@@ -1,0 +1,63 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+/apps/erldist_filter/_build/
+/apps/erldist_filter_test/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+/apps/erldist_filter/deps/
+/apps/erldist_filter_test/deps/
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+/apps/erldist_filter/doc/
+/apps/erldist_filter_test/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Ignore package tarball (built via "mix hex.build").
+erldist_filter-*.tar
+erldist_filter_test-*.tar
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# rebar3 and erlang.mk related files.
+.rebar3
+_*
+.eunit
+*.o
+*.beam
+*.plt
+*.swp
+*.swo
+.erlang.cookie
+ebin
+log
+erl_crash.dump
+.rebar
+logs
+_build
+.idea
+.vscode
+*.iml
+rebar3.crashdump
+*~
+/.elixir_ls/
+/.erlang.mk/
+/apps/erldist_filter/c_src/env.mk
+/apps/erldist_filter/priv/*.dll
+/apps/erldist_filter/priv/*.dylib
+/apps/erldist_filter/priv/*.so
+/erlfmt
+/rebar3

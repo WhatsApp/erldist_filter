@@ -1,0 +1,3 @@
+%{
+  "proper": {:git, "https://github.com/proper-testing/proper.git", "a5ae5669f01143b0828fc21667d4f5e344aa760b", [branch: "master"]},
+}

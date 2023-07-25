@@ -1,0 +1,17 @@
+{"1.2.0",
+[{<<"eqwalizer_support">>,
+  {git_subdir,"https://github.com/WhatsApp/eqwalizer.git",
+              {ref,"a12f4fa1f0db971b54dfa9ff6cdf5240040579b1"},
+              "eqwalizer_support"},
+  0},
+ {<<"proper">>,
+  {git,"https://github.com/proper-testing/proper.git",
+       {ref,"bfd7d862dd5082eeca65c192a7021d0e4de5973e"}},
+  0},
+ {<<"rebar3_proper">>,{pkg,<<"rebar3_proper">>,<<"0.12.1">>},0}]}.
+[
+{pkg_hash,[
+ {<<"rebar3_proper">>, <<"5DDB0FE2B118844A96F868660516F78A6DEA4C777FF19DE225CCC313310B9F1B">>}]},
+{pkg_hash_ext,[
+ {<<"rebar3_proper">>, <<"6691C4D1883543578240D157EAA9D49F3EBB3156892F7C320F070868962327B8">>}]}
+].

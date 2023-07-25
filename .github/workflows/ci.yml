@@ -1,0 +1,66 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  MIX_ENV: test
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: 1.15.4
+            otp: 26.0.2
+            rebar3: 3.22.0
+            lint: true
+
+          - elixir: 1.14.5
+            otp: 25.2.3
+            rebar3: 3.22.0
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Beam
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+          rebar3-version: ${{ matrix.rebar3 }}
+
+      - name: Erlang Tests
+        run: |
+          rebar3 ct
+
+      - name: Retrieve Mix Dependencies Cache
+        uses: actions/cache@v3
+        id: mix-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+
+      - name: Install Mix Dependencies
+        if: steps.mix-cache.outputs.cache-hit != 'true'
+        run: |
+          mix local.rebar --force
+          mix local.hex --force
+          mix deps.get
+
+      - name: Check Formatting
+        if: ${{ matrix.lint }}
+        run: mix format --check-formatted
+
+      - name: Elixir Tests
+        run: mix test
+
+      - name: Logs
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: ct-logs-${{ matrix.otp }}-${{ matrix.elixir }}
+          path: _build/test/logs/
