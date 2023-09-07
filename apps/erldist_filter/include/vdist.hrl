@@ -31,7 +31,7 @@
 }).
 
 -record(vdist_atom_translation_table, {
-    entries = maps:new() :: #{vdist_atom_translation_table:index() => {vdist_atom_cache:index(), atom()}}
+    entries = maps:new() :: #{vdist_atom_translation_table:index() := {vdist_atom_cache:index(), atom()}}
 }).
 
 -record(vdist_external, {
@@ -60,7 +60,7 @@
 
 -record(vdist_normal_header, {
     number_of_atom_cache_refs = 0 :: vterm:u8(),
-    atom_cache_ref_entries = [vdist:atom_cache_ref_entry()],
+    atom_cache_ref_entries = [] :: [vdist:atom_cache_ref_entry()],
     long_atoms = false :: boolean()
 }).
 
@@ -68,7 +68,7 @@
     sequence_id = 0 :: vdist:sequence_id(),
     fragment_id = 0 :: vdist:fragment_id(),
     number_of_atom_cache_refs = 0 :: vterm:u8(),
-    atom_cache_ref_entries = [vdist:atom_cache_ref_entry()],
+    atom_cache_ref_entries = [] :: [vdist:atom_cache_ref_entry()],
     long_atoms = false :: boolean()
 }).
 

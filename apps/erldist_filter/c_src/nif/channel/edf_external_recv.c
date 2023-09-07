@@ -189,7 +189,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                                                                        ext->slices.control.length + ext->slices.payload.length)) {
                 *err_termp = EXCP_ERROR_F(caller_env,
                                           "Corrupted trap->external state: first fragment MUST NOT be writable "
-                                          "(old_frag_size=%llu, new_frag_size=%llu, remaining_bytes=%llu)\n",
+                                          "(old_frag_size=%llu, new_frag_size=%llu, remaining_bytes=%llu).\n",
                                           trap->old_frag_size, trap->new_frag_size.total, vec_remaining_writable_bytes(&frag->vec));
                 return TRAP_ERR(*err_termp);
             }
@@ -257,6 +257,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             }
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT: {
+            bool untrusted = edf_config_is_untrusted_enabled();
             switch (ext->up->control.tag) {
             case UDIST_CONTROL_TAG_EXIT:
                 // LOG, DROP
@@ -277,11 +278,28 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
                 goto transition_to_maybe_log_event;
             case UDIST_CONTROL_TAG_MONITOR_RELATED:
+                if (untrusted) {
+                    // LOG, EMIT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
+                    goto transition_to_maybe_log_event;
+                }
                 // EMIT
                 goto transition_to_emit;
             case UDIST_CONTROL_TAG_SEND_TO_ALIAS:
+                if (untrusted) {
+                    // LOG, DROP or REDIRECT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
+                    goto transition_to_maybe_log_event;
+                }
                 goto transition_to_classify_send;
             case UDIST_CONTROL_TAG_SEND_TO_NAME: {
+                if (untrusted) {
+                    // LOG, DROP or REDIRECT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
+                    goto transition_to_maybe_log_event;
+                }
                 if (ext->up->control.data.send_to == ATOM(net_kernel)) {
                     goto transition_to_classify_send_to_net_kernel;
                 } else if (ext->up->control.data.send_to == ATOM(rex)) {
@@ -290,13 +308,29 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 goto transition_to_classify_send;
             }
             case UDIST_CONTROL_TAG_SEND_TO_PID:
+                if (untrusted) {
+                    // LOG, DROP or REDIRECT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
+                    goto transition_to_maybe_log_event;
+                }
                 goto transition_to_classify_send;
             case UDIST_CONTROL_TAG_SPAWN_REPLY:
+                if (untrusted) {
+                    // LOG, EMIT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
+                    goto transition_to_maybe_log_event;
+                }
                 // EMIT
                 goto transition_to_emit;
             case UDIST_CONTROL_TAG_SPAWN_REQUEST:
                 goto transition_to_classify_spawn_request;
             case UDIST_CONTROL_TAG_UNLINK:
+                if (untrusted) {
+                    // LOG, EMIT
+                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
+                    goto transition_to_maybe_log_event;
+                }
                 // EMIT
                 goto transition_to_emit;
             default:
@@ -314,6 +348,8 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             //     {'$gen_call', From, {terminate_child, ChildId}}
             //     {'$gen_call', From, {restart_child, ChildId}}
             //     {'$gen_call', From, {delete_child, ChildId}}
+            //     {io_request, From, ReplyAs, Request}
+            //     {io_reply, ReplyAs, Reply}
             //
             // Otherwise, emit the message.
             bool is_external_term = false;
@@ -386,12 +422,26 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                                     }
                                     if (arity == 2 && (atom == ATOM(start_child) || atom == ATOM(terminate_child) ||
                                                        atom == ATOM(restart_child) || atom == ATOM(delete_child))) {
-                                        // LOG, EMIT
-                                        trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
+                                        // LOG, DROP or REDIRECT
+                                        trap->flags |=
+                                            (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                             EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
                                         goto transition_to_maybe_log_event;
                                     }
                                 }
                             }
+                        } else if (atom == ATOM(io_reply)) {
+                            // LOG, DROP or REDIRECT
+                            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
+                            goto transition_to_maybe_log_event;
+                        }
+                    } else if (arity == 4) {
+                        if (atom == ATOM(io_request)) {
+                            // LOG, DROP or REDIRECT
+                            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
+                                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
+                            goto transition_to_maybe_log_event;
                         }
                     }
                 }

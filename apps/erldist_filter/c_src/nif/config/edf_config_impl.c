@@ -15,7 +15,7 @@ static ERL_NIF_TERM edf_config_set_bool(ErlNifEnv *env, bool *val, ERL_NIF_TERM 
 ERL_NIF_TERM
 erldist_filter_nif_config_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-#define RET_MAP_SIZE (4)
+#define RET_MAP_SIZE (5)
 
     ERL_NIF_TERM out_term;
     ERL_NIF_TERM keys[RET_MAP_SIZE];
@@ -35,6 +35,8 @@ erldist_filter_nif_config_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
     vals[v++] = edf_config_get_bool(env, &edf_config_global->logging);
     keys[k++] = ATOM(redirect_dist_operations);
     vals[v++] = edf_config_get_bool(env, &edf_config_global->redirect_dist_operations);
+    keys[k++] = ATOM(untrusted);
+    vals[v++] = edf_config_get_bool(env, &edf_config_global->untrusted);
 
     if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, &out_term)) {
         return EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
@@ -65,6 +67,8 @@ erldist_filter_nif_config_get_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
         val_term = edf_config_get_bool(env, &edf_config_global->logging);
     } else if (key_term == ATOM(redirect_dist_operations)) {
         val_term = edf_config_get_bool(env, &edf_config_global->redirect_dist_operations);
+    } else if (key_term == ATOM(untrusted)) {
+        val_term = edf_config_get_bool(env, &edf_config_global->untrusted);
     }
 
     if (val_term == THE_NON_VALUE) {
@@ -95,6 +99,8 @@ erldist_filter_nif_config_set_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
         return edf_config_set_bool(env, &edf_config_global->logging, val_term);
     } else if (key_term == ATOM(redirect_dist_operations)) {
         return edf_config_set_bool(env, &edf_config_global->redirect_dist_operations, val_term);
+    } else if (key_term == ATOM(untrusted)) {
+        return edf_config_set_bool(env, &edf_config_global->untrusted, val_term);
     }
 
     return EXCP_BADARG(env, "Key is invalid");

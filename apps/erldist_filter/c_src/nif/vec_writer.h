@@ -127,8 +127,10 @@ vec_writer_write_exact(vec_writer_t *w, const uint8_t *bytes, size_t bytes_lengt
     }
     (void)memcpy(&w->buf[w->pos], bytes, bytes_length);
     w->pos += bytes_length;
-    if (w->vec->data.owned.len < w->pos) {
-        w->vec->data.owned.len = w->pos;
+    if (vec_is_own_bin(w->vec) && w->vec->data.own_bin.len < w->pos) {
+        w->vec->data.own_bin.len = w->pos;
+    } else if (vec_is_own_mem(w->vec) && w->vec->data.own_mem.len < w->pos) {
+        w->vec->data.own_mem.len = w->pos;
     }
     return 1;
 }
@@ -209,8 +211,10 @@ vec_writer_set_offset(vec_writer_t *w, size_t offset)
     w->pos = offset;
     if (vec_is_null(w->vec) && w->vec->data.null.len < w->pos) {
         w->vec->data.null.len = w->pos;
-    } else if (vec_is_owned(w->vec) && w->vec->data.owned.len < w->pos) {
-        w->vec->data.owned.len = w->pos;
+    } else if (vec_is_own_bin(w->vec) && w->vec->data.own_bin.len < w->pos) {
+        w->vec->data.own_bin.len = w->pos;
+    } else if (vec_is_own_mem(w->vec) && w->vec->data.own_mem.len < w->pos) {
+        w->vec->data.own_mem.len = w->pos;
     }
     return 1;
 }
@@ -224,8 +228,10 @@ vec_writer_skip_exact(vec_writer_t *w, size_t skip)
     w->pos += skip;
     if (vec_is_null(w->vec) && w->vec->data.null.len < w->pos) {
         w->vec->data.null.len = w->pos;
-    } else if (vec_is_owned(w->vec) && w->vec->data.owned.len < w->pos) {
-        w->vec->data.owned.len = w->pos;
+    } else if (vec_is_own_bin(w->vec) && w->vec->data.own_bin.len < w->pos) {
+        w->vec->data.own_bin.len = w->pos;
+    } else if (vec_is_own_mem(w->vec) && w->vec->data.own_mem.len < w->pos) {
+        w->vec->data.own_mem.len = w->pos;
     }
     return 1;
 }

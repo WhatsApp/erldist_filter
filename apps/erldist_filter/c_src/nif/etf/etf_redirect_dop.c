@@ -13,65 +13,56 @@
 #include "../core/unreachable.h"
 #include "../channel/edf_channel.h"
 
-// Node = vterm_small_atom_utf8_ext:new(0, <<>>),
-// ReqId = vterm_newer_reference_ext:new(1, Node, 0, [0]),
-// From = vterm_new_pid_ext:new(Node, 0, 0, 0),
-// GroupLeader = From,
-// Module = vterm_small_atom_utf8_ext:new(3, <<"edf">>),
-// Function = vterm_small_atom_utf8_ext:new(3, <<"dop">>),
-// Arity = vterm_small_integer_ext:new(3),
-// OptList = [],
-// SpawnRequest = vdist_dop_spawn_request:new(ReqId, From, GroupLeader, Module, Function, Arity, OptList),
-// SpawnRequestVTerm = vdist_dop:dop_to_control_message_vterm(SpawnRequest),
-// erlang:display(vterm_encode:internal_vterm_to_binary(SpawnRequestVTerm, #{})).
+static const uint8_t c_tuple4_reg_send_header[] = {
+    // clang-format off
+    SMALL_TUPLE_EXT, 4,
+        SMALL_INTEGER_EXT, DOP_REG_SEND,
+        NEW_PID_EXT,                          // elements[1].From
+            SMALL_ATOM_UTF8_EXT, 0,           // elements[1].From.Node
+            0, 0, 0, 0,                       // elements[1].From.ID
+            0, 0, 0, 0,                       // elements[1].From.Serial
+            0, 0, 0, 0,                       // elements[1].From.Creation
+        SMALL_ATOM_UTF8_EXT, 0,               // elements[2].Unused
+    // clang-format on
+};
+// Insert: elements[3].ToName
+static const uint8_t c_tuple5_reg_send_tt_header[] = {
+    // clang-format off
+    SMALL_TUPLE_EXT, 5,
+        SMALL_INTEGER_EXT, DOP_REG_SEND_TT,
+        NEW_PID_EXT,                          // elements[1].From
+            SMALL_ATOM_UTF8_EXT, 0,           // elements[1].From.Node
+            0, 0, 0, 0,                       // elements[1].From.ID
+            0, 0, 0, 0,                       // elements[1].From.Serial
+            0, 0, 0, 0,                       // elements[1].From.Creation
+        SMALL_ATOM_UTF8_EXT, 0,               // elements[2].Unused
+    // clang-format on
+};
+// Insert: elements[3].ToName
+// Insert: elements[4].TraceToken
+static const uint8_t c_tuple3_payload_header[] = {SMALL_TUPLE_EXT, 3};
+// Insert: elements[0].Sysname
+// Insert: elements[1].Sort
+// Insert: elements[2].Control
+static const uint8_t c_tuple4_payload_header[] = {SMALL_TUPLE_EXT, 4};
+// Insert: elements[0].Sysname
+// Insert: elements[1].Sort
+// Insert: elements[2].Control
+// Insert: elements[2].Payload
 
-static const uint8_t c_atom_undefined[] = {SMALL_ATOM_UTF8_EXT, 9, 'u', 'n', 'd', 'e', 'f', 'i', 'n', 'e', 'd'};
-static const uint8_t c_tuple6_spawn_request_header[] = {SMALL_TUPLE_EXT, 6, SMALL_INTEGER_EXT, DOP_SPAWN_REQUEST};
-static const uint8_t c_tuple7_spawn_request_tt_header[] = {SMALL_TUPLE_EXT, 7, SMALL_INTEGER_EXT, DOP_SPAWN_REQUEST_TT};
-static const uint8_t c_tuple_elements_0[] = {
-    // clang-format off
-    NEWER_REFERENCE_EXT, 0, 1,            // elements[1].ReqId
-    // clang-format on
-};
-// Insert: elements[1].ReqId.Node
-static const uint8_t c_tuple_elements_1[] = {
-    // clang-format off
-        0, 0, 0, 0,                       // elements[1].ReqId.Creation
-        0, 0, 0, 0,                       // elements[1].ReqId.ID...
-    NEW_PID_EXT,                          // elements[2].From
-    // clang-format on
-};
-// Insert: elements[2].From.Node
-static const uint8_t c_tuple_elements_2[] = {
-    // clang-format off
-        0, 0, 0, 0,                       // elements[2].From.ID
-        0, 0, 0, 0,                       // elements[2].From.Serial
-        0, 0, 0, 0,                       // elements[2].From.Creation
-    NEW_PID_EXT,                          // elements[3].GroupLeader
-    // clang-format on
-};
-// Insert: elements[3].GroupLeader.Node
-static const uint8_t c_tuple_elements_3[] = {
-    // clang-format off
-        0, 0, 0, 0,                       // elements[3].GroupLeader.ID
-        0, 0, 0, 0,                       // elements[3].GroupLeader.Serial
-        0, 0, 0, 0,                       // elements[3].GroupLeader.Creation
-    SMALL_TUPLE_EXT, 3,                   // elements[4].tuple3
-        SMALL_ATOM_UTF8_EXT, 3,           // elements[4].tuple3.elements[0].Module
-            'e', 'd', 'f',
-        SMALL_ATOM_UTF8_EXT, 3,           // elements[4].tuple3.elements[1].Function
-            'd', 'o', 'p',
-        SMALL_INTEGER_EXT, 3,             // elements[4].tuple3.elements[2].Arity
-    NIL_EXT,                              // elements[5].OptList
-    // clang-format on
-};
-static const uint8_t c_list3_header[] = {LIST_EXT, 0, 0, 0, 3};
-static const uint8_t c_list3_footer[] = {NIL_EXT};
+static int etf_redirect_dop_resolve_atom(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM atom, vec_writer_t *vw);
+static int etf_redirect_dop_resolve_atom_length(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM atom,
+                                                size_t *atom_lengthp);
+static int etf_redirect_dop_resolve_u64(ErlNifEnv *caller_env, edf_external_t *ext, uint64_t val, vec_writer_t *vw);
+static int etf_redirect_dop_resolve_u64_length(ErlNifEnv *caller_env, edf_external_t *ext, uint64_t val, size_t *lengthp);
 
 int
 etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_termp)
 {
-    vec_t node_vec[1];
+    size_t name_length;
+    size_t node_length;
+    uint64_t sort;
+    size_t sort_length;
     vec_t vec[1];
     size_t new_length = 0;
     slice_t old_framing[1] = {SLICE_INIT_EMPTY()};
@@ -82,7 +73,6 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
 
 #define CLEANUP()                                                                                                                  \
     do {                                                                                                                           \
-        (void)vec_destroy(node_vec);                                                                                               \
         (void)vec_destroy(vec);                                                                                                    \
     } while (0)
 
@@ -106,13 +96,9 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
         }                                                                                                                          \
     } while (0)
 
-    (void)vec_init_free(node_vec);
     (void)vec_init_free(vec);
-    old_framing->head = vec_buf(&ext->primary->vec);
-    old_framing->tail = vec_buf(&ext->slices.headers.vec);
-    if (old_framing->tail == NULL) {
-        old_framing->head = NULL;
-    }
+    old_framing->head = vec_buf(&ext->slices.framing.vec);
+    old_framing->tail = vec_buf_tail(&ext->slices.framing.vec);
     old_headers->head = vec_buf(&ext->slices.headers.vec);
     old_headers->tail = vec_buf_tail(&ext->slices.headers.vec);
     old_control->head = vec_buf(&ext->slices.control.vec);
@@ -122,9 +108,23 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
         old_payload->tail = vec_buf_tail(&ext->slices.payload.vec);
     }
 
-    if (!etf_redirect_dop_resolve_node(caller_env, ext, node_vec)) {
+    if (!etf_redirect_dop_resolve_atom_length(caller_env, ext, ext->channel->rx.router_name, &name_length)) {
         CLEANUP();
-        *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_node() failed: unable to redirect dop\n");
+        *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_atom_length() failed: unable to redirect dop\n");
+        return 0;
+    }
+
+    if (!etf_redirect_dop_resolve_atom_length(caller_env, ext, ext->channel->sysname, &node_length)) {
+        CLEANUP();
+        *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_atom_length() failed: unable to redirect dop\n");
+        return 0;
+    }
+
+    sort = ext->channel->rx.sort++;
+
+    if (!etf_redirect_dop_resolve_u64_length(caller_env, ext, sort, &sort_length)) {
+        CLEANUP();
+        *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_u64_length() failed: unable to redirect dop\n");
         return 0;
     }
 
@@ -173,24 +173,33 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
 
     if (edf_external_is_pass_through(ext)) {
         new_length += 1;
+        old_control->head += 1;
+        if (!slice_is_empty(old_payload)) {
+            old_payload->head += 1;
+        }
     }
     new_length += slice_len(old_framing);
     new_length += slice_len(old_headers);
     if (ext->up->info.token_offset != -1) {
-        new_length += sizeof(c_tuple7_spawn_request_tt_header) + slice_len(old_token);
+        new_length += sizeof(c_tuple5_reg_send_tt_header) + slice_len(old_token);
     } else {
-        new_length += sizeof(c_tuple6_spawn_request_header);
+        new_length += sizeof(c_tuple4_reg_send_header);
     }
-    new_length += sizeof(c_tuple_elements_0) + sizeof(c_tuple_elements_1) + sizeof(c_tuple_elements_2) + sizeof(c_tuple_elements_3);
-    new_length += (vec_len(node_vec) * 4);
-    new_length += sizeof(c_list3_header) + slice_len(old_control) + sizeof(c_list3_footer);
-    if (!slice_is_empty(old_payload)) {
-        new_length += slice_len(old_payload);
+    new_length += node_length;
+    if (edf_external_is_pass_through(ext)) {
+        new_length += 1;
+    }
+    if (slice_is_empty(old_payload)) {
+        new_length += sizeof(c_tuple3_payload_header);
+        new_length += name_length;
+        new_length += sort_length;
+        new_length += slice_len(old_control);
     } else {
-        new_length += sizeof(c_atom_undefined);
-        if (edf_external_is_pass_through(ext)) {
-            new_length += 1;
-        }
+        new_length += sizeof(c_tuple4_payload_header);
+        new_length += name_length;
+        new_length += sort_length;
+        new_length += slice_len(old_control);
+        new_length += slice_len(old_payload);
     }
 
     do {
@@ -211,9 +220,6 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
             return 0;
         }
         new_framing->head = RAW_BYTES();
-        if (edf_external_is_pass_through(ext)) {
-            WRITE_U8(PASS_THROUGH);
-        }
         if (old_framing->head != NULL && slice_len(old_framing) > 0) {
             WRITE_BYTES(old_framing->head, slice_len(old_framing));
         }
@@ -228,38 +234,42 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
             WRITE_U8(VERSION_MAGIC);
         }
         if (!slice_is_empty(old_token)) {
-            WRITE_BYTES(c_tuple7_spawn_request_tt_header, sizeof(c_tuple7_spawn_request_tt_header));
+            WRITE_BYTES(c_tuple5_reg_send_tt_header, sizeof(c_tuple5_reg_send_tt_header));
         } else {
-            WRITE_BYTES(c_tuple6_spawn_request_header, sizeof(c_tuple6_spawn_request_header));
+            WRITE_BYTES(c_tuple4_reg_send_header, sizeof(c_tuple4_reg_send_header));
         }
-        WRITE_BYTES(c_tuple_elements_0, sizeof(c_tuple_elements_0));
-        WRITE_BYTES(vec_buf(node_vec), vec_len(node_vec));
-        WRITE_BYTES(c_tuple_elements_1, sizeof(c_tuple_elements_1));
-        WRITE_BYTES(vec_buf(node_vec), vec_len(node_vec));
-        WRITE_BYTES(c_tuple_elements_2, sizeof(c_tuple_elements_2));
-        WRITE_BYTES(vec_buf(node_vec), vec_len(node_vec));
-        WRITE_BYTES(c_tuple_elements_3, sizeof(c_tuple_elements_3));
+        if (!etf_redirect_dop_resolve_atom(caller_env, ext, ext->channel->rx.router_name, vw)) {
+            CLEANUP();
+            *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_atom() failed: unable to redirect dop\n");
+            return 0;
+        }
         if (!slice_is_empty(old_token)) {
             WRITE_BYTES(old_token->head, slice_len(old_token));
         }
         new_control->tail = RAW_BYTES();
         new_payload->head = RAW_BYTES();
         if (edf_external_is_pass_through(ext)) {
-            old_control->head += 1;
-            if (!slice_is_empty(old_payload)) {
-                old_payload->head += 1;
-            }
             WRITE_U8(VERSION_MAGIC);
         }
-        WRITE_BYTES(c_list3_header, sizeof(c_list3_header));
-        WRITE_BYTES(vec_buf(node_vec), vec_len(node_vec));
+        if (slice_is_empty(old_payload)) {
+            WRITE_BYTES(c_tuple3_payload_header, sizeof(c_tuple3_payload_header));
+        } else {
+            WRITE_BYTES(c_tuple4_payload_header, sizeof(c_tuple4_payload_header));
+        }
+        if (!etf_redirect_dop_resolve_atom(caller_env, ext, ext->channel->sysname, vw)) {
+            CLEANUP();
+            *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_atom() failed: unable to redirect dop\n");
+            return 0;
+        }
+        if (!etf_redirect_dop_resolve_u64(caller_env, ext, sort, vw)) {
+            CLEANUP();
+            *err_termp = EXCP_ERROR(caller_env, "Call to etf_redirect_dop_resolve_u64() failed: unable to redirect dop\n");
+            return 0;
+        }
         WRITE_BYTES(old_control->head, slice_len(old_control));
         if (!slice_is_empty(old_payload)) {
             WRITE_BYTES(old_payload->head, slice_len(old_payload));
-        } else {
-            WRITE_BYTES(c_atom_undefined, sizeof(c_atom_undefined));
         }
-        WRITE_BYTES(c_list3_footer, sizeof(c_list3_footer));
         new_payload->tail = RAW_BYTES();
         if (vec_is_writable(vec)) {
             *err_termp = EXCP_ERROR_F(caller_env,
@@ -288,8 +298,6 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
 
     } while (0);
 
-    (void)vec_destroy(node_vec);
-
     return 1;
 
 #undef WRITE_BYTES
@@ -299,14 +307,12 @@ etf_redirect_dop(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM *err_t
 }
 
 int
-etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t *node_vec)
+etf_redirect_dop_resolve_atom(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM atom, vec_writer_t *vw)
 {
     int internal_index;
     const uint8_t *c_name = NULL;
     uint8_t *a_name = NULL;
     size_t len;
-    size_t node_vec_len;
-    vec_writer_t vw[1];
 
 #define CLEANUP_UTF8()                                                                                                             \
     do {                                                                                                                           \
@@ -318,14 +324,7 @@ etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t 
         (void)enif_free((void *)a_name);                                                                                           \
     } while (0)
 
-    if (edf_atom_translation_table_get_entry(&ext->attab, ext->channel->sysname, &internal_index)) {
-        node_vec_len = 1 + 1;
-        if (!vec_create_owned(node_vec, node_vec_len)) {
-            return 0;
-        }
-        if (!vec_writer_create(vw, node_vec, 0)) {
-            return 0;
-        }
+    if (edf_atom_translation_table_get_entry(&ext->attab, atom, &internal_index)) {
         if (!vec_writer_write_u8(vw, ATOM_CACHE_REF)) {
             return 0;
         }
@@ -333,20 +332,7 @@ etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t 
             return 0;
         }
         return 1;
-    } else if (edf_atom_text_get_name(ext->channel->sysname, ERTS_ATOM_ENC_UTF8, &c_name, &len)) {
-        if (len > 255) {
-            node_vec_len = 1 + 2 + len;
-        } else {
-            node_vec_len = 1 + 1 + len;
-        }
-        if (!vec_create_owned(node_vec, node_vec_len)) {
-            CLEANUP_UTF8();
-            return 0;
-        }
-        if (!vec_writer_create(vw, node_vec, 0)) {
-            CLEANUP_UTF8();
-            return 0;
-        }
+    } else if (edf_atom_text_get_name(atom, ERTS_ATOM_ENC_UTF8, &c_name, &len)) {
         if (len > 255) {
             if (!vec_writer_write_u8(vw, ATOM_UTF8_EXT)) {
                 CLEANUP_UTF8();
@@ -370,36 +356,19 @@ etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t 
             CLEANUP_UTF8();
             return 0;
         }
-        if (vec_is_writable(node_vec)) {
-            CLEANUP_UTF8();
-            return 0;
-        }
         CLEANUP_UTF8();
         return 1;
     } else {
         unsigned int ui_len;
-        if (!enif_get_atom_length(caller_env, ext->channel->sysname, &ui_len, ERL_NIF_LATIN1)) {
+        if (!enif_get_atom_length(caller_env, atom, &ui_len, ERL_NIF_LATIN1)) {
             return 0;
         }
         len = (size_t)(ui_len);
-        if (len > 255) {
-            node_vec_len = 1 + 2 + len;
-        } else {
-            node_vec_len = 1 + 1 + len;
-        }
         a_name = (void *)enif_alloc(len + 1);
         if (a_name == NULL) {
             return 0;
         }
-        if (!enif_get_atom(caller_env, ext->channel->sysname, (char *)a_name, ui_len + 1, ERL_NIF_LATIN1)) {
-            CLEANUP_LATIN1();
-            return 0;
-        }
-        if (!vec_create_owned(node_vec, node_vec_len)) {
-            CLEANUP_LATIN1();
-            return 0;
-        }
-        if (!vec_writer_create(vw, node_vec, 0)) {
+        if (!enif_get_atom(caller_env, atom, (char *)a_name, ui_len + 1, ERL_NIF_LATIN1)) {
             CLEANUP_LATIN1();
             return 0;
         }
@@ -426,10 +395,6 @@ etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t 
             CLEANUP_LATIN1();
             return 0;
         }
-        if (vec_is_writable(node_vec)) {
-            CLEANUP_LATIN1();
-            return 0;
-        }
         CLEANUP_LATIN1();
         return 1;
     }
@@ -438,4 +403,119 @@ etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t 
 
 #undef CLEANUP_LATIN1
 #undef CLEANUP_UTF8
+}
+
+int
+etf_redirect_dop_resolve_atom_length(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NIF_TERM atom, size_t *atom_lengthp)
+{
+    int internal_index;
+    size_t atom_length;
+    if (edf_atom_translation_table_get_entry(&ext->attab, atom, &internal_index)) {
+        *atom_lengthp = 1 + 1;
+        return 1;
+    } else if (edf_atom_text_get_length(atom, ERTS_ATOM_ENC_UTF8, &atom_length)) {
+        if (atom_length > 255) {
+            *atom_lengthp = 1 + 2 + atom_length;
+        } else {
+            *atom_lengthp = 1 + 1 + atom_length;
+        }
+        return 1;
+    } else {
+        unsigned int ui_len;
+        if (!enif_get_atom_length(caller_env, atom, &ui_len, ERL_NIF_LATIN1)) {
+            return 0;
+        }
+        atom_length = (size_t)(ui_len);
+        if (atom_length > 255) {
+            *atom_lengthp = 1 + 2 + atom_length;
+        } else {
+            *atom_lengthp = 1 + 1 + atom_length;
+        }
+        return 1;
+    }
+    unreachable();
+}
+
+int
+etf_redirect_dop_resolve_node(ErlNifEnv *caller_env, edf_external_t *ext, vec_t *node_vec)
+{
+    size_t node_length;
+    vec_writer_t vw[1];
+
+    if (!etf_redirect_dop_resolve_atom_length(caller_env, ext, ext->channel->sysname, &node_length)) {
+        return 0;
+    }
+    if (!vec_create_owned_mem(node_vec, node_length)) {
+        return 0;
+    }
+    if (!vec_writer_create(vw, node_vec, 0)) {
+        (void)vec_destroy(node_vec);
+        return 0;
+    }
+    if (!etf_redirect_dop_resolve_atom(caller_env, ext, ext->channel->sysname, vw)) {
+        (void)vec_writer_destroy(vw);
+        (void)vec_destroy(node_vec);
+        return 0;
+    }
+    if (vec_is_writable(node_vec)) {
+        (void)vec_writer_destroy(vw);
+        (void)vec_destroy(node_vec);
+        return 0;
+    }
+    (void)vec_writer_destroy(vw);
+    return 1;
+}
+
+int
+etf_redirect_dop_resolve_u64(ErlNifEnv *caller_env, edf_external_t *ext, uint64_t val, vec_writer_t *vw)
+{
+    (void)caller_env;
+    (void)ext;
+    if (val < 256) {
+        if (!vec_writer_write_u8(vw, SMALL_INTEGER_EXT)) {
+            return 0;
+        }
+        if (!vec_writer_write_u8(vw, (uint8_t)(val))) {
+            return 0;
+        }
+        return 1;
+    } else if (val < 2147483648) {
+        if (!vec_writer_write_u8(vw, INTEGER_EXT)) {
+            return 0;
+        }
+        if (!vec_writer_write_i32(vw, (int32_t)(val))) {
+            return 0;
+        }
+        return 1;
+    } else {
+        if (!vec_writer_write_u8(vw, SMALL_BIG_EXT)) {
+            return 0;
+        }
+        if (!vec_writer_write_u8(vw, 8)) {
+            return 0;
+        }
+        if (!vec_writer_write_u8(vw, 0)) {
+            return 0;
+        }
+        if (!vec_writer_write_u64(vw, htobe64(val))) {
+            return 0;
+        }
+        return 1;
+    }
+    unreachable();
+}
+
+int
+etf_redirect_dop_resolve_u64_length(ErlNifEnv *caller_env, edf_external_t *ext, uint64_t val, size_t *lengthp)
+{
+    (void)caller_env;
+    (void)ext;
+    if (val < 256) {
+        *lengthp = 2;
+    } else if (val < 2147483648) {
+        *lengthp = 5;
+    } else {
+        *lengthp = 11;
+    }
+    return 1;
 }

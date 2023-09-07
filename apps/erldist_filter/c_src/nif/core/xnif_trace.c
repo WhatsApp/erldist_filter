@@ -33,14 +33,9 @@ xnif_make_string_vprintf(ErlNifEnv *env, const char *format, va_list ap)
     int res;
     size_t buf_len = 0;
     ERL_NIF_TERM buf_term;
-    // size_t bin_len = 0;
-    // unsigned char *bin_buf = NULL;
-    // ERL_NIF_TERM bin_term;
 
     buf[0] = '\0';
     res = enif_vsnprintf(buf, BUF_SZ - 1, format, ap);
-    XNIF_TRACE_F("enif_vsnprintf -> %d\n", res);
-    XNIF_TRACE_F("string was %s\n", buf);
     if (res < 0) {
         return enif_raise_exception(env, enif_make_string(env, "Call to xnif_make_string_vprintf() failed", ERL_NIF_LATIN1));
     }
@@ -50,22 +45,7 @@ xnif_make_string_vprintf(ErlNifEnv *env, const char *format, va_list ap)
         buf_len = BUF_SZ;
     }
     buf_term = enif_make_string_len(env, buf, buf_len, ERL_NIF_LATIN1);
-    // bin_buf = enif_make_new_binary(env, bin_len, &bin_term);
-    // if (bin_buf == NULL) {
-    //     XNIF_TRACE_F("UNABLE TO ALLOCATE BINBUF\n");
-    //     return enif_raise_exception(env, enif_make_string(env, "Call to xnif_make_string_vprintf() failed", ERL_NIF_LATIN1));
-    // }
-    // (void)memcpy(bin_buf, buf, bin_len);
-    XNIF_TRACE_F("output is: %T\n", buf_term);
     return buf_term;
-
-    // if (res == 0) {
-    //     return enif_make_string_len(env, buf, 0, ERL_NIF_LATIN1);
-    // }
-    // if (res < BUF_SZ) {
-    //     return enif_make_string_len(env, buf, (size_t)(res - 1), ERL_NIF_LATIN1);
-    // }
-    // return enif_make_string_len(env, buf, BUF_SZ, ERL_NIF_LATIN1);
 #undef BUF_SZ
 }
 

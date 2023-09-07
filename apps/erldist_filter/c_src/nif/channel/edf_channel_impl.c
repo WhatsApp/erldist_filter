@@ -93,56 +93,6 @@ erldist_filter_nif_channel_close_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
 }
 
 ERL_NIF_TERM
-erldist_filter_nif_channel_index_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
-{
-#define RET_MAP_SIZE (2)
-
-    ERL_NIF_TERM out_term;
-    ERL_NIF_TERM keys[RET_MAP_SIZE];
-    ERL_NIF_TERM vals[RET_MAP_SIZE];
-    size_t k = 0;
-    size_t v = 0;
-    ErlNifUInt64 slots;
-    edf_channel_stats_t acc[1];
-    edf_channel_index_slot_t *root = NULL;
-    edf_channel_index_slot_t *slot = NULL;
-
-    if (argc != 0) {
-        return EXCP_BADARG(env, "argc must be 0");
-    }
-
-    (void)memset((void *)acc, 0, sizeof(edf_channel_stats_t));
-
-    slots = 0;
-    (void)core_rwlock_read_lock(&edf_channel_index_table->rwlock);
-    root = (void *)&edf_channel_index_table->_link;
-    slot = (void *)root->_link.next;
-    while (slot != root) {
-        (void)core_simd_add_vec_u64((uint64_t *)acc, (const uint64_t *)&slot->rx_stats,
-                                    (sizeof(edf_channel_stats_t) / sizeof(uint64_t)));
-        slots += 1;
-        slot = (void *)slot->_link.next;
-    }
-    (void)core_rwlock_read_unlock(&edf_channel_index_table->rwlock);
-    keys[k++] = ATOM(rx_stats);
-    if (!edf_channel_inspect_stats(env, acc, &out_term)) {
-        return out_term;
-    }
-    vals[v++] = out_term;
-
-    keys[k++] = ATOM(slots);
-    vals[v++] = enif_make_uint64(env, slots);
-
-    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, &out_term)) {
-        return EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
-    }
-
-    return out_term;
-
-#undef RET_MAP_SIZE
-}
-
-ERL_NIF_TERM
 erldist_filter_nif_channel_inspect_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
 #define RET_MAP_SIZE (4)

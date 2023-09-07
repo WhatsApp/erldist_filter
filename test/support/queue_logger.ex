@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE.md file in the root directory of this source tree.
 
-defmodule ErldistFilterElixirTests.ErldistFilterLogger do
+defmodule ErldistFilterElixirTests.QueueLogger do
   @behaviour :erldist_filter_logger
 
   @spec child_spec() :: :supervisor.child_spec()

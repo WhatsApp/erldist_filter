@@ -56,7 +56,7 @@ child_spec(Handler, HandlerOptions, WorkerCount) when ?is_handler(Handler) andal
         id => ?MODULE,
         start => {?MODULE, start_link, [Handler, HandlerOptions, WorkerCount]},
         restart => permanent,
-        shutdown => 5000,
+        shutdown => infinity,
         type => supervisor,
         modules => [?MODULE]
     }.

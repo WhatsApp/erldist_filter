@@ -1,5 +1,1 @@
-# Changelog
-
-## 1.0.0 (2023-??-??)
-
-* Initial release.
+apps/erldist_filter/CHANGELOG.md

@@ -28,18 +28,16 @@ etf_decode_dist_header_trap_open(ErlNifEnv *env, edf_external_t *external, etf_d
         .arg = NULL,
     };
     etf_decode_dist_header_trap_t *trap = NULL;
-    ERL_NIF_TERM trap_term;
+    ERL_NIF_TERM err_term = THE_NON_VALUE;
 
-    trap_term = edf_trap_open(env, &trap_state, sizeof(etf_decode_dist_header_trap_t), (edf_trap_t **)(&trap));
-    if (trap == NULL) {
-        return trap_term;
+    if (!edf_trap_open_x(env, &trap_state, sizeof(etf_decode_dist_header_trap_t), (edf_trap_t **)(&trap), &err_term)) {
+        return err_term;
     }
 
     trap->super.state.arg = (void *)trap;
     trap->state = ETF_DECODE_DIST_HEADER_TRAP_STATE_INIT;
     trap->external = external;
     (void)vec_init_free(&trap->vec);
-    (void)edf_external_slice_headers_get(trap->external, &trap->vec);
     trap->skip = 0;
     trap->number_of_atom_cache_refs = 0;
     trap->flags_size = 0;
@@ -49,11 +47,17 @@ etf_decode_dist_header_trap_open(ErlNifEnv *env, edf_external_t *external, etf_d
     trap->head = NULL;
     trap->tail = NULL;
 
+    if (!edf_external_slice_headers_get(trap->external, &trap->vec)) {
+        err_term = EXCP_ERROR(env, "Call to edf_external_slice_headers_get() failed");
+        (void)enif_release_resource((void *)trap);
+        return err_term;
+    }
+
     if (trapp != NULL) {
         *trapp = trap;
     }
 
-    return trap_term;
+    return edf_trap_open_x_make_term(env, &trap->super);
 }
 
 void

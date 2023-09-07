@@ -233,9 +233,10 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             // Note: a "referenced" vec does not consume the ioq.
             //
             // Otherwise, create an "owned" writable vec of size packet_length and copy/consume all of the ioq.
-            if (!vec_create_from_ioq(rx_vec, packet_length, rx_ioq)) {
+            if (!vec_create_from_ioq_mem(rx_vec, packet_length, rx_ioq)) {
                 (void)ioq_reader_destroy(ir);
-                return TRAP_ERR(EXCP_ERROR_F(caller_env, "Call to vec_create_from_ioq() failed: %u-byte packet\n", packet_length));
+                return TRAP_ERR(
+                    EXCP_ERROR_F(caller_env, "Call to vec_create_from_ioq_mem() failed: %u-byte packet\n", packet_length));
             }
 
             goto transition_to_packet_data;
@@ -1125,13 +1126,13 @@ inline int
 channel_rx_stats_dop_seen(edf_external_t *external)
 {
     edf_channel_stats_dop_t *statsdop = NULL;
-    edf_channel_index_slot_t *slot = NULL;
+    edf_world_slot_t *slot = NULL;
     if (!udist_get_channel_stats_dop(external->up, &external->channel->rx.stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->seen += 1;
-    slot = edf_channel_index_get();
-    if (!udist_get_channel_stats_dop(external->up, &slot->rx_stats, &statsdop) || statsdop == NULL) {
+    slot = edf_world_get();
+    if (!udist_get_channel_stats_dop(external->up, &slot->stats.channel.rx_stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->seen += 1;
@@ -1142,13 +1143,13 @@ inline int
 channel_rx_stats_dop_emit(edf_external_t *external)
 {
     edf_channel_stats_dop_t *statsdop = NULL;
-    edf_channel_index_slot_t *slot = NULL;
+    edf_world_slot_t *slot = NULL;
     if (!udist_get_channel_stats_dop(external->up, &external->channel->rx.stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->emit += 1;
-    slot = edf_channel_index_get();
-    if (!udist_get_channel_stats_dop(external->up, &slot->rx_stats, &statsdop) || statsdop == NULL) {
+    slot = edf_world_get();
+    if (!udist_get_channel_stats_dop(external->up, &slot->stats.channel.rx_stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->emit += 1;
@@ -1159,13 +1160,13 @@ inline int
 channel_rx_stats_dop_drop(edf_external_t *external)
 {
     edf_channel_stats_dop_t *statsdop = NULL;
-    edf_channel_index_slot_t *slot = NULL;
+    edf_world_slot_t *slot = NULL;
     if (!udist_get_channel_stats_dop(external->up, &external->channel->rx.stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->drop += 1;
-    slot = edf_channel_index_get();
-    if (!udist_get_channel_stats_dop(external->up, &slot->rx_stats, &statsdop) || statsdop == NULL) {
+    slot = edf_world_get();
+    if (!udist_get_channel_stats_dop(external->up, &slot->stats.channel.rx_stats, &statsdop) || statsdop == NULL) {
         return 0;
     }
     statsdop->drop += 1;

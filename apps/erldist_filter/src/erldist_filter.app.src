@@ -8,10 +8,9 @@
 {application, erldist_filter, [
     {description, "erldist_filter: Erlang distribution filtering"},
     {vsn, "1.0.0"},
+    {mod, {erldist_filter_app, []}},
     {modules, []},
     {registered, []},
-    %% NOTE: Remember to sync changes to `applications` to
-    %% the BUCK file in the application's base folder
     {applications, [
         kernel,
         stdlib,
@@ -20,9 +19,34 @@
     ]},
     {env, []},
     {doc, "doc"},
+    {exclude_patterns, [
+        %% emacs temp files
+        "~$",
+        %% c object files
+        "\\.o$",
+        %% compiled NIF libraries
+        "\\.dll$",
+        "\\.dylib$",
+        "\\.so$",
+        %% make temp files
+        "env\\.mk$",
+        %% vim swap files
+        "\\.swp$"
+    ]},
+    {files, [
+        "c_src",
+        "CHANGELOG*",
+        "include",
+        "lib",
+        "LICENSE*",
+        "mix.exs",
+        "priv",
+        "README*",
+        "rebar.config",
+        "src"
+    ]},
     {licenses, ["MIT"]},
-    {links, [{"GitHub", "https://github.com/WhatsApp/erldist_filter"}]},
-    {exclude_paths, [
-        "c_src/env.mk"
-    ]}
+    {links, #{
+        "GitHub" => "https://github.com/WhatsApp/erldist_filter"
+    }}
 ]}.

@@ -17,6 +17,7 @@ static edf_config_t edf_config_internal = {
     .deep_packet_inspection = false,
     .logging = false,
     .redirect_dist_operations = false,
+    .untrusted = false,
 };
 edf_config_t *edf_config_global = &edf_config_internal;
 

@@ -108,27 +108,27 @@ core_simd_add_vec_u64(uint64_t *a, const uint64_t *b, size_t size)
 #if defined(__AVX512F__)
     if (remainder >= 8 && __builtin_cpu_supports("avx512f")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_avx512f() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
-        (void)core_simd_add_vec_u64_avx512f(a, b, remainder);
+        (void)core_simd_add_vec_u64_avx512f(&a[size - remainder], &b[size - remainder], remainder);
         remainder %= 8;
     }
 #endif
 #if defined(__AVX2__)
     if (remainder >= 4 && __builtin_cpu_supports("avx2")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_avx2() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
-        (void)core_simd_add_vec_u64_avx2(a, b, remainder);
+        (void)core_simd_add_vec_u64_avx2(&a[size - remainder], &b[size - remainder], remainder);
         remainder %= 4;
     }
 #endif
 #if defined(__SSE2__)
     if (remainder >= 2 && __builtin_cpu_supports("sse2")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_sse2() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
-        (void)core_simd_add_vec_u64_sse2(a, b, remainder);
+        (void)core_simd_add_vec_u64_sse2(&a[size - remainder], &b[size - remainder], remainder);
         remainder %= 2;
     }
 #endif
     if (remainder > 0) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_scalar() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
-        (void)core_simd_add_vec_u64_scalar(a, b, remainder);
+        (void)core_simd_add_vec_u64_scalar(&a[size - remainder], &b[size - remainder], remainder);
     }
     return;
 }

@@ -77,7 +77,7 @@ action_into_term_emit(ErlNifEnv *env, action_t *action, ERL_NIF_TERM *termp)
     action_term = vec_into_binary_term(env, &action->data.emit.vec);
     action_term = enif_make_tuple2(env, ATOM(emit), action_term);
     *termp = action_term;
-    (void)action_init_free(action);
+    (void)action_destroy(action);
     return 1;
 }
 

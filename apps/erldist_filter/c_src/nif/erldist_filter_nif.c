@@ -24,6 +24,11 @@
 
 #include "core/xnif_trace.h"
 
+/* Global Variables */
+
+uint64_t erldist_filter_router_count = 0;
+ERL_NIF_TERM erldist_filter_router_names[ERLDIST_FILTER_ROUTER_LIMIT];
+
 /* Resource Type Functions (Declarations) */
 
 /* NIF Function Declarations */
@@ -37,6 +42,8 @@ static ERL_NIF_TERM erldist_filter_nif_atom_text_release_1(ErlNifEnv *env, int a
 static ERL_NIF_TERM erldist_filter_nif_distribution_flags_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_internal_hash_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_dist_ext_to_term_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM erldist_filter_nif_router_info_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
+static ERL_NIF_TERM erldist_filter_nif_router_name_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 
 /* NIF Function Definitions */
 
@@ -264,6 +271,51 @@ erldist_filter_nif_dist_ext_to_term_2(ErlNifEnv *env, int argc, const ERL_NIF_TE
     return vterm_env_direct_dist_ext_to_term(env, argv[0], argv[1]);
 }
 
+ERL_NIF_TERM
+erldist_filter_nif_router_info_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+#define RET_MAP_SIZE (3)
+
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+    ERL_NIF_TERM out_term;
+
+    keys[k++] = ATOM(count);
+    vals[v++] = enif_make_uint64(env, erldist_filter_router_count);
+    keys[k++] = ATOM(limit);
+    vals[v++] = enif_make_uint64(env, ERLDIST_FILTER_ROUTER_LIMIT);
+    keys[k++] = ATOM(names);
+    vals[v++] = enif_make_list_from_array(env, erldist_filter_router_names, (unsigned int)erldist_filter_router_count);
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, &out_term)) {
+        return EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+    }
+
+    return out_term;
+
+#undef RET_MAP_SIZE
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_router_name_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    ERL_NIF_TERM sysname;
+
+    if (argc != 1) {
+        return EXCP_BADARG(env, "argc must be 1");
+    }
+
+    sysname = argv[0];
+
+    if (!enif_is_atom(env, sysname)) {
+        return EXCP_BADARG(env, "Sysname must be an atom");
+    }
+
+    return edf_channel_router_name(env, sysname);
+}
+
 /* NIF Callbacks */
 
 static ErlNifFunc erldist_filter_nif_funcs[] = {
@@ -275,7 +327,6 @@ static ErlNifFunc erldist_filter_nif_funcs[] = {
     {"atom_text_release", 1, erldist_filter_nif_atom_text_release_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"channel_open", 5, erldist_filter_nif_channel_open_5, ERL_NIF_NORMAL_JOB_BOUND},
     {"channel_close", 1, erldist_filter_nif_channel_close_1, ERL_NIF_NORMAL_JOB_BOUND},
-    {"channel_index_get", 0, erldist_filter_nif_channel_index_get_0, ERL_NIF_NORMAL_JOB_BOUND},
     {"channel_inspect", 1, erldist_filter_nif_channel_inspect_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"channel_list", 0, erldist_filter_nif_channel_list_0, ERL_NIF_NORMAL_JOB_BOUND},
     {"channel_list", 1, erldist_filter_nif_channel_list_1, ERL_NIF_NORMAL_JOB_BOUND},
@@ -301,6 +352,8 @@ static ErlNifFunc erldist_filter_nif_funcs[] = {
     {"logger_recv", 1, erldist_filter_nif_logger_recv_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"logger_set_capacity", 1, erldist_filter_nif_logger_set_capacity_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"logger_set_controlling_process", 2, erldist_filter_nif_logger_set_controlling_process_2, ERL_NIF_NORMAL_JOB_BOUND},
+    {"router_info", 0, erldist_filter_nif_router_info_0, ERL_NIF_NORMAL_JOB_BOUND},
+    {"router_name", 1, erldist_filter_nif_router_name_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"world_stats_get", 0, erldist_filter_nif_world_stats_get_0, ERL_NIF_NORMAL_JOB_BOUND},
 };
 
@@ -344,6 +397,34 @@ erldist_filter_nif_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info
     if (!edf_atom_text_table_init()) {
         return -1;
     }
+
+    /* Initialize scheduler specific data. */
+    {
+        ErlNifSysInfo sys_info[1];
+        uint64_t i;
+        char name[] = "erldist_filter_router_XXXXXXXXXXXXXXXXXXXX";
+        size_t name_len = 0;
+        (void)enif_system_info(sys_info, sizeof(ErlNifSysInfo));
+        erldist_filter_router_count = (uint64_t)(sys_info->scheduler_threads);
+        if (erldist_filter_router_count > ERLDIST_FILTER_ROUTER_LIMIT) {
+            erldist_filter_router_count = ERLDIST_FILTER_ROUTER_LIMIT;
+        }
+        if (erldist_filter_router_count == 0) {
+            erldist_filter_router_count = 1;
+        }
+        for (i = 0; i < erldist_filter_router_count; i++) {
+            retval = enif_snprintf(name, sizeof(name), "erldist_filter_router_%llu", i + 1);
+            if (retval < 0) {
+                return retval;
+            }
+            name_len = (size_t)retval;
+            if (!edf_atom_text_put_and_keep((const uint8_t *)name, (signed int)name_len, ERTS_ATOM_ENC_UTF8,
+                                            &erldist_filter_router_names[i])) {
+                return -1;
+            }
+        }
+        retval = 0;
+    };
 
     /* Initialize private data. */
     (void)priv_data;

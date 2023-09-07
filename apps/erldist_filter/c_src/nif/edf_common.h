@@ -69,6 +69,12 @@ extern "C" {
 
 /* Common Types */
 
+/* Global Variables */
+
+#define ERLDIST_FILTER_ROUTER_LIMIT (1024)
+extern uint64_t erldist_filter_router_count;
+extern ERL_NIF_TERM erldist_filter_router_names[];
+
 /* Function Declarations */
 
 #ifdef __cplusplus

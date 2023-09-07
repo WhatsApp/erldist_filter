@@ -18,11 +18,39 @@
 -oncall("whatsapp_clr").
 -wacov(ignore).
 
+%% Public API
+-export([
+    handler_get/0,
+    handler_set/1
+]).
+
 %% Internal API
 -export([
     nif_dir/0,
     priv_dir/0
 ]).
+
+%%%=============================================================================
+%%% Public API functions
+%%%=============================================================================
+
+-spec handler_get() -> undefined | module().
+handler_get() ->
+    case persistent_term:get(erldist_filter_handler) of
+        Handler when is_atom(Handler) ->
+            Handler;
+        _ ->
+            undefined
+    end.
+
+-spec handler_set(Handler) -> Handler when Handler :: undefined | module().
+handler_set(Handler) when is_atom(Handler) ->
+    case persistent_term:put(erldist_filter_handler, Handler) of
+        OldHandler when is_atom(OldHandler) ->
+            OldHandler;
+        _ ->
+            undefined
+    end.
 
 %%%=============================================================================
 %%% Internal API functions

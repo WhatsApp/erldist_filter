@@ -11,11 +11,15 @@ defmodule PeersTest do
 
   @peers ErldistFilterElixirTests.Peers
 
+  require EDF
+
   test "alias_send dist operations function correctly" do
     {:ok, {upeer = {unode, _}, vpeer}} = @peers.setup(__MODULE__)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
+    assert([] === @peers.handler_export(upeer))
+    assert([] === @peers.handler_export(vpeer))
 
     small_token = :rand.bytes(16)
     large_token = :binary.copy(small_token, 40960)
@@ -72,11 +76,18 @@ defmodule PeersTest do
     assert(
       match?(
         [
-          {_time, ^unode,
-           {:udist_dop_spawn_request, _req_id, _from, _group_leader, {__MODULE__, :vnode_alias_send_process_init, 2}, _flags},
-           [_uparent, _ualias]}
+          {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_alias_send_process_init, 2}), [_uparent, _ualias]}
         ],
         @peers.logger_export(vpeer)
+      )
+    )
+
+    assert([] === @peers.handler_export(upeer))
+
+    assert(
+      match?(
+        [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_alias_send_process_init, [_, _]}],
+        @peers.handler_export(vpeer)
       )
     )
 
@@ -107,6 +118,8 @@ defmodule PeersTest do
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
+    assert([] === @peers.handler_export(upeer))
+    assert([] === @peers.handler_export(vpeer))
 
     reg_name = @peers.rand_reg_name(upeer, vpeer)
     small_token = :rand.bytes(16)
@@ -166,11 +179,18 @@ defmodule PeersTest do
     assert(
       match?(
         [
-          {_time, ^unode,
-           {:udist_dop_spawn_request, _req_id, _from, _group_leader, {__MODULE__, :vnode_registered_process_init, 2}, _flags},
-           [_uparent, ^reg_name]}
+          {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_registered_process_init, 2}), [_uparent, ^reg_name]}
         ],
         @peers.logger_export(vpeer)
+      )
+    )
+
+    assert([] === @peers.handler_export(upeer))
+
+    assert(
+      match?(
+        [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_registered_process_init, [_, _]}],
+        @peers.handler_export(vpeer)
       )
     )
 
@@ -201,6 +221,8 @@ defmodule PeersTest do
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
+    assert([] === @peers.handler_export(upeer))
+    assert([] === @peers.handler_export(vpeer))
 
     small_token = :rand.bytes(16)
     large_token = :binary.copy(small_token, 40960)
@@ -257,11 +279,18 @@ defmodule PeersTest do
     assert(
       match?(
         [
-          {_time, ^unode,
-           {:udist_dop_spawn_request, _req_id, _from, _group_leader, {__MODULE__, :vnode_send_sender_process_init, 2}, _flags},
-           [_uparent, _upid]}
+          {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_send_sender_process_init, 2}), [_uparent, _upid]}
         ],
         @peers.logger_export(vpeer)
+      )
+    )
+
+    assert([] === @peers.handler_export(upeer))
+
+    assert(
+      match?(
+        [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_send_sender_process_init, [_, _]}],
+        @peers.handler_export(vpeer)
       )
     )
 

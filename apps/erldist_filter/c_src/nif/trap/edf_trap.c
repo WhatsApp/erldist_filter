@@ -51,19 +51,25 @@ edf_trap_unload(ErlNifEnv *env)
     return;
 }
 
-ERL_NIF_TERM
-edf_trap_open(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp)
+int
+edf_trap_open_x(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp, ERL_NIF_TERM *err_termp)
 {
     edf_trap_t *trap = NULL;
-    ERL_NIF_TERM trap_term;
+
+    if (trapp == NULL) {
+        *err_termp = EXCP_ERROR(env, "Call to edf_trap_open_x() failed: **trapp must not be NULL.");
+        return 0;
+    }
 
     if (sz < sizeof(edf_trap_t)) {
-        return EXCP_ERROR_F(env, "Fatal error: size must be at least %d-bytes (was %d-bytes).", sizeof(edf_trap_t), sz);
+        *err_termp = EXCP_ERROR_F(env, "Fatal error: size must be at least %d-bytes (was %d-bytes).", sizeof(edf_trap_t), sz);
+        return 0;
     }
 
     trap = enif_alloc_resource(edf_trap_resource_type, sz);
     if (trap == NULL) {
-        return EXCP_ERROR_F(env, "Can't allocate edf_trap_t: unable to allocate %d-bytes", sz);
+        *err_termp = EXCP_ERROR_F(env, "Can't allocate edf_trap_t: unable to allocate %d-bytes", sz);
+        return 0;
     }
 
     trap->reds = 0;
@@ -78,14 +84,9 @@ edf_trap_open(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap
         (void)enif_keep_resource((void *)(trap->state.resource));
     }
 
-    trap_term = enif_make_resource(env, (void *)trap);
-    (void)enif_release_resource((void *)trap);
+    *trapp = trap;
 
-    if (trapp != NULL) {
-        *trapp = trap;
-    }
-
-    return trap_term;
+    return 1;
 }
 
 void

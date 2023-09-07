@@ -88,7 +88,7 @@ start_peer(PeerNode, _Module, _FunctionName) ->
             {"-connect_all", "false"},
             {"-kernel", "dist_auto_connect", "never"},
             {"-kernel", "start_distribution", "false"},
-            {"-proto_dist", "erldist_filter_otp_25_2_3_inet_tcp"}
+            {"-proto_dist", "erldist_filter_inet_tcp"}
         ])
     },
     ChildSpec = #{

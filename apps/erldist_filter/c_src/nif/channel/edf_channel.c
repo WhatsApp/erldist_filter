@@ -19,8 +19,6 @@
 ErlNifResourceType *edf_channel_resource_type = NULL;
 static edf_channel_resource_table_t edf_channel_resource_table_internal = {._link = {.next = NULL, .prev = NULL}};
 edf_channel_resource_table_t *edf_channel_resource_table = &edf_channel_resource_table_internal;
-static edf_channel_index_table_t edf_channel_index_table_internal = {._link = {.next = NULL, .prev = NULL}};
-edf_channel_index_table_t *edf_channel_index_table = &edf_channel_index_table_internal;
 
 /* Static Declarations */
 
@@ -30,8 +28,6 @@ static void edf_channel_resource_type_down(ErlNifEnv *env, void *obj, ErlNifPid 
 static int edf_channel_create(ErlNifEnv *env, size_t packet_size, ERL_NIF_TERM sysname, uint32_t creation, uint32_t connection_id,
                               uint64_t dflags, edf_channel_resource_t *resource, edf_channel_t **channelp,
                               ERL_NIF_TERM *error_term);
-static void edf_channel_stats_init_empty(edf_channel_stats_t *stats);
-static void edf_channel_stats_dop_init_empty(edf_channel_stats_dop_t *dop);
 
 /* Function Definitions */
 
@@ -57,15 +53,6 @@ edf_channel_load(ErlNifEnv *env)
     if (!linklist_is_linked(&edf_channel_resource_table->_link)) {
         (void)core_mutex_create(&edf_channel_resource_table->mutex, "erldist_filter.channel_resource_table_mutex");
         (void)linklist_init_anchor(&edf_channel_resource_table->_link);
-    }
-
-    if (!linklist_is_linked(&edf_channel_index_table->_link)) {
-        retval = enif_tsd_key_create("erldist_filter.channel_index_table_tsd_key", &edf_channel_index_table->key);
-        if (retval != 0) {
-            return retval;
-        }
-        (void)core_rwlock_create(&edf_channel_index_table->rwlock, "erldist_filter.channel_index_table_rwlock");
-        (void)linklist_init_anchor(&edf_channel_index_table->_link);
     }
 
     return retval;
@@ -114,7 +101,7 @@ edf_channel_resource_open(ErlNifEnv *env, size_t packet_size, ERL_NIF_TERM sysna
     // Don't release the resource here, so a reference is kept on the root table.
     // (void)enif_release_resource((void *)resource);
 
-    (void)atomic_fetch_add(&edf_world->channels_created, 1);
+    WORLD_STATS_COUNT(channel, create, 1);
 
     if (resourcep != NULL) {
         *resourcep = resource;
@@ -198,6 +185,8 @@ edf_channel_create(ErlNifEnv *env, size_t packet_size, ERL_NIF_TERM sysname, uin
     channel->creation = creation;
     channel->connection_id = connection_id;
     channel->dflags = dflags;
+    channel->rx.router_name = edf_channel_router_name(env, channel->sysname);
+    channel->rx.sort = 0;
     channel->rx.packet_size = packet_size;
     channel->rx.state = EDF_CHANNEL_RX_STATE_PACKET_HEADER;
     (void)ioq_init_free(&channel->rx.ioq);
@@ -287,93 +276,16 @@ edf_channel_destroy(ErlNifEnv *env, edf_channel_resource_t *resource, edf_channe
     }
     resource->inner = NULL;
     (void)enif_free((void *)channel);
-    (void)atomic_fetch_add(&edf_world->channels_destroyed, 1);
+    WORLD_STATS_COUNT(channel, destroy, 1);
     return;
 }
 
-edf_channel_index_slot_t *
-edf_channel_index_get_slow(void)
+ERL_NIF_TERM
+edf_channel_router_name(ErlNifEnv *env, ERL_NIF_TERM sysname)
 {
-    edf_channel_index_slot_t *slot = NULL;
-    slot = (void *)enif_tsd_get(edf_channel_index_table->key);
-    if (slot == NULL) {
-        slot = enif_alloc(sizeof(edf_channel_index_slot_t));
-        if (slot == NULL) {
-            unreachable();
-            (void)perror("Too many processors or threads on this machine: OOM, unable to allocate edf_channel_index_slot_t!");
-            abort();
-            return NULL;
-        }
-        slot->_link.prev = NULL;
-        slot->_link.next = NULL;
-        (void)edf_channel_stats_init_empty(&slot->rx_stats);
-        (void)core_rwlock_write_lock(&edf_channel_index_table->rwlock);
-        (void)linklist_insert(&edf_channel_index_table->_link, &slot->_link);
-        (void)core_rwlock_write_unlock(&edf_channel_index_table->rwlock);
-        (void)enif_tsd_set(edf_channel_index_table->key, (void *)slot);
-        return slot;
-    }
-    return slot;
-}
+    ErlNifUInt64 router_number;
 
-void
-edf_channel_stats_init_empty(edf_channel_stats_t *stats)
-{
-    stats->packet_count = 0;
-    stats->emit_count = 0;
-    stats->drop_count = 0;
-    stats->dist_header_count = 0;
-    stats->dist_frag_header_count = 0;
-    stats->dist_frag_cont_count = 0;
-    stats->dist_pass_through_count = 0;
-    stats->atom_cache_read_count = 0;
-    stats->atom_cache_write_count = 0;
-    stats->atom_cache_overwrite_count = 0;
-    stats->rewrite_fragment_header_count = 0;
-    stats->rollback_atom_cache_count = 0;
-    stats->compact_external_count = 0;
-    stats->compact_fragment_count = 0;
-    stats->control_has_export_ext = 0;
-    stats->control_has_new_fun_ext = 0;
-    stats->payload_has_export_ext = 0;
-    stats->payload_has_new_fun_ext = 0;
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_link);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_send);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_exit);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_unlink);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_reg_send);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_group_leader);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_exit2);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_send_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_exit_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_reg_send_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_exit2_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_monitor_p);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_demonitor_p);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_monitor_p_exit);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_send_sender);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_send_sender_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_payload_exit);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_payload_exit_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_payload_exit2);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_payload_exit2_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_payload_monitor_p_exit);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_spawn_request);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_spawn_request_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_spawn_reply);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_spawn_reply_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_alias_send);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_alias_send_tt);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_unlink_id);
-    (void)edf_channel_stats_dop_init_empty(&stats->dop_unlink_id_ack);
-    return;
-}
-
-inline void
-edf_channel_stats_dop_init_empty(edf_channel_stats_dop_t *dop)
-{
-    dop->seen = 0;
-    dop->emit = 0;
-    dop->drop = 0;
-    return;
+    router_number = enif_hash(ERL_NIF_INTERNAL_HASH, sysname, 0);
+    router_number %= erldist_filter_router_count;
+    return erldist_filter_router_names[router_number];
 }

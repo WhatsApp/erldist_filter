@@ -7,7 +7,8 @@
 defmodule ErldistFilterElixirTests.Peers do
   @sup :erldist_filter_peer_spbt_sup
   @shim :erldist_filter_peer_spbt_shim
-  @logger ErldistFilterElixirTests.ErldistFilterLogger
+  @handler ErldistFilterElixirTests.QueueHandler
+  @logger ErldistFilterElixirTests.QueueLogger
 
   def setup(test_module) do
     {:ok, {^test_module, test_bytecode, test_filename}} = read_module(test_module)
@@ -59,6 +60,10 @@ defmodule ErldistFilterElixirTests.Peers do
     @shim.rpc(peer, module, function, arguments, timeout)
   end
 
+  def handler_export(peer) do
+    rpc(peer, @handler, :export, [])
+  end
+
   def logger_export(peer) do
     rpc(peer, @logger, :export, [])
   end
@@ -98,16 +103,21 @@ defmodule ErldistFilterElixirTests.Peers do
   end
 
   def enable_erldist_filter() do
+    {:ok, _} = :application.ensure_all_started(:erldist_filter)
+    _ = :erldist_filter.handler_set(@handler)
     _ = :erldist_filter_nif.logger_set_capacity(1000)
     :ok = :erldist_filter_nif.config_set(:compact_fragments, true)
     :ok = :erldist_filter_nif.config_set(:deep_packet_inspection, true)
     :ok = :erldist_filter_nif.config_set(:logging, true)
     :ok = :erldist_filter_nif.config_set(:redirect_dist_operations, true)
     {:ok, _} = :supervisor.start_child(:kernel_sup, @logger.child_spec())
+    {:ok, _} = :supervisor.start_child(:kernel_sup, @handler.child_spec())
     :ok
   end
 
   def disable_erldist_filter() do
+    _ = :supervisor.terminate_child(:kernel_sup, @handler)
+    _ = :supervisor.delete_child(:kernel_sup, @handler)
     _ = :supervisor.terminate_child(:kernel_sup, @logger)
     _ = :supervisor.delete_child(:kernel_sup, @logger)
     _ = :erldist_filter_nif.logger_set_capacity(2)
@@ -115,7 +125,17 @@ defmodule ErldistFilterElixirTests.Peers do
     :ok = :erldist_filter_nif.config_set(:deep_packet_inspection, false)
     :ok = :erldist_filter_nif.config_set(:logging, false)
     :ok = :erldist_filter_nif.config_set(:redirect_dist_operations, false)
+    :ok = :erldist_filter_nif.config_set(:untrusted, false)
+    # :ok = :application.stop(:erldist_filter)
     :ok
+  end
+
+  def enable_untrusted(peer) do
+    rpc(peer, :erldist_filter_nif, :config_set, [:untrusted, true])
+  end
+
+  def disable_untrusted(peer) do
+    rpc(peer, :erldist_filter_nif, :config_set, [:untrusted, false])
   end
 
   def rand_reg_name(upeer, vpeer) do

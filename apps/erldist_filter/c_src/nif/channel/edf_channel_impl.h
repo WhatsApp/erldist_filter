@@ -25,7 +25,6 @@ extern "C" {
 
 extern ERL_NIF_TERM erldist_filter_nif_channel_open_5(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 extern ERL_NIF_TERM erldist_filter_nif_channel_close_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
-extern ERL_NIF_TERM erldist_filter_nif_channel_index_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 extern ERL_NIF_TERM erldist_filter_nif_channel_inspect_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 extern ERL_NIF_TERM erldist_filter_nif_channel_list_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 extern ERL_NIF_TERM erldist_filter_nif_channel_list_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);

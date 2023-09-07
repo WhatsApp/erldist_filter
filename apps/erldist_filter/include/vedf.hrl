@@ -23,12 +23,15 @@
     dflags = 0 :: vterm:u64(),
     rx_sequences = maps:new() :: #{vdist:sequence_id() => vdist_external:t()},
     rx_atom_cache = undefined :: undefined | vdist_atom_cache:t(),
+    rx_logger_time = 0 :: non_neg_integer(),
+    rx_router_name :: atom(),
+    rx_sort = 0 :: non_neg_integer(),
     compact_fragments = false :: boolean(),
     deep_packet_inspection = false :: boolean(),
     logging = false :: boolean(),
     redirect_dist_operations = false :: boolean(),
-    logger_time = 0 :: non_neg_integer(),
-    sysname = undefined :: undefined | erldist_filter_nif:sysname()
+    sysname = undefined :: undefined | erldist_filter_nif:sysname(),
+    untrusted = false :: boolean()
 }).
 
 -endif.

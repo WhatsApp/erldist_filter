@@ -22,7 +22,6 @@
 
 %% Internal API
 -export([
-    dop/3,
     req/3
 ]).
 
@@ -30,21 +29,16 @@
 %%% Internal API functions
 %%%=============================================================================
 
--spec dop(Node, Control, Payload) -> no_return() when
-    Node :: node(),
-    Control :: eqwalizer:dynamic(),
-    Payload :: undefined | eqwalizer:dynamic().
-dop(Node, Control0, Payload) ->
-    _Control = udist:cast_to_dop(Control0),
-    _ = Node,
-    _ = Payload,
-    exit(normal).
-
--spec req(Node, {Module, FunctionName, Arity}, Arguments) -> no_return() | eqwalizer:dynamic() when
-    Node :: node(),
+-spec req(Sysname, {Module, FunctionName, Arity}, Arguments) -> no_return() | eqwalizer:dynamic() when
+    Sysname :: node(),
     Module :: module(),
     FunctionName :: atom(),
     Arity :: non_neg_integer(),
     Arguments :: [eqwalizer:dynamic()].
-req(_Node, {Module, FunctionName, Arity}, Arguments) when length(Arguments) =:= Arity ->
-    erlang:apply(Module, FunctionName, Arguments).
+req(Sysname, {Module, FunctionName, Arity}, Arguments) when length(Arguments) =:= Arity ->
+    case erldist_filter:handler_get() of
+        undefined ->
+            erlang:apply(Module, FunctionName, Arguments);
+        Handler when is_atom(Handler) ->
+            Handler:spawn_request_init(Sysname, Module, FunctionName, Arguments)
+    end.

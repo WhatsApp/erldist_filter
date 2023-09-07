@@ -39,7 +39,8 @@
     deep_packet_inspection => boolean(),
     logging => boolean(),
     redirect_dist_operations => boolean(),
-    sysname => undefined | erldist_filter_nif:sysname()
+    sysname => undefined | erldist_filter_nif:sysname(),
+    untrusted => boolean()
 }.
 -type t() :: #vedf_channel{}.
 
@@ -72,33 +73,36 @@ new(PacketSize, DistributionFlags, Config) when
     Logging = maps:get(logging, Config, false),
     RedirectDistOperations = maps:get(redirect_dist_operations, Config, false),
     Sysname = maps:get(sysname, Config, undefined),
-    case
-        (DistributionFlags band ?DFLAG_DIST_HDR_ATOM_CACHE) =/= 0 orelse (DistributionFlags band ?DFLAG_FRAGMENTS) =/= 0
-    of
-        true ->
-            RxAtomCache = vdist_atom_cache:new(),
-            #vedf_channel{
-                packet_size = PacketSize,
-                dflags = DistributionFlags,
-                rx_atom_cache = RxAtomCache,
-                compact_fragments = CompactFragments,
-                deep_packet_inspection = DeepPacketInspection,
-                logging = Logging,
-                redirect_dist_operations = RedirectDistOperations,
-                sysname = Sysname
-            };
-        false ->
-            #vedf_channel{
-                packet_size = PacketSize,
-                dflags = DistributionFlags,
-                rx_atom_cache = undefined,
-                compact_fragments = CompactFragments,
-                deep_packet_inspection = DeepPacketInspection,
-                logging = Logging,
-                redirect_dist_operations = RedirectDistOperations,
-                sysname = Sysname
-            }
-    end.
+    Untrusted = maps:get(untrusted, Config, false),
+    Channel0 =
+        #vedf_channel{
+            packet_size = PacketSize,
+            dflags = DistributionFlags,
+            rx_atom_cache = undefined,
+            rx_logger_time = 0,
+            rx_router_name = erldist_filter_nif:router_name(Sysname),
+            rx_sort = 0,
+            compact_fragments = CompactFragments,
+            deep_packet_inspection = DeepPacketInspection,
+            logging = Logging,
+            redirect_dist_operations = RedirectDistOperations,
+            sysname = Sysname,
+            untrusted = Untrusted
+        },
+    Channel1 =
+        case
+            (DistributionFlags band ?DFLAG_DIST_HDR_ATOM_CACHE) =/= 0 orelse
+                (DistributionFlags band ?DFLAG_FRAGMENTS) =/= 0
+        of
+            true ->
+                RxAtomCache = vdist_atom_cache:new(),
+                Channel0#vedf_channel{
+                    rx_atom_cache = RxAtomCache
+                };
+            false ->
+                Channel0
+        end,
+    Channel1.
 
 -spec recv(OldChannel, Packets) -> {ok, Actions, NewChannel} when
     OldChannel :: t(),
@@ -402,6 +406,8 @@ dpi_classify_send(Channel, Entry, Control, Payload0, CompactFragment) when ?is_v
     %%     {'$gen_call', From, {terminate_child, ChildId}}
     %%     {'$gen_call', From, {restart_child, ChildId}}
     %%     {'$gen_call', From, {delete_child, ChildId}}
+    %%     {io_request, From, ReplyAs, Request}
+    %%     {io_reply, ReplyAs, Reply}
     %%
     %% Otherwise, emit the message.
     Payload = vterm:simplify(Payload0),
@@ -416,22 +422,28 @@ dpi_classify_send(Channel, Entry, Control, Payload0, CompactFragment) when ?is_v
             % LOG, DROP or REDIRECT
             dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5);
         {'$gen_call', _From, Request} ->
-            ShouldLogAndEmit =
+            Hint =
                 case Request of
-                    {start_child, _ChildSpec} -> true;
-                    {terminate_child, _ChildId} -> true;
-                    {restart_child, _ChildId} -> true;
-                    {delete_child, _ChildId} -> true;
-                    _ -> false
+                    {start_child, _ChildSpec} -> drop;
+                    {terminate_child, _ChildId} -> drop;
+                    {restart_child, _ChildId} -> drop;
+                    {delete_child, _ChildId} -> drop;
+                    _ -> unsafe
                 end,
-            case ShouldLogAndEmit of
-                true ->
-                    % LOG, EMIT
-                    dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_emit/5);
-                false ->
+            case Hint of
+                drop ->
+                    % LOG, DROP or REDIRECT
+                    dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5);
+                unsafe ->
                     % EMIT
                     dpi_emit(Channel, Entry, Control, Payload0, CompactFragment)
             end;
+        {io_request, _From, _ReplyAs, _Request} ->
+            % LOG, DROP or REDIRECT
+            dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5);
+        {io_reply, _ReplyAs, _Reply} ->
+            % LOG, DROP or REDIRECT
+            dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5);
         _ ->
             % EMIT
             dpi_emit(Channel, Entry, Control, Payload0, CompactFragment)
@@ -452,7 +464,7 @@ dpi_classify_send_to_net_kernel(Channel, Entry, Control, Payload0, CompactFragme
             % EMIT
             dpi_emit(Channel, Entry, Control, Payload0, CompactFragment);
         _ ->
-            % DROP or REDIRECT
+            % LOG, DROP or REDIRECT
             dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5)
     end.
 
@@ -475,7 +487,7 @@ dpi_classify_send_to_rex(Channel, Entry, Control, Payload0, CompactFragment) whe
             % EMIT
             dpi_emit(Channel, Entry, Control, Payload0, CompactFragment);
         _ ->
-            % DROP or REDIRECT
+            % LOG, DROP or REDIRECT
             dpi_maybe_log_event(Channel, Entry, Control, Payload0, CompactFragment, fun dpi_drop_or_redirect/5)
     end.
 
@@ -522,7 +534,7 @@ dpi_emit(Channel, _Entry, _Control, _MaybePayload, CompactFragment) ->
 %% @private
 dpi_maybe_log_event(
     Channel0 = #vedf_channel{
-        logger_time = LoggerTime0, sysname = Sysname, rx_atom_cache = RxAtomCache, logging = true
+        rx_logger_time = LoggerTime0, sysname = Sysname, rx_atom_cache = RxAtomCache, logging = true
     },
     Entry,
     ControlMessage,
@@ -575,7 +587,7 @@ dpi_maybe_log_event(
         end,
     Action = {log, FragmentCount, {LoggerTime0, {Sysname, Atoms, Control, Payload}}},
     LoggerTime1 = LoggerTime0 + 1,
-    Channel1 = Channel0#vedf_channel{logger_time = LoggerTime1},
+    Channel1 = Channel0#vedf_channel{rx_logger_time = LoggerTime1},
     {Channel2, Actions0} = NextState(Channel1, Entry, ControlMessage, MaybePayload, CompactFragment),
     Actions1 = Actions0 ++ [Action],
     {Channel2, Actions1};
@@ -585,81 +597,91 @@ dpi_maybe_log_event(Channel, Entry, ControlMessage, MaybePayload, CompactFragmen
     NextState(Channel, Entry, ControlMessage, MaybePayload, CompactFragment).
 
 %% @private
-dpi_redirect_dop(Channel, _Entry, _Control, _MaybePayload, CompactFragment) ->
-    Undefined = vterm_small_atom_utf8_ext:new(9, <<"undefined">>),
+dpi_redirect_dop(
+    Channel0 = #vedf_channel{rx_router_name = RxRouterName, rx_sort = RxSort},
+    _Entry,
+    _Control,
+    _MaybePayload,
+    CompactFragment
+) ->
+    EmptyNode = vterm_small_atom_utf8_ext:new(0, <<>>),
+    FromPid = vterm_new_pid_ext:new(EmptyNode, 0, 0, 0),
+    Unused = vterm_small_atom_utf8_ext:new(0, <<>>),
     case vdist_header_decode:decode_header(CompactFragment) of
-        {ok, Header, EncRest0} when
-            is_record(Header, vdist_fragment_header) orelse is_record(Header, vdist_normal_header)
-        ->
-            EncNode = dpi_resolve_node(Channel, Header),
+        {ok, Header, EncRest0} ->
+            IsPassThrough =
+                case Header of
+                    _ when is_record(Header, vdist_fragment_header) orelse is_record(Header, vdist_normal_header) ->
+                        false;
+                    #vdist_pass_through_header{} ->
+                        true
+                end,
             EncHeadersLength = byte_size(CompactFragment) - byte_size(EncRest0),
             EncHeaders = binary:part(CompactFragment, 0, EncHeadersLength),
-            {NestedControlVTerm, NestedPayloadVTerm} =
-                case vterm_decode:internal_binary_to_vterm(EncRest0) of
-                    {ok, ControlVTerm0, <<>>} ->
-                        {ControlVTerm0, Undefined};
-                    {ok, ControlVTerm0, EncRest1} ->
-                        {ok, PayloadVTerm0, <<>>} = vterm_decode:internal_binary_to_vterm(EncRest1),
-                        {ControlVTerm0, PayloadVTerm0}
+            {NestedControlVTerm, MaybeNestedPayloadVTerm} =
+                case IsPassThrough of
+                    false ->
+                        case vterm_decode:internal_binary_to_vterm(EncRest0) of
+                            {ok, ControlVTerm0, <<>>} ->
+                                {ControlVTerm0, nothing};
+                            {ok, ControlVTerm0, EncRest1} ->
+                                {ok, PayloadVTerm0, <<>>} = vterm_decode:internal_binary_to_vterm(EncRest1),
+                                {ControlVTerm0, {just, PayloadVTerm0}}
+                        end;
+                    true ->
+                        case vterm_decode:external_binary_to_vterm(EncRest0) of
+                            {ok, ControlVTerm0, <<>>} ->
+                                {ControlVTerm0, nothing};
+                            {ok, ControlVTerm0, EncRest1} ->
+                                {ok, PayloadVTerm0, <<>>} = vterm_decode:external_binary_to_vterm(EncRest1),
+                                {ControlVTerm0, {just, PayloadVTerm0}}
+                        end
                 end,
-            {ok, Node, <<>>} = vterm_decode:internal_binary_to_vterm_atom(EncNode),
-            ReqId = vterm_newer_reference_ext:new(1, Node, 0, [0]),
-            From = vterm_new_pid_ext:new(Node, 0, 0, 0),
-            GroupLeader = From,
-            Module = vterm_small_atom_utf8_ext:new(3, <<"edf">>),
-            Function = vterm_small_atom_utf8_ext:new(3, <<"dop">>),
-            Arity = vterm_small_integer_ext:new(3),
-            OptList = [],
+            EncToName = dpi_resolve_atom(Channel0, Header, RxRouterName),
+            {ok, ToName, <<>>} = vterm_decode:internal_binary_to_vterm_atom(EncToName),
             ControlDOP =
                 case dpi_resolve_token(NestedControlVTerm) of
                     {ok, TokenVTerm} ->
-                        vdist_dop_spawn_request_tt:new(
-                            ReqId, From, GroupLeader, Module, Function, Arity, OptList, TokenVTerm
-                        );
+                        vdist_dop_reg_send_tt:new(FromPid, Unused, ToName, TokenVTerm);
                     error ->
-                        vdist_dop_spawn_request:new(ReqId, From, GroupLeader, Module, Function, Arity, OptList)
+                        vdist_dop_reg_send:new(FromPid, Unused, ToName)
                 end,
             ControlVTerm = vdist_dop:dop_to_control_message_vterm(ControlDOP),
-            PayloadVTerm = vterm_list_ext:new(3, [Node, NestedControlVTerm, NestedPayloadVTerm], vterm_nil_ext:new()),
-            EncControl = vterm_encode:internal_vterm_to_binary(ControlVTerm, #{allow_atom_cache_refs => true}),
-            EncPayload = vterm_encode:internal_vterm_to_binary(PayloadVTerm, #{allow_atom_cache_refs => true}),
-            EncExternal = <<EncHeaders/bytes, EncControl/bytes, EncPayload/bytes>>,
-            {Channel, [{emit, EncExternal}]};
-        {ok, Header = #vdist_pass_through_header{}, EncRest0} ->
-            EncNode = dpi_resolve_node(Channel, Header),
-            EncHeadersLength = byte_size(CompactFragment) - byte_size(EncRest0),
-            EncHeaders = binary:part(CompactFragment, 0, EncHeadersLength),
-            {NestedControlVTerm, NestedPayloadVTerm} =
-                case vterm_decode:external_binary_to_vterm(EncRest0) of
-                    {ok, ControlVTerm0, <<>>} ->
-                        {ControlVTerm0, Undefined};
-                    {ok, ControlVTerm0, EncRest1} ->
-                        {ok, PayloadVTerm0, <<>>} = vterm_decode:external_binary_to_vterm(EncRest1),
-                        {ControlVTerm0, PayloadVTerm0}
-                end,
+            EncNode = dpi_resolve_node(Channel0, Header),
             {ok, Node, <<>>} = vterm_decode:internal_binary_to_vterm_atom(EncNode),
-            ReqId = vterm_newer_reference_ext:new(1, Node, 0, [0]),
-            From = vterm_new_pid_ext:new(Node, 0, 0, 0),
-            GroupLeader = From,
-            Module = vterm_small_atom_utf8_ext:new(3, <<"edf">>),
-            Function = vterm_small_atom_utf8_ext:new(3, <<"dop">>),
-            Arity = vterm_small_integer_ext:new(3),
-            OptList = [],
-            ControlDOP =
-                case dpi_resolve_token(NestedControlVTerm) of
-                    {ok, TokenVTerm} ->
-                        vdist_dop_spawn_request_tt:new(
-                            ReqId, From, GroupLeader, Module, Function, Arity, OptList, TokenVTerm
-                        );
-                    error ->
-                        vdist_dop_spawn_request:new(ReqId, From, GroupLeader, Module, Function, Arity, OptList)
+            EncSort = dpi_resolve_u64(RxSort),
+            {ok, Sort, <<>>} = vterm_decode:internal_binary_to_vterm(EncSort),
+            PayloadVTerm =
+                case MaybeNestedPayloadVTerm of
+                    nothing ->
+                        vterm_small_tuple_ext:new(3, [Node, Sort, NestedControlVTerm]);
+                    {just, NestedPayloadVTerm} ->
+                        vterm_small_tuple_ext:new(4, [Node, Sort, NestedControlVTerm, NestedPayloadVTerm])
                 end,
-            ControlVTerm = vdist_dop:dop_to_control_message_vterm(ControlDOP),
-            PayloadVTerm = vterm_list_ext:new(3, [Node, NestedControlVTerm, NestedPayloadVTerm], vterm_nil_ext:new()),
-            EncControl = vterm_encode:external_vterm_to_binary(ControlVTerm, #{allow_atom_cache_refs => false}),
-            EncPayload = vterm_encode:external_vterm_to_binary(PayloadVTerm, #{allow_atom_cache_refs => false}),
+            {EncControl, EncPayload} =
+                case IsPassThrough of
+                    false ->
+                        EncControl0 = vterm_encode:internal_vterm_to_binary(ControlVTerm, #{
+                            allow_atom_cache_refs => true
+                        }),
+                        EncPayload0 = vterm_encode:internal_vterm_to_binary(PayloadVTerm, #{
+                            allow_atom_cache_refs => true
+                        }),
+                        {EncControl0, EncPayload0};
+                    true ->
+                        EncControl0 = vterm_encode:external_vterm_to_binary(ControlVTerm, #{
+                            allow_atom_cache_refs => false
+                        }),
+                        EncPayload0 = vterm_encode:external_vterm_to_binary(PayloadVTerm, #{
+                            allow_atom_cache_refs => false
+                        }),
+                        {EncControl0, EncPayload0}
+                end,
             EncExternal = <<EncHeaders/bytes, EncControl/bytes, EncPayload/bytes>>,
-            {Channel, [{emit, EncExternal}]}
+            Channel1 = Channel0#vedf_channel{
+                rx_sort = RxSort + 1
+            },
+            {Channel1, [{emit, EncExternal}]}
     end.
 
 %% @private
@@ -712,22 +734,26 @@ dpi_redirect_spawn_request(Channel, _Entry, _Control, _MaybePayload, CompactFrag
     end.
 
 %% @private
-dpi_resolve_node(#vedf_channel{sysname = Sysname, rx_atom_cache = AtomCache}, Header) when
+dpi_resolve_atom(#vedf_channel{rx_atom_cache = AtomCache}, Header, Atom) when
     is_record(Header, vdist_fragment_header) orelse is_record(Header, vdist_normal_header)
 ->
     HeaderType = element(1, Header),
     {ok, _AtomCache, AtomTable} = HeaderType:update_atom_cache(Header, AtomCache),
-    case vdist_atom_translation_table:rfind(AtomTable, Sysname) of
+    case vdist_atom_translation_table:rfind(AtomTable, Atom) of
         {ok, InternalIndex} ->
-            AtomCacheRef = vterm_atom_cache_ref_resolved:new(InternalIndex, Sysname),
+            AtomCacheRef = vterm_atom_cache_ref_resolved:new(InternalIndex, Atom),
             vterm_encode:internal_vterm_to_binary(AtomCacheRef, #{allow_atom_cache_refs => true});
         {error, not_found} ->
-            AtomVTerm = vterm:expand(Sysname),
+            AtomVTerm = vterm:expand(Atom),
             vterm_encode:internal_vterm_to_binary(AtomVTerm, #{allow_atom_cache_refs => false})
     end;
-dpi_resolve_node(#vedf_channel{sysname = Sysname}, #vdist_pass_through_header{}) ->
-    AtomVTerm = vterm:expand(Sysname),
+dpi_resolve_atom(#vedf_channel{}, #vdist_pass_through_header{}, Atom) ->
+    AtomVTerm = vterm:expand(Atom),
     vterm_encode:internal_vterm_to_binary(AtomVTerm, #{allow_atom_cache_refs => false}).
+
+%% @private
+dpi_resolve_node(Channel = #vedf_channel{sysname = Sysname}, Header) ->
+    dpi_resolve_atom(Channel, Header, Sysname).
 
 %% @private
 dpi_resolve_token(ControlVTerm) ->
@@ -755,6 +781,19 @@ dpi_resolve_token(ControlVTerm) ->
             {ok, Token};
         _ ->
             error
+    end.
+
+%% @private
+dpi_resolve_u64(Val) when ?is_u64(Val) ->
+    case Val of
+        _ when Val < 256 ->
+            SmallIntegerExt = vterm_small_integer_ext:new(Val),
+            vterm_encode:internal_vterm_to_binary(SmallIntegerExt, #{});
+        _ when Val < 2147483648 ->
+            IntegerExt = vterm_integer_ext:new(Val),
+            vterm_encode:internal_vterm_to_binary(IntegerExt, #{});
+        _ ->
+            vterm_small_big_ext:new(8, 0, <<Val:64/unsigned-big-integer-unit:1>>)
     end.
 
 %% @private

@@ -31,7 +31,6 @@
     atom_text_release/1,
     channel_open/5,
     channel_close/1,
-    channel_index_get/0,
     channel_inspect/1,
     channel_list/0,
     channel_list/1,
@@ -57,6 +56,8 @@
     logger_recv/1,
     logger_set_capacity/1,
     logger_set_controlling_process/2,
+    router_info/0,
+    router_name/1,
     version_build_date/0,
     world_stats_get/0
 ]).
@@ -70,7 +71,6 @@
     atom_text_release/1,
     channel_open/5,
     channel_close/1,
-    channel_index_get/0,
     channel_inspect/1,
     channel_list/0,
     channel_list/1,
@@ -96,6 +96,8 @@
     logger_recv/1,
     logger_set_capacity/1,
     logger_set_controlling_process/2,
+    router_info/0,
+    router_name/1,
     world_stats_get/0
 ]).
 
@@ -166,10 +168,6 @@
     dop_unlink_id := dop_stats(),
     dop_unlink_id_ack := dop_stats()
 }.
--type channel_index() :: #{
-    rx_stats := channel_stats(),
-    slots := non_neg_integer()
-}.
 -type channel_inspection() :: #{
     controlling_process := pid(),
     entry := #{
@@ -200,15 +198,39 @@
 }.
 -type logger_select_handle() :: reference().
 -type logger_time() :: integer().
+-type world_stat_group_channel() :: #{
+    create := non_neg_integer(), destroy := non_neg_integer(), rx_stats := channel_stats()
+}.
+-type world_stat_group_memory() :: #{
+    vec_own_bin_create := non_neg_integer(),
+    vec_own_bin_create_capacity := non_neg_integer(),
+    vec_own_bin_realloc := non_neg_integer(),
+    vec_own_bin_realloc_capacity := non_neg_integer(),
+    vec_own_bin_destroy := non_neg_integer(),
+    vec_own_mem_create := non_neg_integer(),
+    vec_own_mem_create_capacity := non_neg_integer(),
+    vec_own_mem_realloc := non_neg_integer(),
+    vec_own_mem_realloc_capacity := non_neg_integer(),
+    vec_own_mem_destroy := non_neg_integer(),
+    vec_ref_bin_create := non_neg_integer(),
+    vec_ref_bin_destroy := non_neg_integer(),
+    vec_ref_ioq_create := non_neg_integer(),
+    vec_ref_ioq_destroy := non_neg_integer()
+}.
+-type router_info() :: #{
+    count := pos_integer(),
+    limit := pos_integer(),
+    names := [atom()]
+}.
 -type world_stats() :: #{
-    channels_created := non_neg_integer(),
-    channels_destroyed := non_neg_integer()
+    channel := world_stat_group_channel(),
+    memory := world_stat_group_memory(),
+    slots := non_neg_integer()
 }.
 
 -export_type([
     action/0,
     channel/0,
-    channel_index/0,
     channel_inspection/0,
     channel_stats/0,
     connection_id/0,
@@ -224,7 +246,10 @@
     logger_select_handle/0,
     logger_time/0,
     packet_size/0,
+    router_info/0,
     sysname/0,
+    world_stat_group_channel/0,
+    world_stat_group_memory/0,
     world_stats/0
 ]).
 
@@ -271,10 +296,6 @@ channel_open(_PacketSize, _Sysname, _Creation, _ConnectionId, _DistributionFlags
 channel_close(_Channel) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec channel_index_get() -> channel_index().
-channel_index_get() ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
 -spec channel_inspect(Channel :: channel()) -> channel_inspection().
 channel_inspect(_Channel) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
@@ -306,7 +327,8 @@ channel_set_tracing_process(_Channel, _NewTracePid) ->
         compact_fragments := boolean(),
         deep_packet_inspection := boolean(),
         logging := boolean(),
-        redirect_dist_operations := boolean()
+        redirect_dist_operations := boolean(),
+        untrusted := boolean()
     }.
 config_get() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
@@ -315,7 +337,8 @@ config_get() ->
     (compact_fragments) -> boolean();
     (deep_packet_inspection) -> boolean();
     (logging) -> boolean();
-    (redirect_dist_operations) -> boolean().
+    (redirect_dist_operations) -> boolean();
+    (untrusted) -> boolean().
 config_get(_Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -323,7 +346,8 @@ config_get(_Key) ->
     (compact_fragments, boolean()) -> ok;
     (deep_packet_inspection, boolean()) -> ok;
     (logging, boolean()) -> ok;
-    (redirect_dist_operations, boolean()) -> ok.
+    (redirect_dist_operations, boolean()) -> ok;
+    (untrusted, boolean()) -> ok.
 config_set(_Key, _Val) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -414,10 +438,20 @@ logger_set_capacity(_NewCapacity) ->
 logger_set_controlling_process(_Logger, _NewOwnerPid) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
+-spec router_info() -> RouterInfo when RouterInfo :: router_info().
+router_info() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec router_name(Sysname) -> RouterName when
+    Sysname :: sysname(),
+    RouterName :: atom().
+router_name(_Sysname) ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
 % TODO: This should be embedded in the NIF at build-time; see T151767026
 -spec version_build_date() -> non_neg_integer().
 version_build_date() ->
-    20230617.
+    20230808.
 
 -spec world_stats_get() -> world_stats().
 world_stats_get() ->

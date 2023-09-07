@@ -17,6 +17,10 @@ defmodule ErldistFilterElixirTests.MixProject do
     ]
   end
 
+  def application() do
+    [extra_applications: [:logger, :observer, :runtime_tools, :erldist_filter]]
+  end
+
   # Run "mix help deps" to learn about dependencies.
   defp deps() do
     [

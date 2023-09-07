@@ -82,7 +82,7 @@ edf_external_create(edf_channel_t *channel, edf_external_mode_t mode, uint64_t s
     frag = &ext->fragments[0];
     ext->fragment_id_next -= 1;
 
-    if (!vec_into_owned(&frag->vec, src_vec)) {
+    if (!vec_into_owned_mem(&frag->vec, src_vec)) {
         (void)edf_external_destroy(ext);
         return 0;
     }
@@ -172,7 +172,7 @@ edf_external_add_fragment(edf_external_t *ext, uint64_t fragment_id, vec_t *src_
     frag_size = vec_len(src_vec) - skip;
 
     frag = &ext->fragments[ext->fragment_count - ext->fragment_id_next];
-    if (!vec_into_owned(&frag->vec, src_vec)) {
+    if (!vec_into_owned_mem(&frag->vec, src_vec)) {
         return 0;
     }
     frag->skip = skip;

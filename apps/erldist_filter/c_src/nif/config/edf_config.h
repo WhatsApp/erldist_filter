@@ -26,6 +26,7 @@ struct edf_config_s {
     alignas(uintptr_t) bool deep_packet_inspection;
     alignas(uintptr_t) bool logging;
     alignas(uintptr_t) bool redirect_dist_operations;
+    alignas(uintptr_t) bool untrusted;
 };
 
 /* Global Declarations */
@@ -41,6 +42,7 @@ static bool edf_config_is_compact_fragments_enabled(void);
 static bool edf_config_is_deep_packet_inspection_enabled(void);
 static bool edf_config_is_logging_enabled(void);
 static bool edf_config_is_redirect_dist_operations_enabled(void);
+static bool edf_config_is_untrusted_enabled(void);
 
 /* Inline Function Definitions */
 
@@ -66,6 +68,12 @@ inline bool
 edf_config_is_redirect_dist_operations_enabled(void)
 {
     return (edf_config_global->redirect_dist_operations);
+}
+
+inline bool
+edf_config_is_untrusted_enabled(void)
+{
+    return (edf_config_global->untrusted);
 }
 
 #ifdef __cplusplus

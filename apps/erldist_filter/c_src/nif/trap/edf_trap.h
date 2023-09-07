@@ -96,7 +96,9 @@ extern ErlNifResourceType *edf_trap_resource_type;
 
 extern int edf_trap_load(ErlNifEnv *env);
 extern void edf_trap_unload(ErlNifEnv *env);
-extern ERL_NIF_TERM edf_trap_open(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp);
+static ERL_NIF_TERM edf_trap_open(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp);
+extern int edf_trap_open_x(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp, ERL_NIF_TERM *err_termp);
+static ERL_NIF_TERM edf_trap_open_x_make_term(ErlNifEnv *env, edf_trap_t *trap);
 extern edf_trap_result_t edf_trap_block_on_next(ErlNifEnv *caller_env, edf_trap_t *trap);
 static ERL_NIF_TERM edf_trap_schedule_from_term(ErlNifEnv *caller_env, ERL_NIF_TERM trap_term);
 extern ERL_NIF_TERM edf_trap_schedule_from_term_x(ErlNifEnv *caller_env, ERL_NIF_TERM trap_term, ERL_NIF_TERM keep_term);
@@ -106,6 +108,29 @@ static int edf_trap_attach_child(edf_trap_t *parent, edf_trap_t *child);
 static int edf_trap_detach_child(edf_trap_t *parent);
 
 /* Inline Function Definitions */
+
+inline ERL_NIF_TERM
+edf_trap_open(ErlNifEnv *env, const edf_trap_state_t *state, size_t sz, edf_trap_t **trapp)
+{
+    edf_trap_t *trap = NULL;
+    ERL_NIF_TERM err_term = THE_NON_VALUE;
+    if (!edf_trap_open_x(env, state, sz, &trap, &err_term)) {
+        return err_term;
+    }
+    if (trapp != NULL) {
+        *trapp = trap;
+    }
+    return edf_trap_open_x_make_term(env, trap);
+}
+
+inline ERL_NIF_TERM
+edf_trap_open_x_make_term(ErlNifEnv *env, edf_trap_t *trap)
+{
+    ERL_NIF_TERM trap_term = THE_NON_VALUE;
+    trap_term = enif_make_resource(env, (void *)trap);
+    (void)enif_release_resource((void *)trap);
+    return trap_term;
+}
 
 inline ERL_NIF_TERM
 edf_trap_schedule_from_term(ErlNifEnv *caller_env, ERL_NIF_TERM trap_term)
