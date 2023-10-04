@@ -57,7 +57,9 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {_, ^vnode, EDF.udist_dop_alias_send(), {_, :yes}}
+          # OTP 26+ only
+          # {_, ^vnode, EDF.udist_dop_alias_send(), {_, :yes}}
+          {_, ^vnode, _, {_, :yes}}
         ],
         @peers.logger_export(upeer)
       )
@@ -66,7 +68,9 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {:classify, :unsafe, :keep, ^vnode, EDF.udist_dop_alias_send(), {_, :yes}}
+          # OTP 26+ only
+          # {:classify, :unsafe, :keep, ^vnode, EDF.udist_dop_alias_send(), {_, :yes}}
+          {:classify, :unsafe, :keep, ^vnode, _, {_, :yes}}
         ],
         @peers.handler_export(upeer)
       )
