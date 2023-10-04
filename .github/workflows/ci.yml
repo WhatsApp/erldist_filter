@@ -14,9 +14,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.15.4
-            otp: 26.0.2
-            rebar3: 3.22.0
+          - elixir: 1.15.6
+            otp: 26.1.1
+            rebar3: 3.22.1
             lint: true
 
           - elixir: 1.14.5
@@ -56,7 +56,7 @@ jobs:
         run: mix format --check-formatted
 
       - name: Elixir Tests
-        run: mix test
+        run: mix test --trace
 
       - name: Logs
         uses: actions/upload-artifact@v3

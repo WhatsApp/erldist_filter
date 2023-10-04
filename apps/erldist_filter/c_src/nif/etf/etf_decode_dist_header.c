@@ -333,7 +333,7 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
             return TRAP_ERR(EXCP_ERROR_F(caller_env, "Fatal error: unknown etf_decode_dist_header_trap_t->state value %d\n",
                                          (int)(trap->state)));
         }
-    next_state : {
+    next_state: {
         if (TRAP_SHOULD_YIELD(trap)) {
             (void)vec_reader_destroy(vr);
             return TRAP_YIELD();
@@ -341,6 +341,200 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
         continue;
     }
     } while (1);
+
+#undef SKIP
+#undef READ_U32
+#undef READ_U16
+#undef READ_U8
+#undef RAW_BYTES
+}
+
+int
+etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_atom_translation_table_t *attab, vec_reader_t *vr,
+                            int *external_flags, slice_t *headers, ERL_NIF_TERM *err_termp)
+{
+    uint64_t dflags = channel->dflags;
+    edf_atom_cache_t *cache = channel->rx.cache;
+    uint8_t number_of_atom_cache_refs = 0;
+    size_t flags_size = 0;
+    const uint8_t *flagsp = NULL;
+    bool long_atoms = false;
+    int got_flags = 0;
+    int table_index = 0;
+
+#define RAW_BYTES() vec_reader_raw_bytes(vr)
+
+#define READ_U8(val)                                                                                                               \
+    do {                                                                                                                           \
+        if (!vec_reader_read_u8(vr, (val))) {                                                                                      \
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_read_u8() failed: unable to decode dist header\n");            \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
+#define READ_U16(val)                                                                                                              \
+    do {                                                                                                                           \
+        if (!vec_reader_read_u16(vr, (val))) {                                                                                     \
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_read_u16() failed: unable to decode dist header\n");           \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
+#define READ_U32(val)                                                                                                              \
+    do {                                                                                                                           \
+        if (!vec_reader_read_u32(vr, (val))) {                                                                                     \
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_read_u32() failed: unable to decode dist header\n");           \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
+#define SKIP(sz)                                                                                                                   \
+    do {                                                                                                                           \
+        if (!vec_reader_skip_exact(vr, (sz))) {                                                                                    \
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode dist header\n");         \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
+    headers->head = RAW_BYTES();
+    READ_U8(&number_of_atom_cache_refs);
+    (void)edf_atom_translation_table_set_size(attab, (size_t)(number_of_atom_cache_refs));
+    if (number_of_atom_cache_refs > 0) {
+        int byte_ix;
+        int bit_ix;
+        flags_size = (size_t)(ERTS_DIST_HDR_ATOM_CACHE_FLAG_BYTES(number_of_atom_cache_refs));
+        flagsp = RAW_BYTES();
+        SKIP(flags_size);
+        byte_ix = (int)(ERTS_DIST_HDR_ATOM_CACHE_FLAG_BYTE_IX(number_of_atom_cache_refs));
+        bit_ix = (int)(ERTS_DIST_HDR_ATOM_CACHE_FLAG_BIT_IX(number_of_atom_cache_refs));
+        if (flagsp[byte_ix] & (((uint8_t)ERTS_DIST_HDR_LONG_ATOMS_FLG) << bit_ix)) {
+            long_atoms = true;
+        }
+        *external_flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_REFS;
+    }
+    if (number_of_atom_cache_refs > 0) {
+        register uint32_t flags = 0;
+        while (table_index < (int)(number_of_atom_cache_refs)) {
+            uint8_t internal_segment_index;
+            size_t cache_index;
+            size_t atom_length;
+            ERL_NIF_TERM atom_term;
+
+            if (!got_flags) {
+                int half_bytes_remaining = ((int)(number_of_atom_cache_refs)) - table_index;
+                if (half_bytes_remaining > 6) {
+                    flags = ((((uint32_t)flagsp[3]) << 24) | (((uint32_t)flagsp[2]) << 16) | (((uint32_t)flagsp[1]) << 8) |
+                             ((uint32_t)flagsp[0]));
+                    flagsp += 4;
+                } else {
+                    flags = 0;
+                    switch (half_bytes_remaining) {
+                    case 6:
+                    case 5:
+                        flags |= (((uint32_t)flagsp[2]) << 16);
+                    case 4:
+                    case 3:
+                        flags |= (((uint32_t)flagsp[1]) << 8);
+                    case 2:
+                    case 1:
+                        flags |= ((uint32_t)flagsp[0]);
+                    }
+                }
+                got_flags = 8;
+            }
+
+            cache_index = (size_t)((flags & 7) << 8);
+            READ_U8(&internal_segment_index);
+            cache_index += (size_t)internal_segment_index;
+            if (cache_index >= ERTS_ATOM_CACHE_SIZE) {
+                *err_termp = EXCP_ERROR_F(
+                    caller_env, "Dist Header atom cache entry cache_index=%u is greater than or equal to ERTS_ATOM_CACHE_SIZE=%u\n",
+                    cache_index, ERTS_ATOM_CACHE_SIZE);
+                return 0;
+            }
+            if ((flags & 8) == 0) {
+                /* atom already cached */
+                atom_term = cache->entries[cache_index];
+                if (atom_term == THE_NON_VALUE) {
+                    *err_termp = EXCP_ERROR_F(caller_env,
+                                              "Dist Header existing atom cache entry cache_index=%u points to THE_NON_VALUE in the "
+                                              "cache, expected cached atom\n",
+                                              cache_index);
+                    return 0;
+                }
+                if (!edf_atom_translation_table_set_entry(attab, (int)cache_index, table_index, atom_term, false)) {
+                    *err_termp = EXCP_ERROR_F(caller_env,
+                                              "Call to edf_atom_translation_table_set_entry() failed: Dist Header existing atom "
+                                              "cache entry cache_index=%u with atom_term=%T unable to set translation table\n",
+                                              cache_index, atom_term);
+                    return 0;
+                }
+                *external_flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_READ;
+                CHANNEL_RX_STATS_COUNT(channel, atom_cache_read_count, 1);
+            } else {
+                /* new cached atom */
+                const uint8_t *atom_text = NULL;
+                ErtsAtomEncoding atom_encoding;
+                if (long_atoms) {
+                    uint16_t long_atom_length;
+                    READ_U16(&long_atom_length);
+                    atom_length = (size_t)long_atom_length;
+                } else {
+                    uint8_t short_atom_length;
+                    READ_U8(&short_atom_length);
+                    atom_length = (size_t)short_atom_length;
+                }
+                if (atom_length > MAX_ATOM_SZ_LIMIT) {
+                    *err_termp = EXCP_ERROR_F(caller_env,
+                                              "Dist Header new atom cache entry cache_index=%u has an atom_length=%u which "
+                                              "is greater than MAX_ATOM_SZ_LIMIT=%u\n",
+                                              cache_index, atom_length, MAX_ATOM_SZ_LIMIT);
+                    return 0;
+                }
+                atom_text = RAW_BYTES();
+                SKIP(atom_length);
+                if (!(dflags & DFLAG_UTF8_ATOMS)) {
+                    atom_encoding = ERTS_ATOM_ENC_LATIN1;
+                } else {
+                    atom_encoding = ERTS_ATOM_ENC_UTF8;
+                }
+                if (!edf_atom_text_put_and_keep(atom_text, (signed int)atom_length, atom_encoding, &atom_term)) {
+                    *err_termp = EXCP_ERROR_F(caller_env,
+                                              "Call to edf_atom_text_put_and_keep() failed: Dist Header new atom cache entry "
+                                              "cache_index=%u with atom_length=%u unable to create atom\n",
+                                              cache_index, atom_length);
+                    return 0;
+                }
+                if (cache->entries[cache_index] != THE_NON_VALUE) {
+                    *external_flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_OVERWRITE;
+                    CHANNEL_RX_STATS_COUNT(channel, atom_cache_overwrite_count, 1);
+                }
+                if (!edf_atom_cache_maybe_overwrite(cache, cache_index, atom_term)) {
+                    (void)edf_atom_text_release(atom_term);
+                    *err_termp = EXCP_ERROR_F(caller_env,
+                                              "Call to edf_atom_cache_maybe_overwrite() failed: Dist Header new atom cache entry "
+                                              "cache_index=%u with atom_length=%u unable to create atom\n",
+                                              cache_index, atom_length);
+                    return 0;
+                }
+                if (!edf_atom_translation_table_set_entry(attab, (int)cache_index, table_index, atom_term, true)) {
+                    *err_termp =
+                        EXCP_ERROR_F(caller_env,
+                                     "Call to edf_atom_translation_table_set_entry() failed: Dist Header new atom cache entry "
+                                     "cache_index=%u with atom_length=%u unable to create atom\n",
+                                     cache_index, atom_length);
+                    return 0;
+                }
+                *external_flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_WRITE;
+                CHANNEL_RX_STATS_COUNT(channel, atom_cache_write_count, 1);
+            }
+            flags >>= 4;
+            got_flags -= 1;
+            table_index += 1;
+        }
+    }
+    headers->tail = RAW_BYTES();
+    return 1;
 
 #undef SKIP
 #undef READ_U32

@@ -16,7 +16,7 @@
 -module(erldist_filter_nif_prop).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec).
 
 -include_lib("proper/include/proper.hrl").
 
@@ -52,6 +52,7 @@
 %%% Helpers
 %%%=============================================================================
 
+%% @private
 vdist_derive_atoms(VDistNoAtoms) ->
     VTerm0 = vdist_dop:dop_to_control_message_vterm(VDistNoAtoms),
     {Atoms, VTerm1} = vterm_reference_atoms(VTerm0),
@@ -59,15 +60,23 @@ vdist_derive_atoms(VDistNoAtoms) ->
     VDistWithAtoms = vdist_dop:control_message_vterm_to_dop(VTerm2),
     {Atoms, VDistWithAtoms}.
 
+-spec vdist_test_vectors_derive_atoms([VDistNoAtoms]) -> [{VDistNoAtoms, {Atoms, VDistWithAtoms}}] when
+    VDistNoAtoms :: vdist:dop_t() | eqwalizer:dynamic(),
+    Atoms :: tuple() | eqwalizer:dynamic(),
+    VDistWithAtoms :: vdist:dop_t() | eqwalizer:dynamic().
 vdist_test_vectors_derive_atoms([VDistNoAtoms | TestVectors]) ->
     {Atoms, VDistWithAtoms} = vdist_derive_atoms(VDistNoAtoms),
     [{VDistNoAtoms, {Atoms, VDistWithAtoms}} | vdist_test_vectors_derive_atoms(TestVectors)];
 vdist_test_vectors_derive_atoms([]) ->
     [].
 
+-spec vterm_report_not_equal(A, B) -> ok when A :: term(), B :: term().
 vterm_report_not_equal(A, B) ->
     io:format("Expected:~n~0tp~nActual:~n~0tp~n", [A, B]).
 
+-spec vterm_reference_atoms(VTerm) -> {Atoms, VTerm} when
+    VTerm :: vterm:t() | eqwalizer:dynamic(),
+    Atoms :: tuple() | eqwalizer:dynamic().
 vterm_reference_atoms(VTerm0) ->
     {VTerm1, AtomMap} = vterm:xform(VTerm0, maps:new(), fun vterm_reference_atoms_xform/2),
     {VTerm2, undefined} = vterm:xform(VTerm1, undefined, fun vterm_repair_xform/2),
@@ -77,10 +86,17 @@ vterm_reference_atoms(VTerm0) ->
     ]),
     {Atoms, VTerm2}.
 
+-spec vterm_resolve_atoms(Atoms, VTerm) -> VTerm when
+    Atoms :: tuple() | eqwalizer:dynamic(),
+    VTerm :: vterm:t() | eqwalizer:dynamic().
 vterm_resolve_atoms(Atoms, VTerm0) ->
     {VTerm1, Atoms} = vterm:xform(VTerm0, Atoms, fun vterm_resolve_atoms_xform/2),
     VTerm1.
 
+-spec vterm_test_vectors_resolve_atoms([{Atoms, VTerm}]) -> [{Atoms, VTerm, ExpectedVTerm}] when
+    Atoms :: tuple() | eqwalizer:dynamic(),
+    VTerm :: vterm:t() | eqwalizer:dynamic(),
+    ExpectedVTerm :: vterm:t() | eqwalizer:dynamic().
 vterm_test_vectors_resolve_atoms([{Atoms, VTerm} | TestVectors]) ->
     ExpectedVTerm = vterm_resolve_atoms(Atoms, VTerm),
     [{Atoms, VTerm, ExpectedVTerm} | vterm_test_vectors_resolve_atoms(TestVectors)];
@@ -91,6 +107,7 @@ vterm_test_vectors_resolve_atoms([]) ->
 %%% Properties
 %%%=============================================================================
 
+-spec prop_dist_ext_to_vdist_2(ct_suite:ct_config()) -> proper:test().
 prop_dist_ext_to_vdist_2(_Config) ->
     ?FORALL(
         {VDistNoAtoms, {Atoms, VDistWithAtoms}},
@@ -119,6 +136,7 @@ prop_dist_ext_to_vdist_2(_Config) ->
         end
     ).
 
+-spec prop_dist_ext_to_vterm_2(ct_suite:ct_config()) -> proper:test().
 prop_dist_ext_to_vterm_2(_Config) ->
     ?FORALL(
         {VTerm, Atoms, VTermWithAtomCacheRefs, VTermResolved},
@@ -151,6 +169,7 @@ prop_dist_ext_to_vterm_2(_Config) ->
         end
     ).
 
+-spec prop_dist_ext_to_vterm_3(ct_suite:ct_config()) -> proper:test().
 prop_dist_ext_to_vterm_3(_Config) ->
     ?FORALL(
         {{VTerm, Atoms, VTermWithAtomCacheRefs, _VTermResolved}, Limit},
@@ -174,6 +193,7 @@ prop_dist_ext_to_vterm_3(_Config) ->
         end
     ).
 
+-spec prop_dist_int_to_vdist_2(ct_suite:ct_config()) -> proper:test().
 prop_dist_int_to_vdist_2(_Config) ->
     ?FORALL(
         {VDistNoAtoms, {Atoms, VDistWithAtoms}},
@@ -202,6 +222,7 @@ prop_dist_int_to_vdist_2(_Config) ->
         end
     ).
 
+-spec prop_dist_int_to_vterm_2(ct_suite:ct_config()) -> proper:test().
 prop_dist_int_to_vterm_2(_Config) ->
     ?FORALL(
         {VTerm, Atoms, VTermWithAtomCacheRefs, VTermResolved},
@@ -222,6 +243,7 @@ prop_dist_int_to_vterm_2(_Config) ->
         end
     ).
 
+-spec prop_dist_int_to_vterm_3(ct_suite:ct_config()) -> proper:test().
 prop_dist_int_to_vterm_3(_Config) ->
     ?FORALL(
         {{VTerm, Atoms, VTermWithAtomCacheRefs, _VTermResolved}, Limit},

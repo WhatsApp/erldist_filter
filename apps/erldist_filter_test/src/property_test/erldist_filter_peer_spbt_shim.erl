@@ -16,7 +16,7 @@
 -module(erldist_filter_peer_spbt_shim).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec).
 
 %% Shim API
 -export([
@@ -49,6 +49,15 @@
     wait_until_net_kernel_started/1
 ]).
 
+%% Types
+-type upeer() :: erldist_filter_peer_spbt_model:upeer().
+-type vpeer() :: erldist_filter_peer_spbt_model:vpeer().
+
+-export_type([
+    upeer/0,
+    vpeer/0
+]).
+
 %% Macros
 -define(SUP, erldist_filter_peer_spbt_sup).
 -define(RPC_DEFAULT_TIMEOUT, timer:minutes(1)).
@@ -57,15 +66,22 @@
 %%% Shim API functions
 %%%=============================================================================
 
+-spec noop() -> ok.
 noop() ->
     ok.
 
+-spec start_upeer(UPeerNode) -> {ok, {UPeerNode, UPeerPid}} when UPeerNode :: node(), UPeerPid :: pid().
 start_upeer(UPeerNode) ->
     start_peer(UPeerNode, ?MODULE, ?FUNCTION_NAME).
 
+-spec start_vpeer(VPeerNode) -> {ok, {VPeerNode, VPeerPid}} when VPeerNode :: node(), VPeerPid :: pid().
 start_vpeer(VPeerNode) ->
     start_peer(VPeerNode, ?MODULE, ?FUNCTION_NAME).
 
+-spec start_random_suffix_upeer_and_vpeer_from_label(Label) -> {ok, {UPeer, VPeer}} when
+    Label :: string(),
+    UPeer :: upeer(),
+    VPeer :: vpeer().
 start_random_suffix_upeer_and_vpeer_from_label(Label) when is_list(Label) ->
     Suffix = io_lib:format("~s-~4..0B", [os:getpid(), rand:uniform(9999)]),
     UName = list_to_atom(lists:flatten(io_lib:format("upeer-~s-~s@127.0.0.1", [Label, Suffix]))),
@@ -99,12 +115,14 @@ start_peer(PeerNode, _Module, _FunctionName) ->
         type => worker,
         modules => [peer]
     },
-    {ok, PeerPid, _ActualPeerNode} = ?SUP:start_child(ChildSpec),
-    Peer = {PeerNode, PeerPid},
-    _ = rpc(Peer, code, add_pathsa, [code:get_path()]),
-    _ = rpc(Peer, net_kernel, start, [PeerNode, #{name_domain => longnames}]),
-    _ = rpc(Peer, ?MODULE, wait_until_net_kernel_started, [PeerNode]),
-    {ok, Peer}.
+    case ?SUP:start_child(ChildSpec) of
+        {ok, PeerPid, _ActualPeerNode} when is_pid(PeerPid) ->
+            Peer = {PeerNode, PeerPid},
+            _ = rpc(Peer, code, add_pathsa, [code:get_path()]),
+            _ = rpc(Peer, net_kernel, start, [PeerNode, #{name_domain => longnames}]),
+            _ = rpc(Peer, ?MODULE, wait_until_net_kernel_started, [PeerNode]),
+            {ok, Peer}
+    end.
 
 %% @private
 flatten_peer_args([T | Rest]) when is_tuple(T) ->
@@ -114,15 +132,19 @@ flatten_peer_args([T | Rest]) when is_tuple(T) ->
 flatten_peer_args([]) ->
     [].
 
+-spec ping(U, V) -> pong | pang when U :: upeer(), V :: vpeer().
 ping(U, _V = {VPeerNode, _VPeerPid}) ->
     rpc(U, ?MODULE, upeer_ping, [VPeerNode]).
 
+-spec alias_send(U, V, Term) -> pong when U :: upeer(), V :: vpeer(), Term :: term().
 alias_send(U, _V = {VPeerNode, _VPeerPid}, Term) ->
     rpc(U, ?MODULE, upeer_alias_send, [VPeerNode, Term]).
 
+-spec reg_send(U, V, RegName, Term) -> pong when U :: upeer(), V :: vpeer(), RegName :: atom(), Term :: term().
 reg_send(U, _V = {VPeerNode, _VPeerPid}, RegName, Term) ->
     rpc(U, ?MODULE, upeer_reg_send, [VPeerNode, RegName, Term]).
 
+-spec send_sender(U, V, Term) -> pong when U :: upeer(), V :: vpeer(), Term :: term().
 send_sender(U, _V = {VPeerNode, _VPeerPid}, Term) ->
     rpc(U, ?MODULE, upeer_send_sender, [VPeerNode, Term]).
 
@@ -130,9 +152,11 @@ send_sender(U, _V = {VPeerNode, _VPeerPid}, Term) ->
 %%% UPeer API functions
 %%%=============================================================================
 
+-spec upeer_ping(node()) -> pong | pang.
 upeer_ping(VPeerNode) ->
     net_adm:ping(VPeerNode).
 
+-spec upeer_alias_send(node(), term()) -> pong.
 upeer_alias_send(VNode, Term) ->
     upeer_gen_spawn(fun() ->
         UAlias = erlang:alias(),
@@ -152,6 +176,7 @@ upeer_alias_send(VNode, Term) ->
         pong
     end).
 
+-spec upeer_reg_send(node(), atom(), term()) -> pong.
 upeer_reg_send(VNode, RegName, Term) ->
     upeer_gen_spawn(fun() ->
         true = erlang:register(RegName, self()),
@@ -171,6 +196,7 @@ upeer_reg_send(VNode, RegName, Term) ->
         pong
     end).
 
+-spec upeer_send_sender(node(), term()) -> pong.
 upeer_send_sender(VNode, Term) ->
     upeer_gen_spawn(fun() ->
         UPid = erlang:self(),
@@ -206,6 +232,7 @@ unode_start_aliased_process(VNode, UAlias) ->
             erlang:error(Reason)
     end.
 
+-spec vnode_aliased_process_init(UParent :: pid(), UAlias :: reference()) -> no_return().
 vnode_aliased_process_init(UParent, UAlias) ->
     VAlias = erlang:alias(),
     UParent ! {UParent, self(), VAlias},
@@ -237,6 +264,7 @@ unode_start_registered_process(VNode, RegName) ->
             erlang:error(Reason)
     end.
 
+-spec vnode_registered_process_init(UParent :: pid(), RegName :: atom()) -> no_return().
 vnode_registered_process_init(UParent, RegName) ->
     true = erlang:register(RegName, self()),
     UParent ! {UParent, self(), RegName},
@@ -268,6 +296,7 @@ unode_start_send_sender_process(VNode, UPid) ->
             erlang:error(Reason)
     end.
 
+-spec vnode_send_sender_process_init(UParent :: pid(), UPid :: pid()) -> no_return().
 vnode_send_sender_process_init(UParent, UPid) ->
     VPid = erlang:self(),
     UParent ! {UParent, self(), VPid},
@@ -289,10 +318,23 @@ vnode_send_sender_process_loop(VPid, UPid) ->
 %%%-----------------------------------------------------------------------------
 
 %% @private
+-spec rpc(Peer, Module, FunctionName, Arguments) -> Result when
+    Peer :: upeer() | vpeer(),
+    Module :: module(),
+    FunctionName :: atom(),
+    Arguments :: nil() | [eqwalizer:dynamic()],
+    Result :: eqwalizer:dynamic().
 rpc(Peer = {_PeerNode, _PeerPid}, Module, FunctionName, Arguments) ->
     rpc(Peer, Module, FunctionName, Arguments, ?RPC_DEFAULT_TIMEOUT).
 
 %% @private
+-spec rpc(Peer, Module, FunctionName, Arguments, Timeout) -> Result when
+    Peer :: upeer() | vpeer(),
+    Module :: module(),
+    FunctionName :: atom(),
+    Arguments :: nil() | [eqwalizer:dynamic()],
+    Timeout :: timeout(),
+    Result :: eqwalizer:dynamic().
 rpc(_Peer = {_PeerNode, PeerPid}, Module, FunctionName, Arguments, Timeout) ->
     peer:call(PeerPid, Module, FunctionName, Arguments, Timeout).
 
@@ -317,6 +359,7 @@ upeer_gen_spawn(Fun) ->
         {'DOWN', UMon, process, UPid, Reason} -> exit(Reason)
     end.
 
+-spec wait_until_net_kernel_started(node()) -> ok.
 wait_until_net_kernel_started(Node) ->
     case net_kernel:get_state() of
         #{started := no} ->

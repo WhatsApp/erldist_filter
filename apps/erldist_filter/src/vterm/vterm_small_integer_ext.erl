@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vterm_small_integer_ext).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 

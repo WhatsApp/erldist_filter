@@ -108,7 +108,7 @@ static int edf_channel_inspect_stats_dop(ErlNifEnv *env, edf_channel_stats_dop_t
 int
 edf_channel_inspect_stats(ErlNifEnv *env, edf_channel_stats_t *stats, ERL_NIF_TERM *termp)
 {
-#define RET_MAP_SIZE (47)
+#define RET_MAP_SIZE (49)
 
     ERL_NIF_TERM keys[RET_MAP_SIZE];
     ERL_NIF_TERM vals[RET_MAP_SIZE];
@@ -151,6 +151,10 @@ edf_channel_inspect_stats(ErlNifEnv *env, edf_channel_stats_t *stats, ERL_NIF_TE
     vals[v++] = enif_make_uint64(env, (ErlNifUInt64)stats->payload_has_export_ext);
     keys[k++] = ATOM(payload_has_new_fun_ext);
     vals[v++] = enif_make_uint64(env, (ErlNifUInt64)stats->payload_has_new_fun_ext);
+    keys[k++] = ATOM(fastpath);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)stats->fastpath);
+    keys[k++] = ATOM(slowpath);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)stats->slowpath);
     keys[k++] = ATOM(dop_link);
     if (!edf_channel_inspect_stats_dop(env, &stats->dop_link, &vals[v++])) {
         return vals[v - 1];

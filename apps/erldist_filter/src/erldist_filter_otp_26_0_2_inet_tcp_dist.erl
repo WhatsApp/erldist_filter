@@ -28,6 +28,8 @@
 -oncall("whatsapp_clr").
 -wacov(ignore).
 
+-eqwalizer({nowarn_function, fam_listen/4}).
+
 -include_lib("kernel/include/logger.hrl").
 
 %% Handles the connection setup phase with other Erlang nodes.
@@ -240,7 +242,7 @@ listen_loop(Driver, First, Last, Options) ->
       Creation :: 1..16#FFFFFFFF,
       Reason :: system_limit | inet:posix(),
       ListenFun :: fun((inet:port_number(), inet:port_number(), [gen_tcp:listen_option()]) ->
-                           {ok, {ListeningSocket, Address, Creation}} |
+                           {ok, ListeningSocket} |
                            {error, Reason}).
 fam_listen(Family, Name, Host, ListenFun) ->
     maybe
@@ -296,15 +298,15 @@ listen_options() ->
 -spec merge_options(Opts, ForcedOpts) -> MergedOpts when
       Opts :: proplists:proplist(),
       ForcedOpts :: proplists:proplist(),
-      MergedOpts :: map().
+      MergedOpts :: proplists:proplist().
 merge_options(Opts, ForcedOpts) ->
     merge_options(Opts, ForcedOpts, []).
 %%
 -spec merge_options(Opts, ForcedOpts, DefaultOpts) -> MergedOpts when
     Opts :: proplists:proplist(),
     ForcedOpts :: proplists:proplist(),
-    DefaultOpts :: map(),
-    MergedOpts :: map().
+    DefaultOpts :: proplists:proplist(),
+    MergedOpts :: proplists:proplist().
 merge_options(Opts, ForcedOpts, DefaultOpts) ->
     Forced = merge_options(ForcedOpts),
     Default = merge_options(DefaultOpts),
@@ -376,7 +378,10 @@ accept(Listen) ->
       Driver :: module(),
       Listen :: gen_tcp:socket().
 gen_accept(Driver, Listen) ->
-    spawn_opt(?MODULE, accept_loop, [Driver, self(), Listen], [link, {priority, max}]).
+    case spawn_opt(?MODULE, accept_loop, [Driver, self(), Listen], [link, {priority, max}]) of
+        AcceptPid when is_pid(AcceptPid) ->
+            AcceptPid
+    end.
 
 -spec accept_loop(Driver, Kernel, Listen) -> no_return() when
       Driver :: module(),
@@ -439,9 +444,12 @@ accept_connection(AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
       Allowed :: list(),
       SetupTime :: non_neg_integer().
 gen_accept_connection(Driver, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
-    spawn_opt(?MODULE, do_accept,
+    case spawn_opt(?MODULE, do_accept,
 	      [Driver, self(), AcceptPid, Socket, MyNode, Allowed, SetupTime],
-	      erldist_filter_otp_26_0_2_dist_util:net_ticker_spawn_options()).
+	      erldist_filter_otp_26_0_2_dist_util:net_ticker_spawn_options()) of
+        ConnectionSupervisorPid when is_pid(ConnectionSupervisorPid) ->
+            ConnectionSupervisorPid
+    end.
 
 -spec do_accept(Driver, Kernel, AcceptPid, Socket, MyNode, Allowed, SetupTime) -> no_return() when
       Driver :: module(),
@@ -549,9 +557,12 @@ setup(Node, Type, MyNode, LongOrShortNames,SetupTime) ->
       LongOrShortNames :: shortnames | longnames,
       SetupTime :: non_neg_integer().
 gen_setup(Driver, Node, Type, MyNode, LongOrShortNames, SetupTime) ->
-    spawn_opt(?MODULE, do_setup,
+    case spawn_opt(?MODULE, do_setup,
 	      [Driver, self(), Node, Type, MyNode, LongOrShortNames, SetupTime],
-	      erldist_filter_otp_26_0_2_dist_util:net_ticker_spawn_options()).
+	      erldist_filter_otp_26_0_2_dist_util:net_ticker_spawn_options()) of
+        ConnectionSupervisorPid when is_pid(ConnectionSupervisorPid) ->
+            ConnectionSupervisorPid
+    end.
 
 -spec do_setup(Driver, Kernel, Node, Type, MyNode, LongOrShortNames, SetupTime) -> no_return() when
       Driver :: module(),

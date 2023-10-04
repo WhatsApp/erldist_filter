@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_handler_sup).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 

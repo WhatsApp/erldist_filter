@@ -13,8 +13,8 @@
 #include "../core/xnif_trace.h"
 
 int
-etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external, vec_t *slice, udist_t *up,
-                         ERL_NIF_TERM *err_termp)
+etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external, bool skip_slow_terms, vec_t *slice,
+                         udist_t *up, ERL_NIF_TERM *err_termp)
 {
     vec_reader_t vr[1];
     uint8_t tag;
@@ -68,9 +68,23 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         }                                                                                                                          \
     } while (0)
 
+#define SKIP_PID_TERM(pidp)                                                                                                        \
+    do {                                                                                                                           \
+        if (!etf_skip_pid_term(caller_env, vtenv, false, vr, (pidp), err_termp)) {                                                 \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
 #define READ_REFERENCE_TERM(refp)                                                                                                  \
     do {                                                                                                                           \
         if (!etf_decode_reference_term(caller_env, vtenv, false, vr, (refp), err_termp)) {                                         \
+            return 0;                                                                                                              \
+        }                                                                                                                          \
+    } while (0)
+
+#define SKIP_REFERENCE_TERM(refp)                                                                                                  \
+    do {                                                                                                                           \
+        if (!etf_skip_reference_term(caller_env, vtenv, false, vr, (refp), err_termp)) {                                           \
             return 0;                                                                                                              \
         }                                                                                                                          \
     } while (0)
@@ -173,7 +187,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = -1;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_PID_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_PID_TERM(&up->control.data.send_to);
+        } else {
+            READ_PID_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
     case DOP_EXIT:
@@ -255,7 +273,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = 3;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_PID_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_PID_TERM(&up->control.data.send_to);
+        } else {
+            READ_PID_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
     case DOP_EXIT_TT:
@@ -351,7 +373,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = -1;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_PID_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_PID_TERM(&up->control.data.send_to);
+        } else {
+            READ_PID_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
     case DOP_SEND_SENDER_TT:
@@ -367,7 +393,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = 3;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_PID_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_PID_TERM(&up->control.data.send_to);
+        } else {
+            READ_PID_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
     case DOP_PAYLOAD_EXIT:
@@ -526,7 +556,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = -1;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_REFERENCE_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_REFERENCE_TERM(&up->control.data.send_to);
+        } else {
+            READ_REFERENCE_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_ALIAS;
         break;
     case DOP_ALIAS_SEND_TT:
@@ -542,7 +576,11 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = 3;
         up->info.payload = true;
         SKIP_TERMS(1);
-        READ_REFERENCE_TERM(&up->control.data.send_to);
+        if (skip_slow_terms) {
+            SKIP_REFERENCE_TERM(&up->control.data.send_to);
+        } else {
+            READ_REFERENCE_TERM(&up->control.data.send_to);
+        }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_ALIAS;
         break;
     case DOP_UNLINK_ID:
@@ -581,7 +619,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
 
 #undef READ_TUPLE_HEADER
 #undef READ_FIXED_INTEGER
+#undef SKIP_REFERENCE_TERM
 #undef READ_REFERENCE_TERM
+#undef SKIP_PID_TERM
 #undef READ_PID_TERM
 #undef READ_ATOM_TERM
 #undef SKIP_TERMS

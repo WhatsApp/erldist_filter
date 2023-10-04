@@ -8,6 +8,388 @@
 
 #include "udist.h"
 #include "../channel/edf_channel.h"
+#include "../etf/etf_decode.h"
+#include "../uterm/uterm.h"
+
+#define EMIT()                                                                                                                     \
+    do {                                                                                                                           \
+        up->flags |= (UDIST_CLASSIFY_FLAG_EMIT);                                                                                   \
+    } while (0)
+
+#define LOG()                                                                                                                      \
+    do {                                                                                                                           \
+        up->flags |= (UDIST_CLASSIFY_FLAG_LOG_EVENT);                                                                              \
+    } while (0)
+
+#define LOG_DROP()                                                                                                                 \
+    do {                                                                                                                           \
+        up->flags |= (UDIST_CLASSIFY_FLAG_LOG_EVENT | UDIST_CLASSIFY_FLAG_DROP);                                                   \
+    } while (0)
+
+#define LOG_DROP_OR_REDIRECT()                                                                                                     \
+    do {                                                                                                                           \
+        up->flags |= (UDIST_CLASSIFY_FLAG_LOG_EVENT | UDIST_CLASSIFY_FLAG_DROP | UDIST_CLASSIFY_FLAG_REDIRECT_DOP);                \
+    } while (0)
+
+#define LOG_REDIRECT_SPAWN_REQUEST()                                                                                               \
+    do {                                                                                                                           \
+        up->flags |= (UDIST_CLASSIFY_FLAG_LOG_EVENT | UDIST_CLASSIFY_FLAG_REDIRECT_SPAWN_REQUEST);                                 \
+    } while (0)
+
+static int udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                               slice_t *payload, ERL_NIF_TERM *err_termp);
+static int udist_classify_send_to_net_kernel(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted,
+                                             bool is_pass_through, slice_t *payload, ERL_NIF_TERM *err_termp);
+static int udist_classify_send_to_rex(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                                      slice_t *payload, ERL_NIF_TERM *err_termp);
+
+int
+udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through, slice_t *payload,
+               ERL_NIF_TERM *err_termp)
+{
+    if (up->flags != UDIST_CLASSIFY_FLAG_NONE) {
+        return 1;
+    }
+    switch (up->control.tag) {
+    case UDIST_CONTROL_TAG_EXIT:
+        // LOG, DROP
+        LOG_DROP();
+        return 1;
+    case UDIST_CONTROL_TAG_EXIT2:
+        // LOG, DROP or REDIRECT
+        LOG_DROP_OR_REDIRECT();
+        return 1;
+    case UDIST_CONTROL_TAG_GROUP_LEADER:
+        // LOG, DROP or REDIRECT
+        LOG_DROP_OR_REDIRECT();
+        return 1;
+    case UDIST_CONTROL_TAG_LINK:
+        // LOG, DROP
+        LOG_DROP();
+        return 1;
+    case UDIST_CONTROL_TAG_MONITOR_RELATED:
+        if (untrusted) {
+            // LOG, EMIT
+            LOG();
+            return 1;
+        }
+        // EMIT
+        EMIT();
+        return 1;
+    case UDIST_CONTROL_TAG_SEND_TO_ALIAS:
+        if (untrusted) {
+            // LOG, DROP or REDIRECT
+            LOG_DROP_OR_REDIRECT();
+            return 1;
+        }
+        return udist_classify_send(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+    case UDIST_CONTROL_TAG_SEND_TO_NAME: {
+        if (untrusted) {
+            // LOG, DROP or REDIRECT
+            LOG_DROP_OR_REDIRECT();
+            return 1;
+        }
+        if (up->control.data.send_to == ATOM(net_kernel)) {
+            return udist_classify_send_to_net_kernel(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+        } else if (up->control.data.send_to == ATOM(rex)) {
+            return udist_classify_send_to_rex(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+        }
+        return udist_classify_send(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+    }
+    case UDIST_CONTROL_TAG_SEND_TO_PID:
+        if (untrusted) {
+            // LOG, DROP or REDIRECT
+            LOG_DROP_OR_REDIRECT();
+            return 1;
+        }
+        return udist_classify_send(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+    case UDIST_CONTROL_TAG_SPAWN_REPLY:
+        if (untrusted) {
+            // LOG, EMIT
+            LOG();
+            return 1;
+        }
+        // EMIT
+        EMIT();
+        return 1;
+    case UDIST_CONTROL_TAG_SPAWN_REQUEST:
+        // LOG, REDIRECT
+        LOG_REDIRECT_SPAWN_REQUEST();
+        return 1;
+    case UDIST_CONTROL_TAG_UNLINK:
+        if (untrusted) {
+            // LOG, EMIT
+            LOG();
+            return 1;
+        }
+        // EMIT
+        EMIT();
+        return 1;
+    default:
+        *err_termp = EXCP_ERROR_F(caller_env, "Unknown control tag=%u for dop=%u\n", up->control.tag, up->info.dop);
+        return 0;
+    }
+}
+
+int
+udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through, slice_t *payload,
+                    ERL_NIF_TERM *err_termp)
+{
+    // Logs, emits, drops, and/or redirects any messages matching the following:
+    //
+    //     {system, From, Request}
+    //     {'EXIT', Pid, Reason}
+    //     {'$gen_cast', {try_again_restart, TryAgainId}}
+    //     {'$gen_call', From, {start_child, ChildSpec}}
+    //     {'$gen_call', From, {terminate_child, ChildId}}
+    //     {'$gen_call', From, {restart_child, ChildId}}
+    //     {'$gen_call', From, {delete_child, ChildId}}
+    //     {io_request, From, ReplyAs, Request}
+    //     {io_reply, ReplyAs, Reply}
+    //
+    // Otherwise, emit the message.
+    vec_t vec[1];
+    vec_reader_t vr[1];
+    uint32_t arity;
+    ERL_NIF_TERM atom = THE_NON_VALUE;
+    if (payload == NULL) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send() failed: payload is NULL\n");
+        return 0;
+    }
+    (void)vec_init_free(vec);
+    if (!vec_create_from_slice(vec, payload->head, payload->tail)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send() failed: payload is invalid\n");
+        return 0;
+    }
+    if (!vec_reader_create(vr, vec, 0)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n");
+        return 0;
+    }
+    if (is_pass_through && !vec_reader_skip_exact(vr, 1)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n");
+        return 0;
+    }
+    if (uterm_is_tuple(vtenv, vr)) {
+        if (is_pass_through && !vec_reader_back_exact(vr, 1)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n");
+            return 0;
+        }
+        if (!etf_decode_tuple_header(caller_env, vtenv, is_pass_through, vr, &arity, err_termp)) {
+            return 0;
+        }
+        if (arity > 0 && uterm_is_atom(vtenv, vr)) {
+            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                return 0;
+            }
+            if (arity == 2) {
+                if (atom == ATOM($gen_cast)) {
+                    if (uterm_is_tuple(vtenv, vr)) {
+                        if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &arity, err_termp)) {
+                            return 0;
+                        }
+                        if (arity > 0 && uterm_is_atom(vtenv, vr)) {
+                            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                                return 0;
+                            }
+                            if (arity == 2 && atom == ATOM(try_again_restart)) {
+                                // LOG, DROP or REDIRECT
+                                LOG_DROP_OR_REDIRECT();
+                                return 1;
+                            }
+                        }
+                    }
+                }
+            } else if (arity == 3) {
+                if (atom == ATOM(system) || atom == ATOM(EXIT)) {
+                    // LOG, DROP or REDIRECT
+                    LOG_DROP_OR_REDIRECT();
+                    return 1;
+                } else if (atom == ATOM($gen_call)) {
+                    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                        return 0;
+                    }
+                    if (uterm_is_tuple(vtenv, vr)) {
+                        if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &arity, err_termp)) {
+                            return 0;
+                        }
+                        if (arity > 0 && uterm_is_atom(vtenv, vr)) {
+                            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                                return 0;
+                            }
+                            if (arity == 2 && (atom == ATOM(start_child) || atom == ATOM(terminate_child) ||
+                                               atom == ATOM(restart_child) || atom == ATOM(delete_child))) {
+                                // LOG, DROP or REDIRECT
+                                LOG_DROP_OR_REDIRECT();
+                                return 1;
+                            }
+                        }
+                    }
+                } else if (atom == ATOM(io_reply)) {
+                    // LOG, DROP or REDIRECT
+                    LOG_DROP_OR_REDIRECT();
+                    return 1;
+                }
+            } else if (arity == 4) {
+                if (atom == ATOM(io_request)) {
+                    // LOG, DROP or REDIRECT
+                    LOG_DROP_OR_REDIRECT();
+                    return 1;
+                }
+            }
+        }
+    }
+    // EMIT
+    EMIT();
+    return 1;
+}
+
+int
+udist_classify_send_to_net_kernel(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                                  slice_t *payload, ERL_NIF_TERM *err_termp)
+{
+    // REG_SEND: net_kernel
+    //
+    // Only allow messages matching the following:
+    //
+    //     {'$gen_call', From, {is_auth, Node}}
+    //
+    // Otherwise, redirect the message (drop it).
+    vec_t vec[1];
+    vec_reader_t vr[1];
+    uint32_t arity;
+    ERL_NIF_TERM atom = THE_NON_VALUE;
+    if (payload == NULL) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send_to_net_kernel() failed: payload is NULL\n");
+        return 0;
+    }
+    (void)vec_init_free(vec);
+    if (!vec_create_from_slice(vec, payload->head, payload->tail)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send_to_net_kernel() failed: payload is invalid\n");
+        return 0;
+    }
+    if (!vec_reader_create(vr, vec, 0)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n");
+        return 0;
+    }
+    if (is_pass_through && !vec_reader_skip_exact(vr, 1)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n");
+        return 0;
+    }
+    if (uterm_is_tuple(vtenv, vr)) {
+        if (is_pass_through && !vec_reader_back_exact(vr, 1)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n");
+            return 0;
+        }
+        if (!etf_decode_tuple_header(caller_env, vtenv, is_pass_through, vr, &arity, err_termp)) {
+            return 0;
+        }
+        if (arity == 3 && uterm_is_atom(vtenv, vr)) {
+            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                return 0;
+            }
+            if (atom == ATOM($gen_call)) {
+                if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                    return 0;
+                }
+                if (uterm_is_tuple(vtenv, vr)) {
+                    if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &arity, err_termp)) {
+                        return 0;
+                    }
+                    if (arity == 2 && uterm_is_atom(vtenv, vr)) {
+                        if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                            return 0;
+                        }
+                        if (atom == ATOM(is_auth)) {
+                            // EMIT
+                            EMIT();
+                            return 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // LOG, DROP or REDIRECT
+    LOG_DROP_OR_REDIRECT();
+    return 1;
+}
+
+int
+udist_classify_send_to_rex(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                           slice_t *payload, ERL_NIF_TERM *err_termp)
+{
+    // REG_SEND: rex
+    //
+    // Only allow messages matching the following:
+    //
+    //     {From, features_request}
+    //     {features_reply, node(), [erpc]}
+    //
+    // Otherwise, redirect the message (drop it).
+    vec_t vec[1];
+    vec_reader_t vr[1];
+    uint32_t arity;
+    ERL_NIF_TERM atom = THE_NON_VALUE;
+    if (payload == NULL) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send_to_rex() failed: payload is NULL\n");
+        return 0;
+    }
+    (void)vec_init_free(vec);
+    if (!vec_create_from_slice(vec, payload->head, payload->tail)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send_to_rex() failed: payload is invalid\n");
+        return 0;
+    }
+    if (!vec_reader_create(vr, vec, 0)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n");
+        return 0;
+    }
+    if (is_pass_through && !vec_reader_skip_exact(vr, 1)) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n");
+        return 0;
+    }
+    if (uterm_is_tuple(vtenv, vr)) {
+        if (is_pass_through && !vec_reader_back_exact(vr, 1)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n");
+            return 0;
+        }
+        if (!etf_decode_tuple_header(caller_env, vtenv, is_pass_through, vr, &arity, err_termp)) {
+            return 0;
+        }
+        if (arity == 2) {
+            if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                return 0;
+            }
+            if (uterm_is_atom(vtenv, vr)) {
+                if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                    return 0;
+                }
+                if (atom == ATOM(features_request)) {
+                    // EMIT
+                    EMIT();
+                    return 1;
+                }
+            }
+        } else if (arity == 3 && uterm_is_atom(vtenv, vr)) {
+            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                return 0;
+            }
+            if (atom == ATOM(features_reply)) {
+                // EMIT
+                EMIT();
+                return 1;
+            }
+        }
+    }
+    // LOG, DROP or REDIRECT
+    LOG_DROP_OR_REDIRECT();
+    return 1;
+}
+
+#undef LOG_REDIRECT_SPAWN_REQUEST
+#undef LOG_DROP_OR_REDIRECT
+#undef LOG_DROP
+#undef LOG
+#undef EMIT
 
 int
 udist_get_channel_stats_dop(udist_t *up, edf_channel_stats_t *stats, edf_channel_stats_dop_t **statsdopp)

@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vdist_dop_monitor_p).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 

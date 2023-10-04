@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vterm_atom).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -36,6 +36,8 @@ sequence_id(#vterm_small_atom_ext{len = Len, name = Name}) ->
 sequence_id(#vterm_small_atom_utf8_ext{len = Len, name = Name}) ->
     hash_u64(Len, Name).
 
+%% @private
+-spec hash_u64(Len, Name) -> Hash when Len :: non_neg_integer(), Name :: binary(), Hash :: non_neg_integer().
 hash_u64(Len, Name) ->
     ((erlang:phash2({Name, Len}, 16#FFFFFFFF) bsl 32) bor erlang:phash2({Len, Name}, 16#FFFFFFFF)) band
         16#FFFFFFFFFFFFFFFF.

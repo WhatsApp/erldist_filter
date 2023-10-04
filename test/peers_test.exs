@@ -5,7 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 defmodule PeersTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   @after_compile __MODULE__
 

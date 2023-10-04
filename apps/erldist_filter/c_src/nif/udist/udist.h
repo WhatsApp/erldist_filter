@@ -16,8 +16,16 @@ extern "C" {
 #include "../edf_common.h"
 
 #include "../erts/dist.h"
+#include "../slice.h"
 
 /* Macro Definitions */
+
+#define UDIST_CLASSIFY_FLAG_NONE (0)
+#define UDIST_CLASSIFY_FLAG_DROP (1 << 0)
+#define UDIST_CLASSIFY_FLAG_EMIT (1 << 1)
+#define UDIST_CLASSIFY_FLAG_LOG_EVENT (1 << 2)
+#define UDIST_CLASSIFY_FLAG_REDIRECT_DOP (1 << 3)
+#define UDIST_CLASSIFY_FLAG_REDIRECT_SPAWN_REQUEST (1 << 4)
 
 /* Type Definitions */
 
@@ -69,11 +77,17 @@ struct udist_control_s {
 struct udist_s {
     udist_info_t info;
     udist_control_t control;
+    int flags;
 };
+
+// Don't include "vterm_env.h", just reference the type here.
+typedef struct vterm_env_s vterm_env_t;
 
 /* Function Declarations */
 
 static void udist_init(udist_t *up);
+extern int udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                          slice_t *payload, ERL_NIF_TERM *err_termp);
 extern int udist_get_channel_stats_dop(udist_t *up, edf_channel_stats_t *stats, edf_channel_stats_dop_t **statsdopp);
 extern int udist_get_dop_string(const udist_t *up, const char **name);
 static bool udist_control_is_exit(const udist_t *up);
@@ -81,7 +95,6 @@ static bool udist_control_is_exit2(const udist_t *up);
 static bool udist_control_is_group_leader(const udist_t *up);
 static bool udist_control_is_link(const udist_t *up);
 static bool udist_control_is_monitor_related(const udist_t *up);
-static bool udist_control_is_send(const udist_t *up);
 static bool udist_control_is_send(const udist_t *up);
 static bool udist_control_is_send_to_alias(const udist_t *up);
 static bool udist_control_is_send_to_name(const udist_t *up);
@@ -99,6 +112,7 @@ udist_init(udist_t *up)
     up->info.token_offset = -1;
     up->info.payload = false;
     up->control.tag = UDIST_CONTROL_TAG_NONE;
+    up->flags = UDIST_CLASSIFY_FLAG_NONE;
     return;
 }
 

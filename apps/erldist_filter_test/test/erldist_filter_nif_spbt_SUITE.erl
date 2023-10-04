@@ -63,8 +63,8 @@ all() ->
 groups() ->
     [
         {stateful_property_based_tests, [parallel], [
-            %,
             prop_serial_statem
+            % Disabled by default, Sandcastle does not like this :-(
             % prop_parallel_statem
         ]}
     ].

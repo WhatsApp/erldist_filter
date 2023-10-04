@@ -81,8 +81,8 @@ ifeq ($(PLATFORM),msys2)
 else ifeq ($(PLATFORM),darwin)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -Og -g -ggdb -std=c2x -arch x86_64 -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -Og -g -ggdb -std=c++20 -arch x86_64 -Wall
+	CFLAGS ?= -O2 -g -ggdb -std=c2x -arch x86_64 -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -arch x86_64 -Wall
 	LDFLAGS ?= -arch x86_64 -flat_namespace -undefined suppress
 else ifeq ($(PLATFORM),freebsd)
 	CC ?= cc

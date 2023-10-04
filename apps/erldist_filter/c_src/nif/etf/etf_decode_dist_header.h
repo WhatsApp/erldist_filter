@@ -48,6 +48,8 @@ struct etf_decode_dist_header_trap_s {
 
 extern ERL_NIF_TERM etf_decode_dist_header_trap_open(ErlNifEnv *env, edf_external_t *external,
                                                      etf_decode_dist_header_trap_t **trapp);
+extern int etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_atom_translation_table_t *attab,
+                                       vec_reader_t *vr, int *external_flags, slice_t *headers, ERL_NIF_TERM *err_termp);
 
 /* Inline Function Definitions */
 

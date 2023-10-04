@@ -143,9 +143,9 @@ terminate(_Reason, _State, _Data = #data{}) ->
     HandleEventResult :: gen_statem:event_handler_result(State, Data).
 route(info, Info, Data0 = #data{handlers = Handlers0, monitors = Monitors0}) ->
     case Info of
-        {Sysname, _Sort, _Control} ->
+        {Sysname, _Sort, _Control} when is_atom(Sysname) ->
             route_to_handler(Sysname, Info, Data0);
-        {Sysname, _Sort, _Control, _Payload} ->
+        {Sysname, _Sort, _Control, _Payload} when is_atom(Sysname) ->
             route_to_handler(Sysname, Info, Data0);
         {'DOWN', HandlerMon, process, HandlerPid, _Reason} ->
             case maps:take(HandlerMon, Monitors0) of
@@ -177,7 +177,7 @@ start_and_route_to_handler(
     Sysname, Operation, Data0 = #data{handler_sup = HandlerSup, handlers = Handlers0, monitors = Monitors0}
 ) ->
     case supervisor:start_child(HandlerSup, [Sysname]) of
-        {ok, HandlerPid} ->
+        {ok, HandlerPid} when is_pid(HandlerPid) ->
             _ = catch erlang:send(HandlerPid, Operation, [noconnect]),
             HandlerMon = erlang:monitor(process, HandlerPid),
             Handlers1 = maps:put(Sysname, HandlerPid, Handlers0),

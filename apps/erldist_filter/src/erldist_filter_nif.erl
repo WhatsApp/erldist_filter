@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_nif).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 -wacov(ignore).
@@ -138,6 +138,8 @@
     control_has_new_fun_ext := non_neg_integer(),
     payload_has_export_ext := non_neg_integer(),
     payload_has_new_fun_ext := non_neg_integer(),
+    fastpath := non_neg_integer(),
+    slowpath := non_neg_integer(),
     dop_link := dop_stats(),
     dop_send := dop_stats(),
     dop_exit := dop_stats(),
@@ -308,8 +310,8 @@ channel_list() ->
 channel_list(_Sysname) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec channel_recv(Channel :: channel(), Iovec :: erlang:iovec()) -> [action()].
-channel_recv(_Channel, _Iovec) ->
+-spec channel_recv(Channel :: channel(), Input :: binary() | erlang:iovec()) -> [action()].
+channel_recv(_Channel, _Input) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec channel_set_controlling_process(Channel, NewOwnerPid) -> ok | {error, Reason} when

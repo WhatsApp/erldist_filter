@@ -31,6 +31,8 @@ edf_channel_stats_init_empty(edf_channel_stats_t *stats)
     stats->control_has_new_fun_ext = 0;
     stats->payload_has_export_ext = 0;
     stats->payload_has_new_fun_ext = 0;
+    stats->fastpath = 0;
+    stats->slowpath = 0;
     (void)edf_channel_stats_dop_init_empty(&stats->dop_link);
     (void)edf_channel_stats_dop_init_empty(&stats->dop_send);
     (void)edf_channel_stats_dop_init_empty(&stats->dop_exit);

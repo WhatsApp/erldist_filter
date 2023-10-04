@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_logger_sup).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -101,6 +101,11 @@ init({Handler, HandlerOptions, WorkerCount}) when ?is_handler(Handler) andalso ?
 %%%-----------------------------------------------------------------------------
 
 %% @private
+-spec make_child_specs(Handler, HandlerOptions, WorkerCount, ChildSpecs) -> ChildSpecs when
+    Handler :: erldist_filter_logger:handler(),
+    HandlerOptions :: erldist_filter_logger:handler_options(),
+    WorkerCount :: worker_count(),
+    ChildSpecs :: [supervisor:child_spec()].
 make_child_specs(Handler, _HandlerOptions, 0, ChildSpecs) when ?is_handler(Handler) ->
     ChildSpecs;
 make_child_specs(Handler, HandlerOptions, WorkerCount, ChildSpecs) when

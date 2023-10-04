@@ -16,7 +16,7 @@
 -module(erldist_filter_peer_spbt_statem).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec).
 
 -behaviour(proper_statem).
 
@@ -41,6 +41,15 @@
     gen_vpeer_node/1
 ]).
 
+%% Types
+-type symbolic_state() :: erldist_filter_peer_spbt_model:t().
+-type dynamic_state() :: erldist_filter_peer_spbt_model:t().
+
+-export_type([
+    symbolic_state/0,
+    dynamic_state/0
+]).
+
 %% Macros.
 -define(MODEL, erldist_filter_peer_spbt_model).
 -define(SHIM, erldist_filter_peer_spbt_shim).
@@ -54,9 +63,11 @@
 %%% proper_statem callbacks
 %%%=============================================================================
 
+-spec initial_state() -> symbolic_state().
 initial_state() ->
     ?MODEL:initial_state().
 
+-spec command(symbolic_state()) -> proper_types:type().
 command(SymbolicState) ->
     case ?MODEL:upeer(SymbolicState) of
         {ok, UPeer} ->
@@ -87,6 +98,9 @@ command(_SymbolicState, UPeer, VPeer) ->
         {call, ?SHIM, send_sender, [U, V, gen_payload()]}
     ]).
 
+-spec precondition(SymbolicState, SymbolicCall) -> boolean() when
+    SymbolicState :: dynamic_state(),
+    SymbolicCall :: proper_statem:symbolic_call().
 precondition(SymbolicState, SymbolicCall) ->
     case ?MODEL:upeer(SymbolicState) of
         {ok, UPeer} ->
@@ -132,13 +146,17 @@ precondition(_SymbolicState, SymbolicCall, _UPeer, _VPeer) ->
             true
     end.
 
-postcondition(State, SymbolicCall = {call, _, Func, Args}, Result) ->
-    case ?MODEL:categorize_call(State, Func, Args) of
+-spec postcondition(DynamicState, SymbolicCall, Result) -> boolean() when
+    DynamicState :: dynamic_state(),
+    SymbolicCall :: proper_statem:symbolic_call(),
+    Result :: eqwalizer:dynamic().
+postcondition(DynamicState, SymbolicCall = {call, _, Func, Args}, Result) ->
+    case ?MODEL:categorize_call(DynamicState, Func, Args) of
         {ok, dynamic} ->
-            {_NewState, _ExpectedResult} = ?MODEL:dynamic_call(State, Func, Args, Result),
+            {_NewState, _ExpectedResult} = ?MODEL:dynamic_call(DynamicState, Func, Args, Result),
             true;
         {ok, symbolic} ->
-            {_NewState, ExpectedResult} = ?MODEL:symbolic_call(State, Func, Args),
+            {_NewState, ExpectedResult} = ?MODEL:symbolic_call(DynamicState, Func, Args),
             case Result =:= ExpectedResult of
                 true ->
                     true;
@@ -147,12 +165,16 @@ postcondition(State, SymbolicCall = {call, _, Func, Args}, Result) ->
                         error,
                         ?MAX_IMPORTANCE,
                         "Error: postcondition failure in ~w:~s/~w~nState = ~tp~nSymbolicCall = ~tp~nResult = ~tp~nExpectedResult = ~tp~n",
-                        [?MODULE, ?FUNCTION_NAME, ?FUNCTION_ARITY, State, SymbolicCall, Result, ExpectedResult]
+                        [?MODULE, ?FUNCTION_NAME, ?FUNCTION_ARITY, DynamicState, SymbolicCall, Result, ExpectedResult]
                     ),
                     false
             end
     end.
 
+-spec next_state(State, Result, SymbolicCall) -> State when
+    State :: symbolic_state() | dynamic_state(),
+    Result :: eqwalizer:dynamic(),
+    SymbolicCall :: proper_statem:symbolic_call().
 next_state(State, Result, _SymbolicCall = {call, _, Func, Args}) ->
     case ?MODEL:categorize_call(State, Func, Args) of
         {ok, dynamic} ->
@@ -167,12 +189,14 @@ next_state(State, Result, _SymbolicCall = {call, _, Func, Args}) ->
 %%% Helper Functions
 %%%=============================================================================
 
+-spec gen_payload() -> proper_types:type().
 gen_payload() ->
     frequency([
         {1, term()},
         {1, proper_vterm:vterm_simplify_into_term(#{large_binaries => true})}
     ]).
 
+-spec gen_reg_name() -> proper_types:type().
 gen_reg_name() ->
     ?SUCHTHAT(
         RegName,
@@ -181,8 +205,12 @@ gen_reg_name() ->
             erlang:whereis(RegName) =:= undefined
     ).
 
-gen_reg_name(UPeer = {UPeerNode, _UPeerPid}, VPeer = {VPeerNode, _VPeerPid}) when
-    is_atom(UPeerNode) andalso is_atom(VPeerNode)
+-spec gen_reg_name(UPeer, VPeer) -> Type when
+    UPeer :: erldist_filter_peer_spbt_model:upeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
+    VPeer :: erldist_filter_peer_spbt_model:vpeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
+    Type :: proper_types:type() | proper_statem:symbolic_call().
+gen_reg_name(UPeer = {UPeerNode, UPeerPid}, VPeer = {VPeerNode, VPeerPid}) when
+    is_atom(UPeerNode) andalso is_pid(UPeerPid) andalso is_atom(VPeerNode) andalso is_pid(VPeerPid)
 ->
     ?SUCHTHAT(
         RegName,
@@ -193,6 +221,7 @@ gen_reg_name(UPeer = {UPeerNode, _UPeerPid}, VPeer = {VPeerNode, _VPeerPid}) whe
 gen_reg_name(US, VS) when ?is_symbol(US) orelse ?is_symbol(VS) ->
     {call, ?MODULE, gen_reg_name, [US, VS]}.
 
+-spec gen_upeer_node() -> proper_types:type().
 gen_upeer_node() ->
     ?LET(
         {Uniq, OsPid},
@@ -202,6 +231,7 @@ gen_upeer_node() ->
         end
     ).
 
+-spec gen_vpeer_node() -> proper_types:type().
 gen_vpeer_node() ->
     ?LET(
         {Uniq, OsPid},
@@ -211,6 +241,9 @@ gen_vpeer_node() ->
         end
     ).
 
+-spec gen_vpeer_node(UPeer) -> VPeerNode when
+    UPeer :: erldist_filter_peer_spbt_model:upeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
+    VPeerNode :: node() | proper_statem:symbolic_call().
 gen_vpeer_node({UPeerNode, _UPeerPid}) when is_atom(UPeerNode) ->
     [<<"upeer">>, Uniq, OsPid, Host = <<"127.0.0.1">>] = binary:split(
         erlang:atom_to_binary(UPeerNode, unicode), [<<"-">>, <<"@">>], [global, trim_all]

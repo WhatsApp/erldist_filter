@@ -16,7 +16,7 @@
 -module(erldist_filter_peer_spbt_sup).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -behaviour(supervisor).
 

@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vdist_entry).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -127,6 +127,14 @@ is_tx_atom_cache_filled(#vdist_entry{tx_atom_cache = TxAtomCache = #vdist_atom_c
 %%%-----------------------------------------------------------------------------
 
 %% @private
+-spec do_fill_tx_atom_cache(Entry, NoopControlMessage, KeysAdded, Fragments, Options) ->
+    {ok, Fragments, Entry}
+when
+    Entry :: t(),
+    NoopControlMessage :: vdist:dop_with_payload_t(),
+    KeysAdded :: [atom()],
+    Fragments :: [binary()],
+    Options :: vdist_entry_encode:options().
 do_fill_tx_atom_cache(
     Entry0 = #vdist_entry{tx_atom_cache = #vdist_atom_cache{}}, NoopControlMessage, KeysAdded0, Fragments0, Options
 ) when length(KeysAdded0) > ?ERTS_MAX_INTERNAL_ATOM_CACHE_ENTRIES ->

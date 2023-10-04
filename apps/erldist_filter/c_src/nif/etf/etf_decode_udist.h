@@ -24,8 +24,8 @@ typedef struct vterm_env_s vterm_env_t;
 
 /* Function Declarations */
 
-extern int etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external, vec_t *slice, udist_t *up,
-                                    ERL_NIF_TERM *err_termp);
+extern int etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external, bool skip_slow_terms, vec_t *slice,
+                                    udist_t *up, ERL_NIF_TERM *err_termp);
 
 /* Inline Function Definitions */
 

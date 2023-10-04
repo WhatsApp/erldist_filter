@@ -85,6 +85,7 @@ struct erldist_filter_nif_atom_table_s {
     ERL_NIF_TERM ATOM_entry;
     ERL_NIF_TERM ATOM_error;
     ERL_NIF_TERM ATOM_false;
+    ERL_NIF_TERM ATOM_fastpath;
     ERL_NIF_TERM ATOM_features_reply;
     ERL_NIF_TERM ATOM_features_request;
     ERL_NIF_TERM ATOM_io_reply;
@@ -114,6 +115,7 @@ struct erldist_filter_nif_atom_table_s {
     ERL_NIF_TERM ATOM_rx_stats;
     ERL_NIF_TERM ATOM_seen;
     ERL_NIF_TERM ATOM_slots;
+    ERL_NIF_TERM ATOM_slowpath;
     ERL_NIF_TERM ATOM_start_child;
     ERL_NIF_TERM ATOM_stats;
     ERL_NIF_TERM ATOM_sysname;

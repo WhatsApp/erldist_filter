@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_app).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -37,7 +37,8 @@
     State :: term(),
     Reason :: term().
 start(_StartType, _StartArgs) ->
-    erldist_filter_sup:start_link().
+    {ok, SupPid} = erldist_filter_sup:start_link(),
+    {ok, SupPid}.
 
 -spec stop(State) -> Ignored when
     State :: term(),

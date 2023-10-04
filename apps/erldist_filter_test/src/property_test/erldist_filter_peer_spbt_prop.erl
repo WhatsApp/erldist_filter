@@ -16,7 +16,7 @@
 -module(erldist_filter_peer_spbt_prop).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -include_lib("proper/include/proper.hrl").
 
@@ -34,6 +34,7 @@
 %%% Properties
 %%%=============================================================================
 
+-spec prop_serial_statem(ct_suite:ct_config()) -> proper:test().
 prop_serial_statem(Config) ->
     UPeer = test_server:lookup_config(upeer, Config),
     VPeer = test_server:lookup_config(vpeer, Config),
@@ -46,6 +47,7 @@ prop_serial_statem(Config) ->
         end
     ).
 
+-spec prop_parallel_statem(ct_suite:ct_config()) -> proper:test().
 prop_parallel_statem(Config) ->
     UPeer = test_server:lookup_config(upeer, Config),
     VPeer = test_server:lookup_config(vpeer, Config),

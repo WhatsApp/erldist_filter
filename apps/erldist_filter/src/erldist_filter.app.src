@@ -7,10 +7,12 @@
 %%% % @format
 {application, erldist_filter, [
     {description, "erldist_filter: Erlang distribution filtering"},
-    {vsn, "1.0.0"},
+    {vsn, "1.1.0"},
     {mod, {erldist_filter_app, []}},
     {modules, []},
     {registered, []},
+    %% NOTE: Remember to sync changes to `applications` to
+    %% the BUCK file in the application's base folder
     {applications, [
         kernel,
         stdlib,

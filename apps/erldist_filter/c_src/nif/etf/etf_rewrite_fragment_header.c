@@ -436,7 +436,7 @@ etf_rewrite_fragment_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, 
             return TRAP_ERR(EXCP_ERROR_F(caller_env, "Fatal error: unknown etf_rewrite_fragment_header_trap_t->state value %d\n",
                                          (int)(trap->state)));
         }
-    next_state : {
+    next_state: {
         if (TRAP_SHOULD_YIELD(trap)) {
             return TRAP_YIELD();
         }

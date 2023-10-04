@@ -38,6 +38,11 @@
 -export([
     handle/3
 ]).
+%% Internal Handler API
+-export([
+    handler_classify/4,
+    handler_classify/5
+]).
 
 %% Records
 -record(init_data, {
@@ -162,7 +167,7 @@ handle(
     {keep_state, Data1};
 handle(EventType = info, EventContent = {Sysname, _Sort, _Control}, Data0 = #data{sysname = Sysname}) ->
     % Sort has been reset, which means the dist connection for this Sysname has been reset.
-    _ = catch erlang:garbage_collect(self()),
+    % _ = catch erlang:garbage_collect(self()),
     Data1 = Data0#data{last_seen = -1},
     Actions = [{next_event, EventType, EventContent}],
     {keep_state, Data1, Actions};
@@ -170,10 +175,61 @@ handle(
     EventType = info, EventContent = {Sysname, _Sort, _Control, _Payload}, Data0 = #data{sysname = Sysname}
 ) ->
     % Sort has been reset, which means the dist connection for this Sysname has been reset.
-    _ = catch erlang:garbage_collect(self()),
+    % _ = catch erlang:garbage_collect(self()),
     Data1 = Data0#data{last_seen = -1},
     Actions = [{next_event, EventType, EventContent}],
     {keep_state, Data1, Actions}.
+
+%%%=============================================================================
+%%% Internal Handler API functions
+%%%=============================================================================
+
+%% @private
+-spec handler_classify(Handler, Hint, Sysname, Control) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Hint :: hint(),
+    Sysname :: node(),
+    Control :: control_without_payload(),
+    Decision :: decision().
+handler_classify(undefined, Hint, _Sysname, Control) ->
+    case Hint of
+        drop -> {Hint, {drop, Control}};
+        safe -> {Hint, {keep, Control}};
+        unsafe -> {Hint, {keep, Control}}
+    end;
+handler_classify(Handler, Hint, Sysname, Control) when is_atom(Handler) ->
+    case Handler:classify(Hint, Sysname, Control) of
+        keep ->
+            {Hint, {keep, Control}};
+        {keep, NewControl} when ?is_udist_dop_without_payload_t(NewControl) ->
+            {Hint, {keep, NewControl}};
+        drop ->
+            {Hint, {drop, Control}}
+    end.
+
+%% @private
+-spec handler_classify(Handler, Hint, Sysname, Control, Payload) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Hint :: hint(),
+    Sysname :: node(),
+    Control :: control_with_payload(),
+    Payload :: payload(),
+    Decision :: decision().
+handler_classify(undefined, Hint, _Sysname, Control, Payload) ->
+    case Hint of
+        drop -> {Hint, {drop, Control, Payload}};
+        safe -> {Hint, {keep, Control, Payload}};
+        unsafe -> {Hint, {keep, Control, Payload}}
+    end;
+handler_classify(Handler, Hint, Sysname, Control, Payload) when is_atom(Handler) ->
+    case Handler:classify(Hint, Sysname, Control, Payload) of
+        keep ->
+            {Hint, {keep, Control, Payload}};
+        {keep, NewControl, NewPayload} when ?is_udist_dop_with_payload_t(NewControl) ->
+            {Hint, {keep, NewControl, NewPayload}};
+        drop ->
+            {Hint, {drop, Control, Payload}}
+    end.
 
 %%%-----------------------------------------------------------------------------
 %%% Internal functions
@@ -294,40 +350,6 @@ classify_send_to_rex(Handler, Sysname, Control, Payload) ->
             ?hint_safe_payload();
         _ ->
             ?hint_drop_payload()
-    end.
-
-%% @private
-handler_classify(undefined, Hint, _Sysname, Control) ->
-    case Hint of
-        drop -> {Hint, {drop, Control}};
-        safe -> {Hint, {keep, Control}};
-        unsafe -> {Hint, {keep, Control}}
-    end;
-handler_classify(Handler, Hint, Sysname, Control) when is_atom(Handler) ->
-    case Handler:classify(Hint, Sysname, Control) of
-        keep ->
-            {Hint, {keep, Control}};
-        {keep, NewControl} when ?is_udist_dop_without_payload_t(NewControl) ->
-            {Hint, {keep, NewControl}};
-        drop ->
-            {Hint, {drop, Control}}
-    end.
-
-%% @private
-handler_classify(undefined, Hint, _Sysname, Control, Payload) ->
-    case Hint of
-        drop -> {Hint, {drop, Control, Payload}};
-        safe -> {Hint, {keep, Control, Payload}};
-        unsafe -> {Hint, {keep, Control, Payload}}
-    end;
-handler_classify(Handler, Hint, Sysname, Control, Payload) when is_atom(Handler) ->
-    case Handler:classify(Hint, Sysname, Control, Payload) of
-        keep ->
-            {Hint, {keep, Control, Payload}};
-        {keep, NewControl, NewPayload} when ?is_udist_dop_with_payload_t(NewControl) ->
-            {Hint, {keep, NewControl, NewPayload}};
-        drop ->
-            {Hint, {drop, Control, Payload}}
     end.
 
 %% @private

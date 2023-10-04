@@ -14,11 +14,10 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(proper_vterm).
-% proper
--eqwalizer(ignore).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec).
+-wacov(ignore).
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
@@ -94,30 +93,47 @@
     check_for_map_bug/1
 ]).
 
+-type options() :: #{
+    allow_atom_cache_refs => boolean(),
+    large_binaries => boolean()
+}.
+
+-export_type([
+    options/0
+]).
+
+-spec mostly(U :: proper_types:type(), T :: proper_types:type()) -> proper_types:type().
 mostly(U, T) ->
     frequency([
         {100, U},
         {1, T}
     ]).
 
+-spec i32() -> proper_types:type().
 i32() ->
     integer(-16#FFFFFFFF - 1, 16#FFFFFFFF).
 
+-spec u8() -> proper_types:type().
 u8() ->
     integer(0, 16#FF).
 
+-spec u16() -> proper_types:type().
 u16() ->
     integer(0, 16#FFFF).
 
+-spec u32() -> proper_types:type().
 u32() ->
     integer(0, 16#FFFFFFFF).
 
+-spec u64() -> proper_types:type().
 u64() ->
     integer(0, 16#FFFFFFFFFFFFFFFF).
 
+-spec vterm() -> proper_types:type().
 vterm() ->
     vterm(#{}).
 
+-spec vterm(proper_vterm:options()) -> proper_types:type().
 vterm(Opts) ->
     ?SUCHTHAT(
         VTerm,
@@ -183,18 +199,23 @@ vterm(Opts) ->
         end
     ).
 
+-spec term_expand_into_vterm() -> proper_types:type().
 term_expand_into_vterm() ->
     ?LET(Term, term(), vterm:expand(Term)).
 
+-spec vterm_simplify_into_term() -> proper_types:type().
 vterm_simplify_into_term() ->
     vterm_simplify_into_term(#{}).
 
+-spec vterm_simplify_into_term(proper_vterm:options()) -> proper_types:type().
 vterm_simplify_into_term(Opts) ->
     ?LET(VTerm, vterm(Opts), vterm:simplify(VTerm)).
 
+-spec vterm_atom() -> proper_types:type().
 vterm_atom() ->
     vterm_atom(#{}).
 
+-spec vterm_atom(proper_vterm:options()) -> proper_types:type().
 vterm_atom(Opts) ->
     frequency([
         % {1, vterm_atom_cache_ref()},
@@ -208,9 +229,11 @@ vterm_atom(Opts) ->
         end
     ]).
 
+-spec vterm_atom_cache_ref() -> proper_types:type().
 vterm_atom_cache_ref() ->
     ?LET(Index, u8(), vterm_atom_cache_ref:new(Index)).
 
+-spec vterm_atom_ext() -> proper_types:type().
 vterm_atom_ext() ->
     % technically, 510 is possible
     MaxAtomSize = 255,
@@ -218,6 +241,7 @@ vterm_atom_ext() ->
         {Len, Name}, ?LET(Size, integer(0, MaxAtomSize), {exactly(Size), binary(Size)}), vterm_atom_ext:new(Len, Name)
     ).
 
+-spec vterm_atom_utf8_ext() -> proper_types:type().
 vterm_atom_utf8_ext() ->
     % technically, 1020 is possible
     MaxAtomSize = 255,
@@ -231,15 +255,19 @@ vterm_atom_utf8_ext() ->
         vterm_atom_utf8_ext:new(byte_size(Name), Name)
     ).
 
+-spec vterm_binary_ext() -> proper_types:type().
 vterm_binary_ext() ->
     ?LET(Data, binary(), vterm_binary_ext:new(byte_size(Data), Data)).
 
+-spec vterm_bit_binary_ext() -> proper_types:type().
 vterm_bit_binary_ext() ->
     ?LET({Data, Bits}, {non_empty(binary()), integer(1, 7)}, vterm_bit_binary_ext:new(byte_size(Data), Bits, Data)).
 
+-spec vterm_export_ext() -> proper_types:type().
 vterm_export_ext() ->
     vterm_export_ext(#{}).
 
+-spec vterm_export_ext(proper_vterm:options()) -> proper_types:type().
 vterm_export_ext(Opts) ->
     ?LET(
         {Module, Function, Arity},
@@ -247,12 +275,14 @@ vterm_export_ext(Opts) ->
         vterm_export_ext:new(Module, Function, Arity)
     ).
 
+-spec vterm_fixed_integer() -> proper_types:type().
 vterm_fixed_integer() ->
     oneof([
         vterm_integer_ext(),
         vterm_small_integer_ext()
     ]).
 
+-spec vterm_fixed_integer(Low :: proper_types:extint(), High :: proper_types:extint()) -> proper_types:type().
 vterm_fixed_integer(Low0, High0) ->
     LowLimit = -16#FFFFFFFF - 1,
     HighLimit = 16#FFFFFFFF,
@@ -276,9 +306,11 @@ vterm_fixed_integer(Low0, High0) ->
         end,
     ?LET(Integer, integer(Low, High), vterm:expand(Integer)).
 
+-spec vterm_float_ext() -> proper_types:type().
 vterm_float_ext() ->
     ?LET(Float, float(), vterm_float_ext:new(erlang:iolist_to_binary(io_lib:format("~-31.20.*e", [0, Float])))).
 
+-spec vterm_integer() -> proper_types:type().
 vterm_integer() ->
     oneof([
         vterm_integer_ext(),
@@ -287,17 +319,21 @@ vterm_integer() ->
         vterm_large_big_ext()
     ]).
 
+-spec vterm_integer(Low :: proper_types:extint(), High :: proper_types:extint()) -> proper_types:type().
 vterm_integer(Low, High) ->
     ?LET(Integer, integer(Low, High), vterm:expand(Integer)).
 
+-spec vterm_integer_ext() -> proper_types:type().
 vterm_integer_ext() ->
     ?LET(Value, i32(), vterm_integer_ext:new(Value)).
 
+-spec vterm_large_big_ext() -> proper_types:type().
 vterm_large_big_ext() ->
     ?LET(
         {N, Sign, D}, ?LET({N, Sign}, {u32(), oneof([0, 1])}, {N, Sign, binary(N)}), vterm_large_big_ext:new(N, Sign, D)
     ).
 
+-spec vterm_large_binary() -> proper_types:type().
 vterm_large_binary() ->
     ?LET(
         {Byte, Size},
@@ -306,9 +342,11 @@ vterm_large_binary() ->
         vterm_binary_ext:new(Size, binary:copy(<<Byte>>, Size))
     ).
 
+-spec vterm_large_tuple_ext() -> proper_types:type().
 vterm_large_tuple_ext() ->
     vterm_large_tuple_ext(#{}).
 
+-spec vterm_large_tuple_ext(proper_vterm:options()) -> proper_types:type().
 vterm_large_tuple_ext(Opts) ->
     ?LET(
         {Arity, Elements},
@@ -316,9 +354,11 @@ vterm_large_tuple_ext(Opts) ->
         vterm_large_tuple_ext:new(Arity, Elements)
     ).
 
+-spec vterm_list_ext() -> proper_types:type().
 vterm_list_ext() ->
     vterm_list_ext(#{}).
 
+-spec vterm_list_ext(proper_vterm:options()) -> proper_types:type().
 vterm_list_ext(Opts) ->
     ?LET(
         {Len, Elements, Tail},
@@ -326,9 +366,11 @@ vterm_list_ext(Opts) ->
         vterm_list_ext:new(Len, Elements, Tail)
     ).
 
+-spec vterm_map_ext() -> proper_types:type().
 vterm_map_ext() ->
     vterm_map_ext(#{}).
 
+-spec vterm_map_ext(proper_vterm:options()) -> proper_types:type().
 vterm_map_ext(Opts) ->
     ?LET(
         {Arity, Pairs},
@@ -367,12 +409,15 @@ vterm_map_ext_pairs(Arity, Opts) ->
         end
     ).
 
+-spec vterm_new_float_ext() -> proper_types:type().
 vterm_new_float_ext() ->
     ?LET(Float, float(), vterm_new_float_ext:new(<<Float:64/float>>)).
 
+-spec vterm_new_fun_ext() -> proper_types:type().
 vterm_new_fun_ext() ->
     vterm_new_fun_ext(#{}).
 
+-spec vterm_new_fun_ext(proper_vterm:options()) -> proper_types:type().
 vterm_new_fun_ext(Opts) ->
     ?LET(
         {Arity, Uniq, Index, NumFree, Module, OldIndex, OldUniq, Pid, FreeVars},
@@ -394,9 +439,11 @@ vterm_new_fun_ext(Opts) ->
         vterm_new_fun_ext:new_with_derived_size(Arity, Uniq, Index, NumFree, Module, OldIndex, OldUniq, Pid, FreeVars)
     ).
 
+-spec vterm_new_pid_ext() -> proper_types:type().
 vterm_new_pid_ext() ->
     vterm_new_pid_ext(#{}).
 
+-spec vterm_new_pid_ext(proper_vterm:options()) -> proper_types:type().
 vterm_new_pid_ext(Opts) ->
     ?LET(
         {Node, Id, Serial, Creation},
@@ -404,15 +451,19 @@ vterm_new_pid_ext(Opts) ->
         vterm_new_pid_ext:new(Node, Id, Serial, Creation)
     ).
 
+-spec vterm_new_port_ext() -> proper_types:type().
 vterm_new_port_ext() ->
     vterm_new_port_ext(#{}).
 
+-spec vterm_new_port_ext(proper_vterm:options()) -> proper_types:type().
 vterm_new_port_ext(Opts) ->
     ?LET({Node, Id, Creation}, {vterm_atom(Opts), u32(), u32()}, vterm_new_port_ext:new(Node, Id, Creation)).
 
+-spec vterm_new_reference_ext() -> proper_types:type().
 vterm_new_reference_ext() ->
     vterm_new_reference_ext(#{}).
 
+-spec vterm_new_reference_ext(proper_vterm:options()) -> proper_types:type().
 vterm_new_reference_ext(Opts) ->
     ?LET(
         {Len, Node, Creation, Ids},
@@ -420,9 +471,11 @@ vterm_new_reference_ext(Opts) ->
         vterm_new_reference_ext:new(Len, Node, Creation, Ids)
     ).
 
+-spec vterm_newer_reference_ext() -> proper_types:type().
 vterm_newer_reference_ext() ->
     vterm_newer_reference_ext(#{}).
 
+-spec vterm_newer_reference_ext(proper_vterm:options()) -> proper_types:type().
 vterm_newer_reference_ext(Opts) ->
     ?LET(
         {Len, Node, Creation, Ids},
@@ -430,21 +483,26 @@ vterm_newer_reference_ext(Opts) ->
         vterm_newer_reference_ext:new(Len, Node, Creation, Ids)
     ).
 
+-spec vterm_nil_ext() -> proper_types:type().
 vterm_nil_ext() ->
     exactly(vterm_nil_ext:new()).
 
+-spec vterm_pid() -> proper_types:type().
 vterm_pid() ->
     vterm_pid(#{}).
 
+-spec vterm_pid(proper_vterm:options()) -> proper_types:type().
 vterm_pid(Opts) ->
     frequency([
         {1, vterm_pid_ext(Opts)},
         {1, vterm_new_pid_ext(Opts)}
     ]).
 
+-spec vterm_pid_ext() -> proper_types:type().
 vterm_pid_ext() ->
     vterm_pid_ext(#{}).
 
+-spec vterm_pid_ext(proper_vterm:options()) -> proper_types:type().
 vterm_pid_ext(Opts) ->
     ?LET(
         {Node, Id, Serial, Creation},
@@ -452,15 +510,19 @@ vterm_pid_ext(Opts) ->
         vterm_pid_ext:new(Node, Id, Serial, Creation)
     ).
 
+-spec vterm_port_ext() -> proper_types:type().
 vterm_port_ext() ->
     vterm_port_ext(#{}).
 
+-spec vterm_port_ext(proper_vterm:options()) -> proper_types:type().
 vterm_port_ext(Opts) ->
     ?LET({Node, Id, Creation}, {vterm_atom(Opts), u32(), integer(0, 3)}, vterm_port_ext:new(Node, Id, Creation)).
 
+-spec vterm_proper_list() -> proper_types:type().
 vterm_proper_list() ->
     vterm_proper_list(#{}).
 
+-spec vterm_proper_list(proper_vterm:options()) -> proper_types:type().
 vterm_proper_list(Opts) ->
     ?LET(
         {Len, Elements, Tail},
@@ -468,6 +530,7 @@ vterm_proper_list(Opts) ->
         vterm_list_ext:new(Len, Elements, Tail)
     ).
 
+-spec vterm_proper_list(proper_types:length(), proper_vterm:options()) -> proper_types:type().
 vterm_proper_list(0, _Opts) ->
     vterm_nil_ext();
 vterm_proper_list(Len, Opts) when is_integer(Len) andalso Len > 0 ->
@@ -477,9 +540,11 @@ vterm_proper_list(Len, Opts) when is_integer(Len) andalso Len > 0 ->
         vterm_list_ext:new(Len, Elements, Tail)
     ).
 
+-spec vterm_reference() -> proper_types:type().
 vterm_reference() ->
     vterm_reference(#{}).
 
+-spec vterm_reference(proper_vterm:options()) -> proper_types:type().
 vterm_reference(Opts) ->
     frequency([
         {1, vterm_reference_ext(Opts)},
@@ -487,15 +552,19 @@ vterm_reference(Opts) ->
         {10, vterm_newer_reference_ext(Opts)}
     ]).
 
+-spec vterm_reference_ext() -> proper_types:type().
 vterm_reference_ext() ->
     vterm_reference_ext(#{}).
 
+-spec vterm_reference_ext(proper_vterm:options()) -> proper_types:type().
 vterm_reference_ext(Opts) ->
     ?LET({Node, Id, Creation}, {vterm_atom(Opts), u32(), integer(0, 3)}, vterm_reference_ext:new(Node, Id, Creation)).
 
+-spec vterm_small_atom_ext() -> proper_types:type().
 vterm_small_atom_ext() ->
     ?LET({Len, Name}, ?LET(Size, integer(0, 255), {exactly(Size), binary(Size)}), vterm_small_atom_ext:new(Len, Name)).
 
+-spec vterm_small_atom_utf8_ext() -> proper_types:type().
 vterm_small_atom_utf8_ext() ->
     MaxAtomSize = 255,
     ?LET(
@@ -508,17 +577,21 @@ vterm_small_atom_utf8_ext() ->
         vterm_small_atom_utf8_ext:new(byte_size(Name), Name)
     ).
 
+-spec vterm_small_big_ext() -> proper_types:type().
 vterm_small_big_ext() ->
     ?LET(
         {N, Sign, D}, ?LET({N, Sign}, {u8(), oneof([0, 1])}, {N, Sign, binary(N)}), vterm_small_big_ext:new(N, Sign, D)
     ).
 
+-spec vterm_small_integer_ext() -> proper_types:type().
 vterm_small_integer_ext() ->
     ?LET(Value, integer(0, 255), vterm_small_integer_ext:new(Value)).
 
+-spec vterm_small_tuple_ext() -> proper_types:type().
 vterm_small_tuple_ext() ->
     vterm_small_tuple_ext(#{}).
 
+-spec vterm_small_tuple_ext(proper_vterm:options()) -> proper_types:type().
 vterm_small_tuple_ext(Opts) ->
     ?LET(
         {Arity, Elements},
@@ -526,6 +599,7 @@ vterm_small_tuple_ext(Opts) ->
         vterm_small_tuple_ext:new(Arity, Elements)
     ).
 
+-spec vterm_string_ext() -> proper_types:type().
 vterm_string_ext() ->
     ?LET(
         {Len, Characters},
@@ -533,12 +607,15 @@ vterm_string_ext() ->
         vterm_string_ext:new(Len, Characters)
     ).
 
+-spec vterm_v4_port_ext() -> proper_types:type().
 vterm_v4_port_ext() ->
     vterm_v4_port_ext(#{}).
 
+-spec vterm_v4_port_ext(proper_vterm:options()) -> proper_types:type().
 vterm_v4_port_ext(Opts) ->
     ?LET({Node, Id, Creation}, {vterm_atom(Opts), u64(), u32()}, vterm_v4_port_ext:new(Node, Id, Creation)).
 
+-spec check_for_map_bug(eqwalizer:dynamic()) -> boolean().
 check_for_map_bug([]) ->
     true;
 check_for_map_bug([H | T]) ->

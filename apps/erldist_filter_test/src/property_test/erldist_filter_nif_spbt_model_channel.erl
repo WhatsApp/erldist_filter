@@ -16,7 +16,7 @@
 -module(erldist_filter_nif_spbt_model_channel).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec).
 
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
@@ -51,7 +51,7 @@
 -type dop_spec() :: #{
     header_mode := fragment | normal | pass_through,
     fragment_size := pos_integer(),
-    control_message := vdist:control_message(),
+    control_message => vdist:control_message(),
     payload => vterm:t(),
     packets => [binary()]
 }.
@@ -102,6 +102,10 @@
 % initial_state(Map) when is_map(Map) ->
 %     maps:fold(fun maps:update/3, initial_state(), Map).
 
+-spec precondition(Model, Func, Args) -> boolean() when
+    Model :: t(),
+    Func :: atom(),
+    Args :: nil() | [eqwalizer:dynamic()].
 precondition(Model = #{'__type__' := ?MODULE}, Func, Args) ->
     case {Func, Args} of
         {channel_close, []} ->
@@ -133,6 +137,11 @@ precondition(Model = #{'__type__' := ?MODULE}, Func, Args) ->
             true
     end.
 
+-spec postcondition(Model, Func, Args, Result) -> boolean() when
+    Model :: t(),
+    Func :: atom(),
+    Args :: nil() | [eqwalizer:dynamic()],
+    Result :: eqwalizer:dynamic().
 postcondition(Model = #{'__type__' := ?MODULE, entry := Entry}, Func, Args, Result) ->
     case {Func, Args} of
         {channel_close, []} ->
@@ -171,6 +180,11 @@ postcondition(Model = #{'__type__' := ?MODULE, entry := Entry}, Func, Args, Resu
             Result =:= RxAtomCache
     end.
 
+-spec next_state(Model, Func, Args, Result) -> Model when
+    Model :: t(),
+    Func :: atom(),
+    Args :: nil() | [eqwalizer:dynamic()],
+    Result :: eqwalizer:dynamic().
 next_state(Model0 = #{'__type__' := ?MODULE}, Func, Args, _Result) ->
     case {Func, Args} of
         {channel_dop_with_payload, [Spec = #{packets := Packets}]} ->
@@ -358,9 +372,14 @@ channel_send_packets(
             end
     end.
 
+-spec is_atom_cache_filled(Model :: t()) -> boolean().
 is_atom_cache_filled(#{'__type__' := ?MODULE, entry := Entry}) ->
     vdist_entry:is_tx_atom_cache_filled(Entry).
 
+-spec maybe_fill_atom_cache(Model, Spec) -> {ok, Spec, Model} | {error, Reason} when
+    Model :: t(),
+    Spec :: dop_spec(),
+    Reason :: atom_cache_already_filled.
 maybe_fill_atom_cache(
     Model0 = #{'__type__' := ?MODULE, entry := Entry0},
     Spec0 = #{header_mode := HeaderMode, fragment_size := FragmentSize}

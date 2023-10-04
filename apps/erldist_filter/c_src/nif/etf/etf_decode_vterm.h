@@ -73,8 +73,44 @@ extern int etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, 
                                      ERL_NIF_TERM *refp, ERL_NIF_TERM *err_termp);
 extern int etf_decode_tuple_header(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr,
                                    uint32_t *arityp, ERL_NIF_TERM *err_termp);
+static int etf_skip_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr, ERL_NIF_TERM *pidp,
+                             ERL_NIF_TERM *err_termp);
+static int etf_skip_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr,
+                              ERL_NIF_TERM *portp, ERL_NIF_TERM *err_termp);
+static int etf_skip_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr,
+                                   ERL_NIF_TERM *refp, ERL_NIF_TERM *err_termp);
 
 /* Inline Function Definitions */
+
+inline int
+etf_skip_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr, ERL_NIF_TERM *pidp,
+                  ERL_NIF_TERM *err_termp)
+{
+    if (pidp != NULL) {
+        *pidp = THE_NON_VALUE;
+    }
+    return etf_decode_pid_term(caller_env, vtenv, is_external_term, vr, NULL, err_termp);
+}
+
+inline int
+etf_skip_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr, ERL_NIF_TERM *portp,
+                   ERL_NIF_TERM *err_termp)
+{
+    if (portp != NULL) {
+        *portp = THE_NON_VALUE;
+    }
+    return etf_decode_port_term(caller_env, vtenv, is_external_term, vr, NULL, err_termp);
+}
+
+inline int
+etf_skip_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_term, vec_reader_t *vr, ERL_NIF_TERM *refp,
+                        ERL_NIF_TERM *err_termp)
+{
+    if (refp != NULL) {
+        *refp = THE_NON_VALUE;
+    }
+    return etf_decode_reference_term(caller_env, vtenv, is_external_term, vr, NULL, err_termp);
+}
 
 #ifdef __cplusplus
 }

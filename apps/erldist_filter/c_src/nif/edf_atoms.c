@@ -87,6 +87,7 @@ erldist_filter_nif_make_atoms(ErlNifEnv *env)
     MAKE_ATOM(entry, "entry");
     MAKE_ATOM(error, "error");
     MAKE_ATOM(false, "false");
+    MAKE_ATOM(fastpath, "fastpath");
     MAKE_ATOM(features_reply, "features_reply");
     MAKE_ATOM(features_request, "features_request");
     MAKE_ATOM(io_reply, "io_reply");
@@ -116,6 +117,7 @@ erldist_filter_nif_make_atoms(ErlNifEnv *env)
     MAKE_ATOM(rx_stats, "rx_stats");
     MAKE_ATOM(seen, "seen");
     MAKE_ATOM(slots, "slots");
+    MAKE_ATOM(slowpath, "slowpath");
     MAKE_ATOM(start_child, "start_child");
     MAKE_ATOM(stats, "stats");
     MAKE_ATOM(sysname, "sysname");

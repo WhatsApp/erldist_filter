@@ -741,7 +741,7 @@ etf_decode_vterm_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             return TRAP_ERR(
                 EXCP_ERROR_F(caller_env, "Fatal error: unknown etf_decode_vterm_trap_t->state value %d\n", (int)(trap->state)));
         }
-    next_state : {
+    next_state: {
         if (TRAP_SHOULD_YIELD(trap)) {
             return TRAP_YIELD();
         }
@@ -1393,26 +1393,29 @@ etf_decode_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_
             return 0;
         }
         tail = RAW_BYTES();
-        term_length = (size_t)(tail - head);
-        if (!is_external_term) {
-            /* Unsafe, since head - 1 is not known to exist,
-             * but given current dist term encoding,
-             * we always have at least one free byte to the left.
-             */
-            head -= 1;
-            restore = head[0];
-            head[0] = VERSION_MAGIC;
-            term_length += 1;
+        if (pidp != NULL) {
+            term_length = (size_t)(tail - head);
+            if (!is_external_term) {
+                /* Unsafe, since head - 1 is not known to exist,
+                 * but given current dist term encoding,
+                 * we always have at least one free byte to the left.
+                 */
+                head -= 1;
+                restore = head[0];
+                head[0] = VERSION_MAGIC;
+                term_length += 1;
+            }
+            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
+            if (!is_external_term) {
+                head[0] = restore;
+            }
+            if (!retval) {
+                *err_termp =
+                    EXCP_ERROR(caller_env, "Call to etf_decode_pid_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
+                return 0;
+            }
+            *pidp = enif_make_copy(vtenv->nif_env, temp_term);
         }
-        retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-        if (!is_external_term) {
-            head[0] = restore;
-        }
-        if (!retval) {
-            *err_termp = EXCP_ERROR(caller_env, "Call to etf_decode_pid_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-            return 0;
-        }
-        *pidp = enif_make_copy(vtenv->nif_env, temp_term);
         break;
     }
     default: {
@@ -1487,27 +1490,29 @@ etf_decode_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
             return 0;
         }
         tail = RAW_BYTES();
-        term_length = (size_t)(tail - head);
-        if (!is_external_term) {
-            /* Unsafe, since head - 1 is not known to exist,
-             * but given current dist term encoding,
-             * we always have at least one free byte to the left.
-             */
-            head -= 1;
-            restore = head[0];
-            head[0] = VERSION_MAGIC;
-            term_length += 1;
+        if (portp != NULL) {
+            term_length = (size_t)(tail - head);
+            if (!is_external_term) {
+                /* Unsafe, since head - 1 is not known to exist,
+                 * but given current dist term encoding,
+                 * we always have at least one free byte to the left.
+                 */
+                head -= 1;
+                restore = head[0];
+                head[0] = VERSION_MAGIC;
+                term_length += 1;
+            }
+            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
+            if (!is_external_term) {
+                head[0] = restore;
+            }
+            if (!retval) {
+                *err_termp =
+                    EXCP_ERROR(caller_env, "Call to etf_decode_port_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
+                return 0;
+            }
+            *portp = enif_make_copy(vtenv->nif_env, temp_term);
         }
-        retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-        if (!is_external_term) {
-            head[0] = restore;
-        }
-        if (!retval) {
-            *err_termp =
-                EXCP_ERROR(caller_env, "Call to etf_decode_port_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-            return 0;
-        }
-        *portp = enif_make_copy(vtenv->nif_env, temp_term);
         break;
     }
     default: {
@@ -1583,27 +1588,29 @@ etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_ext
             return 0;
         }
         tail = RAW_BYTES();
-        term_length = (size_t)(tail - head);
-        if (!is_external_term) {
-            /* Unsafe, since head - 1 is not known to exist,
-             * but given current dist term encoding,
-             * we always have at least one free byte to the left.
-             */
-            head -= 1;
-            restore = head[0];
-            head[0] = VERSION_MAGIC;
-            term_length += 1;
+        if (refp != NULL) {
+            term_length = (size_t)(tail - head);
+            if (!is_external_term) {
+                /* Unsafe, since head - 1 is not known to exist,
+                 * but given current dist term encoding,
+                 * we always have at least one free byte to the left.
+                 */
+                head -= 1;
+                restore = head[0];
+                head[0] = VERSION_MAGIC;
+                term_length += 1;
+            }
+            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
+            if (!is_external_term) {
+                head[0] = restore;
+            }
+            if (!retval) {
+                *err_termp = EXCP_ERROR(caller_env,
+                                        "Call to etf_decode_reference_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
+                return 0;
+            }
+            *refp = enif_make_copy(vtenv->nif_env, temp_term);
         }
-        retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-        if (!is_external_term) {
-            head[0] = restore;
-        }
-        if (!retval) {
-            *err_termp =
-                EXCP_ERROR(caller_env, "Call to etf_decode_reference_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-            return 0;
-        }
-        *refp = enif_make_copy(vtenv->nif_env, temp_term);
         break;
     }
     default: {

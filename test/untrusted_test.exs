@@ -5,7 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 defmodule UntrustedTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   @after_compile __MODULE__
 
@@ -208,7 +208,7 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {:classify, :unsafe, :drop, ^unode, EDF.udist_dop_reg_send(to_name: :standard_error), {:io_request, _, _, _}}
+          {:classify, :drop, :drop, ^unode, EDF.udist_dop_reg_send(to_name: :standard_error), {:io_request, _, _, _}}
         ],
         @peers.handler_export(vpeer)
       )
@@ -226,7 +226,7 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {:classify, :unsafe, :keep, ^vnode, EDF.udist_dop_send_sender(), {:io_reply, _, {:error, :enotsup}}}
+          {:classify, :drop, :keep, ^vnode, EDF.udist_dop_send_sender(), {:io_reply, _, {:error, :enotsup}}}
         ],
         @peers.handler_export(upeer)
       )

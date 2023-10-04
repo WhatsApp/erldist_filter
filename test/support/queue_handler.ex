@@ -89,6 +89,27 @@ defmodule ErldistFilterElixirTests.QueueHandler do
 
               :drop
 
+            {:io_reply, _reply_as, _reply} ->
+              :keep
+
+            {:io_request, from, reply_as, _request} ->
+              :ok =
+                try do
+                  case node(from) do
+                    ^sysname ->
+                      _ = Process.send(from, {:io_reply, reply_as, {:error, :enotsup}}, [:noconnect])
+                      :ok
+
+                    _ ->
+                      :ok
+                  end
+                catch
+                  _, _ ->
+                    :ok
+                end
+
+              :drop
+
             _ ->
               :drop
           end
@@ -102,32 +123,7 @@ defmodule ErldistFilterElixirTests.QueueHandler do
               :keep
 
             true ->
-              # Block I/O requests when in untrusted mode.
-              case payload do
-                {:io_reply, _reply_as, _reply} ->
-                  :keep
-
-                {:io_request, from, reply_as, _request} ->
-                  :ok =
-                    try do
-                      case node(from) do
-                        ^sysname ->
-                          _ = Process.send(from, {:io_reply, reply_as, {:error, :enotsup}}, [:noconnect])
-                          :ok
-
-                        _ ->
-                          :ok
-                      end
-                    catch
-                      _, _ ->
-                        :ok
-                    end
-
-                  :drop
-
-                _ ->
-                  :keep
-              end
+              :keep
           end
       end
 

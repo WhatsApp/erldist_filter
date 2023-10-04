@@ -14,11 +14,10 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_proper).
-% proper
--eqwalizer(ignore).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(nowarn_missing_spec).
+-compile(warn_missing_spec_all).
+-wacov(ignore).
 
 %% PropEr Helpers
 -export([
@@ -33,11 +32,18 @@
 %%% PropEr Helpers
 %%%=============================================================================
 
+-spec quickcheck(Module, Function, Config, Options) -> true | {fail, Reason} when
+    Module :: module(),
+    Function :: atom(),
+    Config :: ct_suite:ct_config(),
+    Options :: eqwalizer:dynamic(),
+    Reason :: eqwalizer:dynamic().
 quickcheck(Module, Function, Config0, Options) ->
     _ = erlang:put(?PROPER_QUICKCHECK_OPTIONS, {Module, Function, Config0, Options}),
     Config1 = lists:keystore(property_test_tool, 1, Config0, {property_test_tool, ?MODULE}),
     ct_property_test:quickcheck(undefined, Config1).
 
+-spec quickcheck(undefined) -> true | Reason when Reason :: eqwalizer:dynamic().
 quickcheck(undefined) ->
     {Module, Function, Config, Options0} = erlang:erase(?PROPER_QUICKCHECK_OPTIONS),
     {Store, Options1} =

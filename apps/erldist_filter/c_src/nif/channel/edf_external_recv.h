@@ -22,12 +22,6 @@ extern "C" {
 
 /* Macro Definitions */
 
-#define EDF_EXTERNAL_RECV_TRAP_FLAG_NONE (0)
-#define EDF_EXTERNAL_RECV_TRAP_FLAG_DROP (1 << 0)
-#define EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT (1 << 1)
-#define EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP (1 << 2)
-#define EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_SPAWN_REQUEST (1 << 3)
-
 /* Type Definitions */
 
 typedef struct edf_external_recv_trap_s edf_external_recv_trap_t;
@@ -41,10 +35,6 @@ enum edf_external_recv_trap_state_t {
     EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_INSPECT,
     EDF_EXTERNAL_RECV_TRAP_STATE_DECODE_PAYLOAD_LENGTH,
     EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT,
-    EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND,
-    EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_NET_KERNEL,
-    EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_REX,
-    EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SPAWN_REQUEST,
     EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_LOG_EVENT,
     EDF_EXTERNAL_RECV_TRAP_STATE_LOG_EVENT,
     EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_REDIRECT,
@@ -60,7 +50,6 @@ struct edf_external_recv_trap_s {
     edf_external_recv_trap_state_t state;
     edf_external_t *external;
     size_t fragment_index;
-    int flags;
     size_t old_frag_size;
     struct {
         size_t skip;

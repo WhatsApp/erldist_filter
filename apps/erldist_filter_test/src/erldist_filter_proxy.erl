@@ -1,12 +1,4 @@
 %%%-----------------------------------------------------------------------------
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (C) 2022, WhatsApp, Inc
-%%% @doc
-%%%
-%%% @end
-%%% Created :  13 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
-%%%-----------------------------------------------------------------------------
-%%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
 %%%
@@ -18,13 +10,13 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created :  12 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
+%%% Created :  13 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter_proxy).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -wacov(ignore).
 
 -behaviour(gen_server).

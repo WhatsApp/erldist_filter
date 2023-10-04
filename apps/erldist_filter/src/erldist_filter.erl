@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(erldist_filter).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -oncall("whatsapp_clr").
 -wacov(ignore).
 
@@ -36,7 +36,7 @@
 
 -spec handler_get() -> undefined | module().
 handler_get() ->
-    case persistent_term:get(erldist_filter_handler) of
+    case persistent_term:get(erldist_filter_handler, undefined) of
         Handler when is_atom(Handler) ->
             Handler;
         _ ->
@@ -45,12 +45,9 @@ handler_get() ->
 
 -spec handler_set(Handler) -> Handler when Handler :: undefined | module().
 handler_set(Handler) when is_atom(Handler) ->
-    case persistent_term:put(erldist_filter_handler, Handler) of
-        OldHandler when is_atom(OldHandler) ->
-            OldHandler;
-        _ ->
-            undefined
-    end.
+    OldHandler = handler_get(),
+    ok = persistent_term:put(erldist_filter_handler, Handler),
+    OldHandler.
 
 %%%=============================================================================
 %%% Internal API functions

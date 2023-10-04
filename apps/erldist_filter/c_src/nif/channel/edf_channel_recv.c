@@ -920,11 +920,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
         goto escaped_without_local_jump;
 
-    escaped_without_local_jump : {
+    escaped_without_local_jump: {
         return TRAP_ERR(EXCP_ERROR(caller_env, "Fatal error: escaped switch statement without local jump\n"));
     }
 
-    transition_to_packet_header : {
+    transition_to_packet_header: {
         vec_t *rx_vec = &(trap->channel->rx.vec);
         if (!vec_is_free(rx_vec)) {
             (void)vec_destroy(rx_vec);
@@ -933,62 +933,62 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
         goto next_state;
     }
 
-    transition_to_packet_data : {
+    transition_to_packet_data: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_PACKET_DATA;
         goto next_state;
     }
 
-    transition_to_emit_atom_cache_commit : {
+    transition_to_emit_atom_cache_commit: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_EMIT_ATOM_CACHE_COMMIT;
         goto next_state;
     }
 
-    transition_to_rewrite_fragment_header : {
+    transition_to_rewrite_fragment_header: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_REWRITE_FRAGMENT_HEADER;
         goto next_state;
     }
 
-    transition_to_rollback_atom_cache : {
+    transition_to_rollback_atom_cache: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_ROLLBACK_ATOM_CACHE;
         goto next_state;
     }
 
-    transition_to_external_recv : {
+    transition_to_external_recv: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_EXTERNAL_RECV;
         goto next_state;
     }
 
-    transition_to_external_emit : {
+    transition_to_external_emit: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_EXTERNAL_EMIT;
         goto next_state;
     }
 
-    transition_to_external_drop : {
+    transition_to_external_drop: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_EXTERNAL_DROP;
         goto next_state;
     }
 
-    transition_to_dist_frame : {
+    transition_to_dist_frame: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_DIST_FRAME;
         goto next_state;
     }
 
-    transition_to_dist_header : {
+    transition_to_dist_header: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_DIST_HEADER;
         goto next_state;
     }
 
-    transition_to_fragment_continuation : {
+    transition_to_fragment_continuation: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_FRAGMENT_CONTINUATION;
         goto next_state;
     }
 
-    transition_to_decode_control_length : {
+    transition_to_decode_control_length: {
         trap->channel->rx.state = EDF_CHANNEL_RX_STATE_DECODE_CONTROL_LENGTH;
         goto next_state;
     }
 
-    next_state : {
+    next_state: {
         if (TRAP_SHOULD_YIELD(trap)) {
             return TRAP_YIELD();
         }
@@ -1102,7 +1102,7 @@ decode_control_length_callback(ErlNifEnv *caller_env, etf_decode_term_length_tra
         *result = TRAP_ERR(EXCP_ERROR(caller_env, "Call to vterm_env_alloc() failed: unable to decode control message\n"));
         return;
     }
-    if (!etf_decode_udist_control(caller_env, ext->vtenv, edf_external_is_pass_through(ext), slice, ext->up, &err_term)) {
+    if (!etf_decode_udist_control(caller_env, ext->vtenv, edf_external_is_pass_through(ext), true, slice, ext->up, &err_term)) {
         (void)vec_destroy(slice);
         *result = TRAP_ERR(err_term);
         return;

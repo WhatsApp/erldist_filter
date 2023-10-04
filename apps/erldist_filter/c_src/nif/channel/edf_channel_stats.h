@@ -47,6 +47,8 @@ struct edf_channel_stats_s {
     uint64_t control_has_new_fun_ext;
     uint64_t payload_has_export_ext;
     uint64_t payload_has_new_fun_ext;
+    uint64_t fastpath;
+    uint64_t slowpath;
     edf_channel_stats_dop_t dop_link;
     edf_channel_stats_dop_t dop_send;
     edf_channel_stats_dop_t dop_exit;

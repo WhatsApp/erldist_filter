@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vdist_fragment_header).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -107,17 +107,14 @@ update_atom_cache(#vdist_fragment_header{atom_cache_ref_entries = Entries}, Cach
     update_atom_cache(Entries, Cache, vdist_atom_translation_table:new()).
 
 -spec update_atom_cache(Entries, Cache, Table) -> {ok, Cache, Table} when
-    Entries :: [vdist_old_atom_cache_ref_entry:t()],
+    Entries :: [vdist:atom_cache_ref_entry()],
     Cache :: vdist_atom_cache:t(),
     Table :: vdist_atom_translation_table:t().
 update_atom_cache([#vdist_old_atom_cache_ref_entry{atom_cache_index = CacheIndex} | Entries], Cache, Table0) ->
-    % io:format("CacheIndex = ~p, Cache = ~p~n", [CacheIndex, Cache]),
     case vdist_atom_cache:find(Cache, CacheIndex) of
         {ok, {CacheIndex, Atom}} ->
             {ok, Table1} = vdist_atom_translation_table:store(Table0, CacheIndex, Atom),
             update_atom_cache(Entries, Cache, Table1)
-        % {error, Reason} ->
-        %     {error, Reason}
     end;
 update_atom_cache(
     [#vdist_new_atom_cache_ref_entry{atom_cache_index = CacheIndex, atom_text = AtomText} | Entries], Cache0, Table0

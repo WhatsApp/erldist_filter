@@ -7,7 +7,7 @@
 %%% % @format
 {application, erldist_filter_test, [
     {description, "erldist_filter_test: test modules for Erlang distribution filtering"},
-    {vsn, "1.0.0"},
+    {vsn, "1.1.0"},
     {modules, []},
     {registered, []},
     %% NOTE: Remember to sync changes to `applications` to

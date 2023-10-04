@@ -36,7 +36,7 @@
 %%-compile(export_all).
 -export([handshake_we_started/1, handshake_other_started/1,
          strict_order_flags/0, rejectable_flags/0,
-	 start_timer/1, setup_timer/2, 
+	 start_timer/1, setup_timer/2,
 	 reset_timer/1, cancel_timer/1,
          is_node_name/1, split_node/1, is_allowed/2,
 	 shutdown/3, shutdown/4,
@@ -56,12 +56,12 @@
 
 -define(int16(X), [((X) bsr 8) band 16#ff, (X) band 16#ff]).
 
--define(int32(X), 
+-define(int32(X),
 	[((X) bsr 24) band 16#ff, ((X) bsr 16) band 16#ff,
 	 ((X) bsr 8) band 16#ff, (X) band 16#ff]).
 
 -define(i16(X1,X0),
-        (?u16(X1,X0) - 
+        (?u16(X1,X0) -
          (if (X1) > 127 -> 16#10000; true -> 0 end))).
 
 -define(u16(X1,X0),
@@ -306,7 +306,7 @@ check_mandatory(Mandatory, OtherFlags, Missing) ->
                          Missing
                  end,
     check_mandatory(Left, OtherFlags, NewMissing).
-                    
+
 
 %% No nodedown will be sent if we fail before this process has
 %% succeeded to mark the node as pending.
@@ -338,7 +338,7 @@ mark_pending(#hs_data{kernel_pid=Kernel,
 	nok_pending ->
 	    send_status(HSData, nok),
 	    ?shutdown(Node);
-	    
+
 	up_pending ->
 	    %% Check if connection is still alive, no
 	    %% implies that the connection is no longer pending
@@ -373,7 +373,7 @@ wait_pending(#hs_data{kernel_pid=Kernel,
     Kernel ! {self(), {wait_pending, Node}},
     receive
 	{Kernel, pending} ->
-	    ?trace("wait_pending returned for pid ~p.~n", 
+	    ?trace("wait_pending returned for pid ~p.~n",
 		   [self()]),
 	    ok
     end.
@@ -384,7 +384,7 @@ do_alive(#hs_data{other_node = Node} = HSData) ->
 	true  -> true;
 	false -> ?shutdown(Node)
     end.
-    
+
 do_mark_pending(Kernel, MyNode, Node, Flags) ->
     Kernel ! {self(), {accept_pending,MyNode,Node,
 		       publish_type(Flags)}},
@@ -400,7 +400,7 @@ is_pending(Kernel, Node) ->
     receive
 	{Kernel, {is_pending, Reply}} -> Reply
     end.
-    
+
 %%
 %% This will tell the net_kernel about the nodedown as it
 %% recognizes the exit signal.
@@ -420,7 +420,7 @@ shutdown(_Module, _Line, _Data, Reason) ->
 		    "~p:~p, data ~p,reason ~p~n",
 		    [_Module,_Line, _Data, Reason]),
     exit(Reason).
-%% Use this line to debug connection.  
+%% Use this line to debug connection.
 %% Set net_kernel verbose = 1 as well.
 %%    exit({Reason, {?MODULE, _Line, _Data, erlang:timestamp()}}).
 
@@ -504,9 +504,9 @@ connection(#hs_data{other_node = Node,
 		    f_setopts_pre_nodeup = FPreNodeup,
 		    f_setopts_post_nodeup = FPostNodeup}= HSData) ->
     cancel_timer(HSData#hs_data.timer),
-    PType = publish_type(HSData#hs_data.other_flags), 
+    PType = publish_type(HSData#hs_data.other_flags),
     case FPreNodeup(Socket) of
-	ok -> 
+	ok ->
 	    {DHandle,NamedMe} = do_setnode(HSData), % Succeeds or exits the process.
 	    Address = FAddress(Socket,Node),
 	    TickIntensity = mark_nodeup(HSData,Address,NamedMe),
@@ -539,7 +539,7 @@ connection(#hs_data{other_node = Node,
 	    ?shutdown2({Node, Socket}, {f_setopts_pre_nodeup_failed, Error2})
     end.
 
-%% Generate a message digest from Challenge number and Cookie	
+%% Generate a message digest from Challenge number and Cookie
 gen_digest(Challenge, Cookie) when is_integer(Challenge), is_atom(Cookie) ->
     erlang:md5([atom_to_list(Cookie)|integer_to_list(Challenge)]).
 
@@ -558,11 +558,11 @@ gen_challenge() ->
     %% A(8) B(16) C(16)
     %% D(16),E(8), F(16) G(8) H(16)
     ( ((A bsl 24) + (E bsl 16) + (G bsl 8) + F) bxor
-      (B + (C bsl 16)) bxor 
+      (B + (C bsl 16)) bxor
       (D + (H bsl 16)) ) band 16#ffffffff.
 
 %% No error return; either succeeds or terminates the process.
-do_setnode(#hs_data{other_node = Node, socket = Socket, 
+do_setnode(#hs_data{other_node = Node, socket = Socket,
                     this_node = MyNode,
 		    other_flags = Flags,
 		    f_getll = GetLL,
@@ -600,10 +600,10 @@ do_setnode(#hs_data{other_node = Node, socket = Socket,
 	    ?shutdown({Node, Socket})
     end.
 
-mark_nodeup(#hs_data{kernel_pid = Kernel, 
-		     other_node = Node, 
+mark_nodeup(#hs_data{kernel_pid = Kernel,
+		     other_node = Node,
 		     other_flags = Flags,
-		     other_started = OtherStarted}, 
+		     other_started = OtherStarted},
 	    Address, NamedMe) ->
     Kernel ! {self(), {nodeup,Node,Address,publish_type(Flags),NamedMe}},
     receive
@@ -686,8 +686,8 @@ con_loop(#state{kernel = Kernel, node = Node,
 %% Misc. functions.
 %% ------------------------------------------------------------
 
-send_name(#hs_data{socket = Socket, this_node = Node, 
-		   f_send = FSend, 
+send_name(#hs_data{socket = Socket, this_node = Node,
+		   f_send = FSend,
 		   this_flags = Flags}) ->
     NameBin = to_binary(Node),
     Creation = case name_type(Flags) of
@@ -705,7 +705,7 @@ to_binary(Atom) when is_atom(Atom) ->
 to_binary(List) when is_list(List) ->
     list_to_binary(List).
 
-send_challenge(#hs_data{socket = Socket, this_node = Node, 
+send_challenge(#hs_data{socket = Socket, this_node = Node,
 			this_flags = ThisFlags,
 			f_send = FSend},
 	       Challenge ) ->
@@ -719,13 +719,13 @@ send_challenge(#hs_data{socket = Socket, this_node = Node,
             [<<$N,ThisFlags:64, Challenge:32, Creation:32, NameLen:16>>,
              NodeName]).
 
-send_challenge_reply(#hs_data{socket = Socket, f_send = FSend}, 
+send_challenge_reply(#hs_data{socket = Socket, f_send = FSend},
 		     Challenge, Digest) ->
     ?trace("send_reply: challenge=~w digest=~p\n",
 	   [Challenge,Digest]),
     to_port(FSend, Socket, [$r,?int32(Challenge),Digest]).
 
-send_challenge_ack(#hs_data{socket = Socket, f_send = FSend}, 
+send_challenge_ack(#hs_data{socket = Socket, f_send = FSend},
 		   Digest) ->
     ?trace("send_ack: digest=~p\n", [Digest]),
     to_port(FSend, Socket, [$a,Digest]).
@@ -994,9 +994,9 @@ recv_complement(HSData) ->
 %%
 %% wait for challenge response after send_challenge
 %%
-recv_challenge_reply(#hs_data{socket = Socket, 
+recv_challenge_reply(#hs_data{socket = Socket,
 			      other_node = NodeB,
-			      f_recv = FRecv}, 
+			      f_recv = FRecv},
 		     ChallengeA, Cookie) ->
     case FRecv(Socket, 0, infinity) of
 	{ok,[$r,CB3,CB2,CB1,CB0 | SumB]} when length(SumB) =:= 16 ->
@@ -1018,8 +1018,8 @@ recv_challenge_reply(#hs_data{socket = Socket,
                        {recv_challenge_reply_failed, Other})
     end.
 
-recv_challenge_ack(#hs_data{socket = Socket, f_recv = FRecv, 
-			    other_node = NodeB}, 
+recv_challenge_ack(#hs_data{socket = Socket, f_recv = FRecv,
+			    other_node = NodeB},
 		   ChallengeB, CookieA) ->
     case FRecv(Socket, 0, infinity) of
 	{ok,[$a|SumB]} when length(SumB) =:= 16 ->
@@ -1161,26 +1161,26 @@ to_port(FSend, Socket, Data) ->
 %%
 %% Send a TICK to the other side.
 %%
-%% This will happen every 15 seconds (by default) 
-%% The idea here is that every 15 secs, we write a little 
-%% something on the connection if we haven't written anything for 
+%% This will happen every 15 seconds (by default)
+%% The idea here is that every 15 secs, we write a little
+%% something on the connection if we haven't written anything for
 %% the last 15 secs.
-%% This will ensure that nodes that are not responding due to 
-%% hardware errors (Or being suspended by means of ^Z) will 
-%% be considered to be down. If we do not want to have this  
-%% we must start the net_kernel (in erlang) without its 
-%% ticker process, In that case this code will never run 
+%% This will ensure that nodes that are not responding due to
+%% hardware errors (Or being suspended by means of ^Z) will
+%% be considered to be down. If we do not want to have this
+%% we must start the net_kernel (in erlang) without its
+%% ticker process, In that case this code will never run
 
-%% And then every 60 seconds we also check the connection and 
-%% close it if we haven't received anything on it for the 
-%% last 60 secs. If ticked == tick we haven't received anything 
-%% on the connection the last 60 secs. 
+%% And then every 60 seconds we also check the connection and
+%% close it if we haven't received anything on it for the
+%% last 60 secs. If ticked == tick we haven't received anything
+%% on the connection the last 60 secs.
 
-%% The detection time interval is thus, by default, 45s < DT < 75s 
+%% The detection time interval is thus, by default, 45s < DT < 75s
 
 %% A HIDDEN node is always ticked if we haven't read anything
 %% as a (primitive) hidden node only ticks when it receives a TICK !!
-	
+
 send_tick(#state{handle = DHandle, socket = Socket,
                  tick_intensity = TickIntensity,
                  publish_type = Type, f_tick = MFTick,

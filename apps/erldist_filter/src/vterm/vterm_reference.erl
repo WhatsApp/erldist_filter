@@ -14,7 +14,7 @@
 %%%-----------------------------------------------------------------------------
 %%% % @format
 -module(vterm_reference).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -32,6 +32,9 @@ sequence_id(#vterm_new_reference_ext{creation = Creation, ids = Ids}) ->
 sequence_id(#vterm_reference_ext{id = Id, creation = Creation}) ->
     hash_u64([Id], Creation).
 
+%% @private
+-spec hash_u64(Ids, Creation) -> Hash when
+    Ids :: [non_neg_integer()], Creation :: non_neg_integer(), Hash :: non_neg_integer().
 hash_u64(Ids, Creation) ->
     ((erlang:phash2({Creation, Ids}, 16#FFFFFFFF) bsl 32) bor erlang:phash2({Ids, Creation}, 16#FFFFFFFF)) band
         16#FFFFFFFFFFFFFFFF.

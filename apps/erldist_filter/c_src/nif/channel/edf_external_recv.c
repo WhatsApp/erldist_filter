@@ -45,7 +45,6 @@ edf_external_recv_trap_open(ErlNifEnv *env, edf_external_t *external, edf_extern
     trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_INIT;
     trap->external = external;
     trap->fragment_index = 0;
-    trap->flags = EDF_EXTERNAL_RECV_TRAP_FLAG_NONE;
     trap->old_frag_size = 0;
     trap->new_frag_size.skip = 0;
     trap->new_frag_size.headers_length = 0;
@@ -222,15 +221,15 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 ERL_NIF_TERM child_trap_term;
                 etf_decode_term_length_trap_t *child_trap = NULL;
                 bool is_external_term = false;
-                vec_t payload_slice;
-                (void)vec_init_free(&payload_slice);
-                if (!edf_external_slice_payload_get(trap->external, &is_external_term, &payload_slice)) {
+                vec_t payload_vec[1];
+                (void)vec_init_free(payload_vec);
+                if (!edf_external_slice_payload_get(trap->external, &is_external_term, payload_vec)) {
                     return TRAP_ERR(EXCP_ERROR(
                         caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));
                 }
-                child_trap_term = etf_decode_term_length_trap_open(caller_env, is_external_term, &payload_slice,
+                child_trap_term = etf_decode_term_length_trap_open(caller_env, is_external_term, payload_vec,
                                                                    decode_payload_length_callback, (void *)trap, &child_trap);
-                (void)vec_destroy(&payload_slice);
+                (void)vec_destroy(payload_vec);
                 if (child_trap == NULL || enif_is_exception(caller_env, child_trap_term)) {
                     return TRAP_ERR(child_trap_term);
                 }
@@ -257,332 +256,37 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             }
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT: {
+            vec_t payload_vec[1];
+            slice_t payload_slice[1];
+            slice_t *payload = NULL;
             bool untrusted = edf_config_is_untrusted_enabled();
-            switch (ext->up->control.tag) {
-            case UDIST_CONTROL_TAG_EXIT:
-                // LOG, DROP
-                trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                goto transition_to_maybe_log_event;
-            case UDIST_CONTROL_TAG_EXIT2:
-                // LOG, DROP or REDIRECT
-                trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                goto transition_to_maybe_log_event;
-            case UDIST_CONTROL_TAG_GROUP_LEADER:
-                // LOG, DROP or REDIRECT
-                trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                goto transition_to_maybe_log_event;
-            case UDIST_CONTROL_TAG_LINK:
-                // LOG, DROP
-                trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                goto transition_to_maybe_log_event;
-            case UDIST_CONTROL_TAG_MONITOR_RELATED:
-                if (untrusted) {
-                    // LOG, EMIT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
-                    goto transition_to_maybe_log_event;
-                }
-                // EMIT
-                goto transition_to_emit;
-            case UDIST_CONTROL_TAG_SEND_TO_ALIAS:
-                if (untrusted) {
-                    // LOG, DROP or REDIRECT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                    goto transition_to_maybe_log_event;
-                }
-                goto transition_to_classify_send;
-            case UDIST_CONTROL_TAG_SEND_TO_NAME: {
-                if (untrusted) {
-                    // LOG, DROP or REDIRECT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                    goto transition_to_maybe_log_event;
-                }
-                if (ext->up->control.data.send_to == ATOM(net_kernel)) {
-                    goto transition_to_classify_send_to_net_kernel;
-                } else if (ext->up->control.data.send_to == ATOM(rex)) {
-                    goto transition_to_classify_send_to_rex;
-                }
-                goto transition_to_classify_send;
-            }
-            case UDIST_CONTROL_TAG_SEND_TO_PID:
-                if (untrusted) {
-                    // LOG, DROP or REDIRECT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                    EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                    goto transition_to_maybe_log_event;
-                }
-                goto transition_to_classify_send;
-            case UDIST_CONTROL_TAG_SPAWN_REPLY:
-                if (untrusted) {
-                    // LOG, EMIT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
-                    goto transition_to_maybe_log_event;
-                }
-                // EMIT
-                goto transition_to_emit;
-            case UDIST_CONTROL_TAG_SPAWN_REQUEST:
-                goto transition_to_classify_spawn_request;
-            case UDIST_CONTROL_TAG_UNLINK:
-                if (untrusted) {
-                    // LOG, EMIT
-                    trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT);
-                    goto transition_to_maybe_log_event;
-                }
-                // EMIT
-                goto transition_to_emit;
-            default:
-                return TRAP_ERR(
-                    EXCP_ERROR_F(caller_env, "Unknown control tag=%u for dop=%u\n", ext->up->control.tag, ext->up->info.dop));
-            }
-        }
-        case EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND: {
-            // Logs, emits, drops, and/or redirects any messages matching the following:
-            //
-            //     {system, From, Request}
-            //     {'EXIT', Pid, Reason}
-            //     {'$gen_cast', {try_again_restart, TryAgainId}}
-            //     {'$gen_call', From, {start_child, ChildSpec}}
-            //     {'$gen_call', From, {terminate_child, ChildId}}
-            //     {'$gen_call', From, {restart_child, ChildId}}
-            //     {'$gen_call', From, {delete_child, ChildId}}
-            //     {io_request, From, ReplyAs, Request}
-            //     {io_reply, ReplyAs, Reply}
-            //
-            // Otherwise, emit the message.
             bool is_external_term = false;
-            vec_t payload_slice;
-            vec_reader_t vr[1];
-            uint32_t arity;
-            ERL_NIF_TERM atom = THE_NON_VALUE;
-            (void)vec_init_free(&payload_slice);
-            if (!edf_external_slice_payload_get(ext, &is_external_term, &payload_slice)) {
-                return TRAP_ERR(EXCP_ERROR(
-                    caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));
-            }
-            if (!vec_reader_create(vr, &payload_slice, 0)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n"));
-            }
-            if (edf_external_is_pass_through(ext) && !vec_reader_skip_exact(vr, 1)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n"));
-            }
-            if (uterm_is_tuple(ext->vtenv, vr)) {
-                if (edf_external_is_pass_through(ext) && !vec_reader_back_exact(vr, 1)) {
-                    return TRAP_ERR(
-                        EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n"));
+            if (ext->up->info.payload) {
+                (void)vec_init_free(payload_vec);
+                if (!edf_external_slice_payload_get(ext, &is_external_term, payload_vec)) {
+                    return TRAP_ERR(EXCP_ERROR(
+                        caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));
                 }
-                if (!etf_decode_tuple_header(caller_env, ext->vtenv, is_external_term, vr, &arity, err_termp)) {
-                    return TRAP_ERR(*err_termp);
-                }
-                if (arity > 0 && uterm_is_atom(ext->vtenv, vr)) {
-                    if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                        return TRAP_ERR(*err_termp);
-                    }
-                    if (arity == 2) {
-                        if (atom == ATOM($gen_cast)) {
-                            if (uterm_is_tuple(ext->vtenv, vr)) {
-                                if (!etf_decode_tuple_header(caller_env, ext->vtenv, false, vr, &arity, err_termp)) {
-                                    return TRAP_ERR(*err_termp);
-                                }
-                                if (arity > 0 && uterm_is_atom(ext->vtenv, vr)) {
-                                    if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                                        return TRAP_ERR(*err_termp);
-                                    }
-                                    if (arity == 2 && atom == ATOM(try_again_restart)) {
-                                        // LOG, DROP or REDIRECT
-                                        trap->flags |=
-                                            (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                             EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                                        goto transition_to_maybe_log_event;
-                                    }
-                                }
-                            }
-                        }
-                    } else if (arity == 3) {
-                        if (atom == ATOM(system) || atom == ATOM(EXIT)) {
-                            // LOG, DROP or REDIRECT
-                            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                            goto transition_to_maybe_log_event;
-                        } else if (atom == ATOM($gen_call)) {
-                            if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
-                                return TRAP_ERR(*err_termp);
-                            }
-                            if (uterm_is_tuple(ext->vtenv, vr)) {
-                                if (!etf_decode_tuple_header(caller_env, ext->vtenv, false, vr, &arity, err_termp)) {
-                                    return TRAP_ERR(*err_termp);
-                                }
-                                if (arity > 0 && uterm_is_atom(ext->vtenv, vr)) {
-                                    if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                                        return TRAP_ERR(*err_termp);
-                                    }
-                                    if (arity == 2 && (atom == ATOM(start_child) || atom == ATOM(terminate_child) ||
-                                                       atom == ATOM(restart_child) || atom == ATOM(delete_child))) {
-                                        // LOG, DROP or REDIRECT
-                                        trap->flags |=
-                                            (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                             EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                                        goto transition_to_maybe_log_event;
-                                    }
-                                }
-                            }
-                        } else if (atom == ATOM(io_reply)) {
-                            // LOG, DROP or REDIRECT
-                            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                            goto transition_to_maybe_log_event;
-                        }
-                    } else if (arity == 4) {
-                        if (atom == ATOM(io_request)) {
-                            // LOG, DROP or REDIRECT
-                            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-                            goto transition_to_maybe_log_event;
-                        }
-                    }
-                }
+                payload_slice->head = vec_buf(payload_vec);
+                payload_slice->tail = vec_buf_tail(payload_vec);
+                payload = payload_slice;
             }
-            // EMIT
+            if (!udist_classify(caller_env, ext->vtenv, ext->up, untrusted, is_external_term, payload, err_termp)) {
+                (void)vec_destroy(payload_vec);
+                return TRAP_ERR(*err_termp);
+            }
+            (void)vec_destroy(payload_vec);
+            if ((ext->up->flags & UDIST_CLASSIFY_FLAG_LOG_EVENT) != 0) {
+                goto transition_to_maybe_log_event;
+            } else if ((ext->up->flags & (UDIST_CLASSIFY_FLAG_REDIRECT_DOP | UDIST_CLASSIFY_FLAG_REDIRECT_SPAWN_REQUEST)) != 0) {
+                goto transition_to_maybe_redirect;
+            } else if ((ext->up->flags & UDIST_CLASSIFY_FLAG_DROP) != 0) {
+                goto transition_to_drop;
+            }
             goto transition_to_emit;
         }
-        case EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_NET_KERNEL: {
-            // REG_SEND: net_kernel
-            //
-            // Only allow messages matching the following:
-            //
-            //     {'$gen_call', From, {is_auth, Node}}
-            //
-            // Otherwise, redirect the message (drop it).
-            bool is_external_term = false;
-            vec_t payload_slice;
-            vec_reader_t vr[1];
-            uint32_t arity;
-            ERL_NIF_TERM atom = THE_NON_VALUE;
-            (void)vec_init_free(&payload_slice);
-            if (!edf_external_slice_payload_get(ext, &is_external_term, &payload_slice)) {
-                return TRAP_ERR(EXCP_ERROR(
-                    caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));
-            }
-            if (!vec_reader_create(vr, &payload_slice, 0)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n"));
-            }
-            if (edf_external_is_pass_through(ext) && !vec_reader_skip_exact(vr, 1)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n"));
-            }
-            if (uterm_is_tuple(ext->vtenv, vr)) {
-                if (edf_external_is_pass_through(ext) && !vec_reader_back_exact(vr, 1)) {
-                    return TRAP_ERR(
-                        EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n"));
-                }
-                if (!etf_decode_tuple_header(caller_env, ext->vtenv, is_external_term, vr, &arity, err_termp)) {
-                    return TRAP_ERR(*err_termp);
-                }
-                if (arity == 3 && uterm_is_atom(ext->vtenv, vr)) {
-                    if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                        return TRAP_ERR(*err_termp);
-                    }
-                    if (atom == ATOM($gen_call)) {
-                        if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
-                            return TRAP_ERR(*err_termp);
-                        }
-                        if (uterm_is_tuple(ext->vtenv, vr)) {
-                            if (!etf_decode_tuple_header(caller_env, ext->vtenv, false, vr, &arity, err_termp)) {
-                                return TRAP_ERR(*err_termp);
-                            }
-                            if (arity == 2 && uterm_is_atom(ext->vtenv, vr)) {
-                                if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                                    return TRAP_ERR(*err_termp);
-                                }
-                                if (atom == ATOM(is_auth)) {
-                                    // EMIT
-                                    goto transition_to_emit;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // LOG, DROP or REDIRECT
-            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-            goto transition_to_maybe_log_event;
-        }
-        case EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_REX: {
-            // REG_SEND: rex
-            //
-            // Only allow messages matching the following:
-            //
-            //     {From, features_request}
-            //     {features_reply, node(), [erpc]}
-            //
-            // Otherwise, redirect the message (drop it).
-            bool is_external_term = false;
-            vec_t payload_slice;
-            vec_reader_t vr[1];
-            uint32_t arity;
-            ERL_NIF_TERM atom = THE_NON_VALUE;
-            (void)vec_init_free(&payload_slice);
-            if (!edf_external_slice_payload_get(ext, &is_external_term, &payload_slice)) {
-                return TRAP_ERR(EXCP_ERROR(
-                    caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));
-            }
-            if (!vec_reader_create(vr, &payload_slice, 0)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_create() failed: unable to get slice for payload message\n"));
-            }
-            if (edf_external_is_pass_through(ext) && !vec_reader_skip_exact(vr, 1)) {
-                return TRAP_ERR(
-                    EXCP_ERROR(caller_env, "Call to vec_reader_skip_exact() failed: unable to decode payload message\n"));
-            }
-            if (uterm_is_tuple(ext->vtenv, vr)) {
-                if (edf_external_is_pass_through(ext) && !vec_reader_back_exact(vr, 1)) {
-                    return TRAP_ERR(
-                        EXCP_ERROR(caller_env, "Call to vec_reader_back_exact() failed: unable to decode payload message\n"));
-                }
-                if (!etf_decode_tuple_header(caller_env, ext->vtenv, is_external_term, vr, &arity, err_termp)) {
-                    return TRAP_ERR(*err_termp);
-                }
-                if (arity == 2) {
-                    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
-                        return TRAP_ERR(*err_termp);
-                    }
-                    if (uterm_is_atom(ext->vtenv, vr)) {
-                        if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                            return TRAP_ERR(*err_termp);
-                        }
-                        if (atom == ATOM(features_request)) {
-                            // EMIT
-                            goto transition_to_emit;
-                        }
-                    }
-                } else if (arity == 3 && uterm_is_atom(ext->vtenv, vr)) {
-                    if (!etf_decode_atom_term(caller_env, ext->vtenv, false, vr, &atom, err_termp)) {
-                        return TRAP_ERR(*err_termp);
-                    }
-                    if (atom == ATOM(features_reply)) {
-                        // EMIT
-                        goto transition_to_emit;
-                    }
-                }
-            }
-            // LOG, DROP or REDIRECT
-            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP |
-                            EDF_EXTERNAL_RECV_TRAP_FLAG_DROP);
-            goto transition_to_maybe_log_event;
-        }
-        case EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SPAWN_REQUEST: {
-            // LOG, REDIRECT
-            trap->flags |= (EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT | EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_SPAWN_REQUEST);
-            goto transition_to_maybe_log_event;
-        }
         case EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_LOG_EVENT: {
-            if (edf_config_is_logging_enabled() && (trap->flags & EDF_EXTERNAL_RECV_TRAP_FLAG_LOG_EVENT) != 0) {
+            if (edf_config_is_logging_enabled() && (ext->up->flags & UDIST_CLASSIFY_FLAG_LOG_EVENT) != 0) {
                 goto transition_to_log_event;
             }
             goto transition_to_maybe_redirect;
@@ -623,11 +327,11 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_maybe_redirect;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_REDIRECT: {
-            if ((trap->flags & EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_DOP) != 0 && edf_config_is_redirect_dist_operations_enabled()) {
+            if ((ext->up->flags & UDIST_CLASSIFY_FLAG_REDIRECT_DOP) != 0 && edf_config_is_redirect_dist_operations_enabled()) {
                 goto transition_to_redirect_dop;
-            } else if ((trap->flags & EDF_EXTERNAL_RECV_TRAP_FLAG_REDIRECT_SPAWN_REQUEST) != 0) {
+            } else if ((ext->up->flags & UDIST_CLASSIFY_FLAG_REDIRECT_SPAWN_REQUEST) != 0) {
                 goto transition_to_redirect_spawn_request;
-            } else if ((trap->flags & EDF_EXTERNAL_RECV_TRAP_FLAG_DROP) != 0) {
+            } else if ((ext->up->flags & UDIST_CLASSIFY_FLAG_DROP) != 0) {
                 goto transition_to_drop;
             }
             goto transition_to_emit;
@@ -664,79 +368,63 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
         goto escaped_without_local_jump;
 
-    escaped_without_local_jump : {
+    escaped_without_local_jump: {
         return TRAP_ERR(EXCP_ERROR(caller_env, "Fatal error: escaped switch statement without local jump\n"));
     }
 
-    transition_to_compact_realloc : {
+    transition_to_compact_realloc: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_REALLOC;
         goto next_state;
     }
-    transition_to_compact_copy : {
+    transition_to_compact_copy: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_COPY;
         goto next_state;
     }
-    transition_to_maybe_inspect : {
+    transition_to_maybe_inspect: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_INSPECT;
         goto next_state;
     }
-    transition_to_decode_payload_length : {
+    transition_to_decode_payload_length: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_DECODE_PAYLOAD_LENGTH;
         goto next_state;
     }
-    transition_to_inspect : {
+    transition_to_inspect: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT;
         goto next_state;
     }
-    transition_to_classify_send : {
-        trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND;
-        goto next_state;
-    }
-    transition_to_classify_send_to_net_kernel : {
-        trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_NET_KERNEL;
-        goto next_state;
-    }
-    transition_to_classify_send_to_rex : {
-        trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SEND_TO_REX;
-        goto next_state;
-    }
-    transition_to_classify_spawn_request : {
-        trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_CLASSIFY_SPAWN_REQUEST;
-        goto next_state;
-    }
-    transition_to_maybe_log_event : {
+    transition_to_maybe_log_event: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_LOG_EVENT;
         goto next_state;
     }
-    transition_to_log_event : {
+    transition_to_log_event: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_LOG_EVENT;
         goto next_state;
     }
-    transition_to_maybe_redirect : {
+    transition_to_maybe_redirect: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_REDIRECT;
         goto next_state;
     }
-    transition_to_redirect_dop : {
+    transition_to_redirect_dop: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_DOP;
         goto next_state;
     }
-    transition_to_redirect_spawn_request : {
+    transition_to_redirect_spawn_request: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_SPAWN_REQUEST;
         goto next_state;
     }
-    transition_to_emit : {
+    transition_to_emit: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_EMIT;
         goto next_state;
     }
-    transition_to_drop : {
+    transition_to_drop: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_DROP;
         goto next_state;
     }
-    transition_to_done : {
+    transition_to_done: {
         trap->state = EDF_EXTERNAL_RECV_TRAP_STATE_DONE;
         goto next_state;
     }
-    next_state : {
+    next_state: {
         if (TRAP_SHOULD_YIELD(trap)) {
             return TRAP_YIELD();
         }
