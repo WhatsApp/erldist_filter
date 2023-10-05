@@ -1,6 +1,12 @@
 %%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%
 %%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (C) 2022, WhatsApp, Inc
+%%% @copyright (c) Meta Platforms, Inc. and affiliates.
 %%% @doc A test suite designed to load the `erldist_filter_nif' and do nothing
 %%% else.
 %%%
