@@ -154,16 +154,7 @@ send_sender(U, _V = {VPeerNode, _VPeerPid}, Term) ->
 
 -spec upeer_ping(node()) -> pong | pang.
 upeer_ping(VPeerNode) ->
-    case net_adm:ping(VPeerNode) of
-        pong ->
-            pong;
-        pang ->
-            ok =
-                receive
-                after 1000 -> ok
-                end,
-            net_adm:ping(VPeerNode)
-    end.
+    net_adm:ping(VPeerNode).
 
 -spec upeer_alias_send(node(), term()) -> pong.
 upeer_alias_send(VNode, Term) ->
