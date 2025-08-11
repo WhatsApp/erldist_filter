@@ -18,7 +18,7 @@
 -oncall("whatsapp_clr").
 -compile(warn_missing_spec_all).
 
--include_lib("proper/include/proper.hrl").
+-include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 
 %% Properties
 -export([

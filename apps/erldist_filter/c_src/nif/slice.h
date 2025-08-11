@@ -20,7 +20,8 @@ extern "C" {
 
 #define SLICE_INIT_EMPTY()                                                                                                         \
     {                                                                                                                              \
-        .head = NULL, .tail = NULL,                                                                                                \
+        .head = NULL,                                                                                                              \
+        .tail = NULL,                                                                                                              \
     }
 
 /* Type Definitions */

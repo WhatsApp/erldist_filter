@@ -10,29 +10,17 @@
 %%% @doc
 %%%
 %%% @end
-%%% Created :  16 Dec 2022 by Andrew Bennett <potatosaladx@meta.com>
+%%% Created :  29 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
 %%% % @format
--module(erldist_filter_test_dummy_prop).
+-module(erldist_filter_test).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
+-compile(warn_missing_spec).
 
--include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
-
-%% Properties
 -export([
-    prop_noop/1
+    dynamic_cast/1
 ]).
 
-%%%=============================================================================
-%%% Properties
-%%%=============================================================================
-
-prop_noop(_Config) ->
-    ?FORALL(
-        Integer,
-        integer(),
-        begin
-            Integer =:= Integer
-        end
-    ).
+-spec dynamic_cast(term()) -> dynamic().
+dynamic_cast(X) -> X.

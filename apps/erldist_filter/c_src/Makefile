@@ -76,29 +76,29 @@ ifeq ($(PLATFORM),msys2)
 	export CC
 	CXX = /mingw64/bin/g++
 	export CXX
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= -O2 -g -ggdb -std=c23 -finline-functions -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -finline-functions -Wall
 else ifeq ($(PLATFORM),darwin)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -arch x86_64 -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -arch x86_64 -Wall
-	LDFLAGS ?= -arch x86_64 -flat_namespace -undefined suppress
+	CFLAGS ?= -O2 -g -ggdb -std=c23 -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -Wall
+	LDFLAGS ?= -flat_namespace -undefined suppress
 else ifeq ($(PLATFORM),freebsd)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= -O2 -g -ggdb -std=c23 -finline-functions -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -finline-functions -Wall
 else ifeq ($(PLATFORM),linux)
 	CC ?= gcc
 	CXX ?= g++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= -O2 -g -ggdb -std=c23 -finline-functions -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -finline-functions -Wall
 else ifeq ($(PLATFORM),solaris)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -fstack-protector -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -fstack-protector -Wall
+	CFLAGS ?= -O2 -g -ggdb -std=c23 -finline-functions -fstack-protector -Wall -Wmissing-prototypes
+	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -finline-functions -fstack-protector -Wall
 endif
 
 ifneq ($(PLATFORM),msys2)

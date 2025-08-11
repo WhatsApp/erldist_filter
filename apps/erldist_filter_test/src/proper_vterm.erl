@@ -19,7 +19,7 @@
 -compile(warn_missing_spec).
 -wacov(ignore).
 
--include_lib("proper/include/proper.hrl").
+-include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
 -export([

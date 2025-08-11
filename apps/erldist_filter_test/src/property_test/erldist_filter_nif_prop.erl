@@ -18,7 +18,7 @@
 -oncall("whatsapp_clr").
 -compile(warn_missing_spec).
 
--include_lib("proper/include/proper.hrl").
+-include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
@@ -41,11 +41,6 @@
 ]).
 
 %% Macros
--ifdef(WHENFAIL).
--undef(WHENFAIL).
--endif.
-% eqWAlizer gets angry about `fun(() -> boolean())` not being a subtype of `fun(() -> proper:test())`
--define(WHENFAIL(Action, Prop), proper:whenfail(?DELAY(Action), dynamic_cast(?DELAY(Prop)))).
 -define(VTERM_EQUALS(A, B), ?WHENFAIL(vterm_report_not_equal(A, B), A =:= B)).
 
 %%%=============================================================================
@@ -270,9 +265,6 @@ prop_dist_int_to_vterm_3(_Config) ->
 %%%-----------------------------------------------------------------------------
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
-
--spec dynamic_cast(term()) -> eqwalizer:dynamic().
-dynamic_cast(X) -> X.
 
 %% @private
 gen_vdist_test_vector() ->

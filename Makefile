@@ -10,10 +10,80 @@ PROJECT_VERSION = 1.0.0
 
 include erlang.mk
 
+.PHONY: eqwalize eqwalize-all distclean-elp
+
+# Arch detection.
+
+ifeq ($(ARCH),)
+UNAME_M := $(shell uname -m)
+
+ifeq ($(UNAME_M),amd64)
+ARCH = x86_64
+else ifeq ($(UNAME_M),x86_64)
+ARCH = x86_64
+else ifeq ($(UNAME_M),arm64)
+ARCH = aarch64
+else ifeq ($(UNAME_M),aarch64)
+ARCH = aarch64
+else
+$(error Unable to detect architecture. Please open a ticket with the output of uname -s.)
+endif
+
+export ARCH
+endif
+
+# Configuration.
+ELP_VERSION ?= 2025-07-21
+ELP_OTP_VERSION ?= 28
+
+ELP ?= $(CURDIR)/elp
+export ELP
+
+ifeq ($(PLATFORM),darwin)
+	ELP_URL ?= https://github.com/WhatsApp/erlang-language-platform/releases/download/${ELP_VERSION}/elp-macos-${ARCH}-apple-darwin-otp-${ELP_OTP_VERSION}.tar.gz
+else
+	ELP_URL ?= https://github.com/WhatsApp/erlang-language-platform/releases/download/${ELP_VERSION}/elp-linux-${ARCH}-unknown-linux-gnu-otp-${ELP_OTP_VERSION}.tar.gz
+endif
+
+ELP_OPTS ?=
+ELP_BUILD_DIR ?= $(CURDIR)/_elp_build
+ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
+
+# Core targets.
+
+help::
+	$(verbose) printf "%s\n" "" \
+		"elp targets:" \
+		"  eqwalize     Run 'elp eqwalize-app argo' on the current project" \
+		"  eqwalize-all Run 'elp eqwalize-all' on the current project"
+
+distclean:: distclean-elp
+
+# Plugin-specific targets.
+
+$(ELP):
+	$(verbose) mkdir -p $(ELP_BUILD_DIR)
+	$(verbose) echo "Downloading eqwalizer from: "$(ELP_URL)
+	$(verbose) $(call core_http_get,$(ELP_BUILD_DIR)/$(ELP_ARCHIVE),$(ELP_URL))
+	$(verbose) cd $(ELP_BUILD_DIR) && \
+		tar -xzf $(ELP_ARCHIVE)
+	$(gen_verbose) cp $(ELP_BUILD_DIR)/elp $(ELP)
+	$(verbose) chmod +x $(ELP)
+	$(verbose) rm -rf $(ELP_BUILD_DIR)
+
+eqwalize: $(ELP)
+	$(verbose) $(ELP) eqwalize $(PROJECT)
+
+eqwalize-all: $(ELP)
+	$(verbose) $(ELP) eqwalize-all
+
+distclean-elp:
+	$(gen_verbose) rm -rf $(ELP)
+
 .PHONY: erlfmt erlfmt-check distclean-erlfmt format
 
 # Configuration.
-ERLFMT_VERSION ?= 1.2.0
+ERLFMT_VERSION ?= 1.7.0
 
 ERLFMT ?= $(CURDIR)/erlfmt
 export ERLFMT
@@ -62,15 +132,35 @@ endif
 	$(verbose) rm -rf $(ERLFMT_BUILD_DIR)
 
 erlfmt: $(ERLFMT)
-	$(verbose) $(ERLFMT) --verbose --write --require-pragma --print-width=120 'apps/**/{src,include,test}/**/*.{hrl,erl,app.src}' 'apps/**/rebar.config' rebar.config
+	$(verbose) $(ERLFMT) --verbose --write --require-pragma --print-width=120 \
+		'apps/**/{src,include,test}/**/*.{hrl,erl,app.src}' \
+		'apps/**/{rebar.config,rebar.config.script}' \
+		'{rebar.config,rebar.config.script}'
 
 erlfmt-check: $(ERLFMT)
-	$(verbose) $(ERLFMT) --check --require-pragma --print-width=120 'apps/**/{src,include,test}/**/*.{hrl,erl,app.src}' 'apps/**/rebar.config' rebar.config
+	$(verbose) $(ERLFMT) --check --require-pragma --print-width=120 \
+		'apps/**/{src,include,test}/**/*.{hrl,erl,app.src,app.src.script}' \
+		'apps/**/{rebar.config,rebar.config.script}' \
+		'{rebar.config,rebar.config.script}'
 
 distclean-erlfmt:
 	$(gen_verbose) rm -rf $(ERLFMT)
 
 format: $(ERLFMT)
-	$(verbose) $(MAKE) -C $(CURDIR)/apps/erldist_filter/c_src format
+	$(verbose) $(MAKE) -C $(CURDIR)/apps/$(PROJECT)/c_src format
 	$(verbose) $(MAKE) erlfmt
 	$(verbose) mix format
+
+.PHONY: lint lint-dialyzer lint-eqwalizer lint-format lint-xref
+
+lint:: lint-format lint-eqwalizer lint-xref lint-dialyzer
+
+lint-dialyzer:
+	$(verbose) rebar3 dialyzer
+
+lint-eqwalizer: eqwalize-all
+
+lint-format: erlfmt-check
+
+lint-xref:
+	$(verbose) rebar3 xref

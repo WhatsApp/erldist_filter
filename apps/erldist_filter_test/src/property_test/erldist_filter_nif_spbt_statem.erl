@@ -21,7 +21,7 @@
 -behaviour(proper_statem).
 
 -include_lib("common_test/include/ct.hrl").
--include_lib("proper/include/proper.hrl").
+-include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
 %% proper_statem callbacks

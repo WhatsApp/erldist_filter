@@ -13,10 +13,32 @@
 extern "C" {
 #endif
 
+#include "portable_hint.h"
+
+#if defined(ARCH_ARM_AVAILABLE)
+#include <arm_neon.h>
+#elif defined(ARCH_X86_AVAILABLE)
 #include <emmintrin.h>
 #include <immintrin.h>
 #include <inttypes.h>
 #include <stdint.h>
+#endif
+
+#if defined(ARCH_ARM_AVAILABLE)
+#if defined(__ARM_NEON) || defined(__aarch64__) || defined(_M_ARM64)
+#define CORE_SIMD_NEON 1
+#endif
+#elif defined(ARCH_X86_AVAILABLE)
+#if defined(__AVX512F__)
+#define CORE_SIMD_AVX512F 1
+#endif
+#if defined(__AVX2__)
+#define CORE_SIMD_AVX2 1
+#endif
+#if defined(__SSE2__)
+#define CORE_SIMD_SSE2 1
+#endif
+#endif
 
 #include "xnif_trace.h"
 
@@ -32,13 +54,16 @@ extern "C" {
 
 /* Function Declarations */
 
-#if defined(__AVX512F__)
+#if defined(CORE_SIMD_AVX512F)
 static void core_simd_add_vec_u64_avx512f(uint64_t *a, const uint64_t *b, size_t size);
 #endif
-#if defined(__AVX2__)
+#if defined(CORE_SIMD_AVX2)
 static void core_simd_add_vec_u64_avx2(uint64_t *a, const uint64_t *b, size_t size);
 #endif
-#if defined(__SSE2__)
+#if defined(CORE_SIMD_NEON)
+static void core_simd_add_vec_u64_neon(uint64_t *a, const uint64_t *b, size_t size);
+#endif
+#if defined(CORE_SIMD_SSE2)
 static void core_simd_add_vec_u64_sse2(uint64_t *a, const uint64_t *b, size_t size);
 #endif
 static void core_simd_add_vec_u64_scalar(uint64_t *a, const uint64_t *b, size_t size);
@@ -46,7 +71,7 @@ static void core_simd_add_vec_u64(uint64_t *a, const uint64_t *b, size_t size);
 
 /* Inline Function Definitions */
 
-#if defined(__AVX512F__)
+#if defined(CORE_SIMD_AVX512F)
 inline void
 core_simd_add_vec_u64_avx512f(uint64_t *a, const uint64_t *b, size_t size)
 {
@@ -61,7 +86,7 @@ core_simd_add_vec_u64_avx512f(uint64_t *a, const uint64_t *b, size_t size)
 }
 #endif
 
-#if defined(__AVX2__)
+#if defined(CORE_SIMD_AVX2)
 inline void
 core_simd_add_vec_u64_avx2(uint64_t *a, const uint64_t *b, size_t size)
 {
@@ -76,7 +101,22 @@ core_simd_add_vec_u64_avx2(uint64_t *a, const uint64_t *b, size_t size)
 }
 #endif
 
-#if defined(__SSE2__)
+#if defined(CORE_SIMD_NEON)
+inline void
+core_simd_add_vec_u64_neon(uint64_t *a, const uint64_t *b, size_t size)
+{
+    size_t i;
+    for (i = 0; (i + 2) <= size; i += 2) {
+        uint64x2_t vec1 = vld1q_u64(a + i);
+        uint64x2_t vec2 = vld1q_u64(b + i);
+        uint64x2_t result = vaddq_u64(vec1, vec2);
+        (void)vst1q_u64(a + i, result);
+    }
+    return;
+}
+#endif
+
+#if defined(CORE_SIMD_SSE2)
 inline void
 core_simd_add_vec_u64_sse2(uint64_t *a, const uint64_t *b, size_t size)
 {
@@ -105,21 +145,28 @@ inline void
 core_simd_add_vec_u64(uint64_t *a, const uint64_t *b, size_t size)
 {
     size_t remainder = size;
-#if defined(__AVX512F__)
+#if defined(CORE_SIMD_AVX512F)
     if (remainder >= 8 && __builtin_cpu_supports("avx512f")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_avx512f() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
         (void)core_simd_add_vec_u64_avx512f(&a[size - remainder], &b[size - remainder], remainder);
         remainder %= 8;
     }
 #endif
-#if defined(__AVX2__)
+#if defined(CORE_SIMD_AVX2)
     if (remainder >= 4 && __builtin_cpu_supports("avx2")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_avx2() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
         (void)core_simd_add_vec_u64_avx2(&a[size - remainder], &b[size - remainder], remainder);
         remainder %= 4;
     }
 #endif
-#if defined(__SSE2__)
+#if defined(CORE_SIMD_NEON)
+    if (remainder >= 2) {
+        CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_neon() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
+        (void)core_simd_add_vec_u64_neon(&a[size - remainder], &b[size - remainder], remainder);
+        remainder %= 2;
+    }
+#endif
+#if defined(CORE_SIMD_SSE2)
     if (remainder >= 2 && __builtin_cpu_supports("sse2")) {
         CORE_SIMD_TRACE_F("%s:%d core_simd_add_vec_u64_sse2() size=%llu, remainder=%llu\n", __FILE__, __LINE__, size, remainder);
         (void)core_simd_add_vec_u64_sse2(&a[size - remainder], &b[size - remainder], remainder);
@@ -134,6 +181,19 @@ core_simd_add_vec_u64(uint64_t *a, const uint64_t *b, size_t size)
 }
 
 #undef CORE_SIMD_TRACE_F
+
+#if defined(CORE_SIMD_AVX512F)
+#undef CORE_SIMD_AVX512F
+#endif
+#if defined(CORE_SIMD_AVX2)
+#undef CORE_SIMD_AVX2
+#endif
+#if defined(CORE_SIMD_NEON)
+#undef CORE_SIMD_NEON
+#endif
+#if defined(CORE_SIMD_SSE2)
+#undef CORE_SIMD_SSE2
+#endif
 
 #ifdef __cplusplus
 }
