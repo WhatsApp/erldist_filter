@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vterm_encode).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% Callbacks
 -callback internal_vterm_to_binary(T :: vterm:t(), Options :: term()) -> binary().
@@ -63,7 +58,8 @@ internal_vterm_elements_to_binary([], _Opts) ->
 internal_vterm_elements_to_binary(Elements, Opts) when is_list(Elements) ->
     internal_vterm_elements_to_binary(Elements, Opts, []).
 
-%% @private
+-spec internal_vterm_elements_to_binary(Elements, Options, Acc) -> binary() when
+    Elements :: [vterm:t()], Options :: term(), Acc :: iodata().
 internal_vterm_elements_to_binary([], _Opts, Acc) ->
     erlang:iolist_to_binary(Acc);
 internal_vterm_elements_to_binary([Element | Elements], Opts, Acc) ->
@@ -76,7 +72,8 @@ internal_vterm_pairs_to_binary([], _Opts) ->
 internal_vterm_pairs_to_binary(Pairs, Opts) when is_list(Pairs) ->
     internal_vterm_pairs_to_binary(Pairs, Opts, []).
 
-%% @private
+-spec internal_vterm_pairs_to_binary(Pairs, Options, Acc) -> binary() when
+    Pairs :: [{vterm:t(), vterm:t()}], Options :: term(), Acc :: iodata().
 internal_vterm_pairs_to_binary([], _Opts, Acc) ->
     erlang:iolist_to_binary(Acc);
 internal_vterm_pairs_to_binary([{Key, Value} | Pairs], Opts, Acc) ->

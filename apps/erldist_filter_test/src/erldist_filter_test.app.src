@@ -1,13 +1,13 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
 %%%
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
-%%% % @format
 {application, erldist_filter_test, [
     {description, "erldist_filter_test: test modules for Erlang distribution filtering"},
-    {vsn, "1.1.0"},
+    {vsn, "1.0.0"},
     {modules, []},
     {registered, []},
     %% NOTE: Remember to sync changes to `applications` to

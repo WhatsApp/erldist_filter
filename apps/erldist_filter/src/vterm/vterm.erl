@@ -1,3 +1,4 @@
+%%% % @format
 %%%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,20 +6,14 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vterm).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
 
 %% API
 -export([
@@ -139,7 +134,7 @@
 %%% API functions
 %%%=============================================================================
 
--spec expand(T) -> VT when T :: vterm:t() | eqwalizer:dynamic(), VT :: vterm:t().
+-spec expand(T) -> VT when T :: vterm:t() | dynamic(), VT :: vterm:t().
 expand(VT) when ?is_vterm_t(VT) ->
     VT;
 expand(T) ->
@@ -276,7 +271,7 @@ expand_small_integer(T) when ?is_u8(T) ->
             VT
     end.
 
--spec is_improper_list(T) -> boolean() when T :: eqwalizer:dynamic().
+-spec is_improper_list(T) -> boolean() when T :: dynamic().
 is_improper_list(L) when is_list(L) ->
     case L of
         _ when length(L) >= 0 ->
@@ -287,7 +282,7 @@ is_improper_list(L) when is_list(L) ->
 is_improper_list(_) ->
     false.
 
--spec is_string(T) -> boolean() when T :: eqwalizer:dynamic().
+-spec is_string(T) -> boolean() when T :: dynamic().
 is_string(L) when is_list(L) andalso ?is_u16(length(L)) ->
     Predicate = fun(C) -> ?is_u8(C) end,
     lists:all(Predicate, L);
@@ -299,12 +294,12 @@ resolve_atoms(Atoms, VTerm0) ->
     {VTerm1, Atoms} = vterm:xform(VTerm0, Atoms, fun xform_resolve_atoms/2),
     VTerm1.
 
--spec simplify(VT) -> T when VT :: vterm:t(), T :: eqwalizer:dynamic().
+-spec simplify(VT) -> T when VT :: vterm:t(), T :: dynamic().
 simplify(VT) when ?is_vterm_t(VT) ->
     Module = element(1, VT),
     Module:simplify(VT).
 
--spec xform(VT, Acc, Fun) -> {VT, Acc} when VT :: vterm:t(), Acc :: eqwalizer:dynamic(), Fun :: xform_func(VT, Acc).
+-spec xform(VT, Acc, Fun) -> {VT, Acc} when VT :: vterm:t(), Acc :: dynamic(), Fun :: xform_func(VT, Acc).
 xform(VT0, Acc0, Fun) when ?is_vterm_t(VT0) andalso is_function(Fun, 2) ->
     % VT0 = xform_lazy(VT),
     case xform_normalize(VT0, Acc0, Fun(VT0, Acc0)) of
@@ -426,13 +421,21 @@ xform(VT0, Acc0, Fun) when ?is_vterm_t(VT0) andalso is_function(Fun, 2) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec expand_improper_list(
+    Len :: integer(),
+    List :: dynamic(),
+    Elements :: list()
+) -> vterm:t().
 expand_improper_list(Len, [Head | Tail], Elements) ->
     expand_improper_list(Len + 1, Tail, [expand(Head) | Elements]);
 expand_improper_list(Len, Tail, Elements) ->
     vterm_list_ext:new(Len, lists:reverse(Elements), expand(Tail)).
 
-%% @private
+-spec expand_map_pairs(
+    Arity :: integer(),
+    Iterator :: maps:iterator(),
+    Pairs :: [{vterm:t(), vterm:t()}]
+) -> [{vterm:t(), vterm:t()}].
 expand_map_pairs(0, Iterator, Pairs) ->
     none = maps:next(Iterator),
     lists:reverse(Pairs);
@@ -440,55 +443,56 @@ expand_map_pairs(Arity, Iterator, Pairs) when is_integer(Arity) andalso Arity > 
     {Key, Value, NextIterator} = maps:next(Iterator),
     expand_map_pairs(Arity - 1, NextIterator, [{expand(Key), expand(Value)} | Pairs]).
 
-%% @private
+-spec xform_elements(
+    Elements,
+    Acc,
+    Fun :: xform_func(VT, Acc, VT, Acc),
+    Elements
+) -> {Elements, Acc :: dynamic()} when Elements :: [vterm:t()], VT :: vterm:t(), Acc :: dynamic().
 xform_elements([Element0 | In], Acc0, Fun, Out) ->
     {Element1, Acc1} = xform(Element0, Acc0, Fun),
     xform_elements(In, Acc1, Fun, [Element1 | Out]);
 xform_elements([], Acc, _Fun, Out) ->
     {lists:reverse(Out), Acc}.
 
-%% @private
 -spec xform_expect_atom(VT0, Acc, Fun) -> {VT1, Acc} when
     VT0 :: vterm:t(),
     VT1 :: vterm:atom_t(),
-    Acc :: eqwalizer:dynamic(),
-    Fun :: xform_func(VT0, Acc, VT1, Acc) | eqwalizer:dynamic().
+    Acc :: dynamic(),
+    Fun :: xform_func(VT0, Acc, VT1, Acc) | dynamic().
 xform_expect_atom(VT0, Acc0, Fun) ->
     case xform(VT0, Acc0, Fun) of
         Result = {VT1, _Acc1} when ?is_vterm_atom_t(VT1) ->
             Result
     end.
 
-%% @private
 -spec xform_expect_fixed_integer(VT0, Acc, Fun) -> {VT1, Acc} when
     VT0 :: vterm:t(),
     VT1 :: vterm:fixed_integer_t(),
-    Acc :: eqwalizer:dynamic(),
-    Fun :: xform_func(VT0, Acc, VT1, Acc) | eqwalizer:dynamic().
+    Acc :: dynamic(),
+    Fun :: xform_func(VT0, Acc, VT1, Acc) | dynamic().
 xform_expect_fixed_integer(VT0, Acc0, Fun) ->
     case xform(VT0, Acc0, Fun) of
         Result = {VT1, _Acc1} when ?is_vterm_fixed_integer_t(VT1) ->
             Result
     end.
 
-%% @private
 -spec xform_expect_pid(VT0, Acc, Fun) -> {VT1, Acc} when
     VT0 :: vterm:t(),
     VT1 :: vterm:pid_t(),
-    Acc :: eqwalizer:dynamic(),
-    Fun :: xform_func(VT0, Acc, VT1, Acc) | eqwalizer:dynamic().
+    Acc :: dynamic(),
+    Fun :: xform_func(VT0, Acc, VT1, Acc) | dynamic().
 xform_expect_pid(VT0, Acc0, Fun) ->
     case xform(VT0, Acc0, Fun) of
         Result = {VT1, _Acc1} when ?is_vterm_pid_t(VT1) ->
             Result
     end.
 
-%% @private
 -spec xform_expect_small_integer(VT0, Acc, Fun) -> {VT1, Acc} when
     VT0 :: vterm:t(),
     VT1 :: vterm:small_integer_t(),
-    Acc :: eqwalizer:dynamic(),
-    Fun :: xform_func(VT0, Acc, VT1, Acc) | eqwalizer:dynamic().
+    Acc :: dynamic(),
+    Fun :: xform_func(VT0, Acc, VT1, Acc) | dynamic().
 xform_expect_small_integer(VT0, Acc0, Fun) ->
     case xform(VT0, Acc0, Fun) of
         Result = {VT1, _Acc1} when ?is_vterm_small_integer_t(VT1) ->
@@ -502,7 +506,12 @@ xform_expect_small_integer(VT0, Acc0, Fun) ->
 % xform_lazy(VT) ->
 %     VT.
 
-%% @private
+-spec xform_normalize(OldVTerm, AccIn, Action) -> {Action, NewVTerm, AccOut} when
+    OldVTerm :: vterm:t(),
+    NewVTerm :: dynamic(),
+    AccIn :: dynamic(),
+    AccOut :: dynamic(),
+    Action :: xform_result(vterm:t(), dynamic()).
 xform_normalize(OldVTerm, AccIn, Action) when is_atom(Action) ->
     {Action, OldVTerm, AccIn};
 xform_normalize(OldVTerm, _AccIn, {Action, AccOut}) when is_atom(Action) ->
@@ -510,7 +519,12 @@ xform_normalize(OldVTerm, _AccIn, {Action, AccOut}) when is_atom(Action) ->
 xform_normalize(_OldVTerm, _AccIn, {Action, NewVTerm, AccOut}) when is_atom(Action) ->
     {Action, NewVTerm, AccOut}.
 
-%% @private
+-spec xform_pairs(
+    [{K, V}],
+    Acc,
+    Fun :: xform_func(K, Acc, K, Acc),
+    [{K, V}]
+) -> {[{K, V}], Acc} when K :: vterm:t(), V :: vterm:t(), Acc :: dynamic().
 xform_pairs([{Key0, Value0} | In], Acc0, Fun, Out) ->
     {Key1, Acc1} = xform(Key0, Acc0, Fun),
     {Value1, Acc2} = xform(Value0, Acc1, Fun),
@@ -518,7 +532,9 @@ xform_pairs([{Key0, Value0} | In], Acc0, Fun, Out) ->
 xform_pairs([], Acc, _Fun, Out) ->
     {lists:reverse(Out), Acc}.
 
-%% @private
+-spec xform_resolve_atoms(VT, Atoms) -> xform_result(vterm:t(), dynamic()) when
+    VT :: vterm:t(),
+    Atoms :: dynamic().
 xform_resolve_atoms(#vterm_atom_cache_ref{index = Index}, Atoms) ->
     Atom = element(Index + 1, Atoms),
     {cont, vterm_atom_cache_ref_resolved:new(Index, Atom), Atoms};

@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_spbt_prop).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
@@ -40,7 +35,7 @@ prop_serial_statem(Config) ->
         commands(?STATEM),
         begin
             RunResult = {_History, _State, _Result} = run_commands(?STATEM, Commands),
-            ct_property_test:present_result(?MODULE, Commands, RunResult, Config)
+            erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)
         end
     ).
 
@@ -51,6 +46,6 @@ prop_parallel_statem(Config) ->
         parallel_commands(?STATEM),
         begin
             RunResult = {_History, _State, _Result} = run_parallel_commands(?STATEM, Commands),
-            ct_property_test:present_result(?MODULE, Commands, RunResult, Config)
+            erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)
         end
     ).

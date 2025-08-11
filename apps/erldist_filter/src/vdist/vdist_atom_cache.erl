@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,27 +6,22 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_atom_cache).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
     new/0,
     atom_cache_index/1,
     find/2,
+    find_by_index/2,
     find_or_insert/2,
     insert/3,
     diff/2,
@@ -79,8 +75,11 @@ find(#vdist_atom_cache{entries = Entries}, Atom) when is_atom(Atom) ->
             {error, {already_present, {Index, OtherAtom}}};
         error ->
             {error, not_found}
-    end;
-find(#vdist_atom_cache{entries = Entries}, Index) when
+    end.
+
+-spec find_by_index(Cache, Index) -> {ok, {Index, Atom}} | {error, Reason} when
+    Cache :: t(), Atom :: atom(), Index :: index(), Reason :: not_found.
+find_by_index(#vdist_atom_cache{entries = Entries}, Index) when
     is_integer(Index) andalso Index >= 0 andalso Index < ?ERTS_ATOM_CACHE_SIZE
 ->
     case orddict:find(Index, Entries) of

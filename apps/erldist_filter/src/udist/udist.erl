@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,20 +6,14 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  19 Jun 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(udist).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("udist.hrl").
+-include_lib("erldist_filter/include/udist.hrl").
 
 %% Public API
 -export([
@@ -231,35 +226,8 @@
 %%%=============================================================================
 
 -spec cast_to_dop
-    (raw_dop_alias_send_t()) -> dop_alias_send_t();
-    (raw_dop_alias_send_tt_t()) -> dop_alias_send_tt_t();
-    (raw_dop_demonitor_p_t()) -> dop_demonitor_p_t();
-    (raw_dop_exit_t()) -> dop_exit_t();
-    (raw_dop_exit2_t()) -> dop_exit2_t();
-    (raw_dop_exit2_tt_t()) -> dop_exit2_tt_t();
-    (raw_dop_exit_tt_t()) -> dop_exit_tt_t();
-    (raw_dop_group_leader_t()) -> dop_group_leader_t();
-    (raw_dop_link_t()) -> dop_link_t();
-    (raw_dop_monitor_p_t()) -> dop_monitor_p_t();
-    (raw_dop_monitor_p_exit_t()) -> dop_monitor_p_exit_t();
-    (raw_dop_payload_exit_t()) -> dop_payload_exit_t();
-    (raw_dop_payload_exit2_t()) -> dop_payload_exit2_t();
-    (raw_dop_payload_exit2_tt_t()) -> dop_payload_exit2_tt_t();
-    (raw_dop_payload_exit_tt_t()) -> dop_payload_exit_tt_t();
-    (raw_dop_payload_monitor_p_exit_t()) -> dop_payload_monitor_p_exit_t();
-    (raw_dop_reg_send_t()) -> dop_reg_send_t();
-    (raw_dop_reg_send_tt_t()) -> dop_reg_send_tt_t();
-    (raw_dop_send_t()) -> dop_send_t();
-    (raw_dop_send_sender_t()) -> dop_send_sender_t();
-    (raw_dop_send_sender_tt_t()) -> dop_send_sender_tt_t();
-    (raw_dop_send_tt_t()) -> dop_send_tt_t();
-    (raw_dop_spawn_reply_t()) -> dop_spawn_reply_t();
-    (raw_dop_spawn_reply_tt_t()) -> dop_spawn_reply_tt_t();
-    (raw_dop_spawn_request_t()) -> dop_spawn_request_t();
-    (raw_dop_spawn_request_tt_t()) -> dop_spawn_request_tt_t();
-    (raw_dop_unlink_t()) -> dop_unlink_t();
-    (raw_dop_unlink_id_t()) -> dop_unlink_id_t();
-    (raw_dop_unlink_id_ack_t()) -> dop_unlink_id_ack_t().
+    (raw_dop_without_payload_t()) -> dop_without_payload_t();
+    (raw_dop_with_payload_t()) -> dop_with_payload_t().
 cast_to_dop(T = {?DOP_ALIAS_SEND, _, _}) -> setelement(1, T, udist_dop_alias_send);
 cast_to_dop(T = {?DOP_ALIAS_SEND_TT, _, _, _}) -> setelement(1, T, udist_dop_alias_send_tt);
 cast_to_dop(T = {?DOP_DEMONITOR_P, _, _, _}) -> setelement(1, T, udist_dop_demonitor_p);
@@ -291,35 +259,8 @@ cast_to_dop(T = {?DOP_UNLINK_ID, _, _, _}) -> setelement(1, T, udist_dop_unlink_
 cast_to_dop(T = {?DOP_UNLINK_ID_ACK, _, _, _}) -> setelement(1, T, udist_dop_unlink_id_ack).
 
 -spec cast_to_raw_dop
-    (dop_alias_send_t()) -> raw_dop_alias_send_t();
-    (dop_alias_send_tt_t()) -> raw_dop_alias_send_tt_t();
-    (dop_demonitor_p_t()) -> raw_dop_demonitor_p_t();
-    (dop_exit_t()) -> raw_dop_exit_t();
-    (dop_exit2_t()) -> raw_dop_exit2_t();
-    (dop_exit2_tt_t()) -> raw_dop_exit2_tt_t();
-    (dop_exit_tt_t()) -> raw_dop_exit_tt_t();
-    (dop_group_leader_t()) -> raw_dop_group_leader_t();
-    (dop_link_t()) -> raw_dop_link_t();
-    (dop_monitor_p_t()) -> raw_dop_monitor_p_t();
-    (dop_monitor_p_exit_t()) -> raw_dop_monitor_p_exit_t();
-    (dop_payload_exit_t()) -> raw_dop_payload_exit_t();
-    (dop_payload_exit2_t()) -> raw_dop_payload_exit2_t();
-    (dop_payload_exit2_tt_t()) -> raw_dop_payload_exit2_tt_t();
-    (dop_payload_exit_tt_t()) -> raw_dop_payload_exit_tt_t();
-    (dop_payload_monitor_p_exit_t()) -> raw_dop_payload_monitor_p_exit_t();
-    (dop_reg_send_t()) -> raw_dop_reg_send_t();
-    (dop_reg_send_tt_t()) -> raw_dop_reg_send_tt_t();
-    (dop_send_t()) -> raw_dop_send_t();
-    (dop_send_sender_t()) -> raw_dop_send_sender_t();
-    (dop_send_sender_tt_t()) -> raw_dop_send_sender_tt_t();
-    (dop_send_tt_t()) -> raw_dop_send_tt_t();
-    (dop_spawn_reply_t()) -> raw_dop_spawn_reply_t();
-    (dop_spawn_reply_tt_t()) -> raw_dop_spawn_reply_tt_t();
-    (dop_spawn_request_t()) -> raw_dop_spawn_request_t();
-    (dop_spawn_request_tt_t()) -> raw_dop_spawn_request_tt_t();
-    (dop_unlink_t()) -> raw_dop_unlink_t();
-    (dop_unlink_id_t()) -> raw_dop_unlink_id_t();
-    (dop_unlink_id_ack_t()) -> raw_dop_unlink_id_ack_t().
+    (dop_without_payload_t()) -> raw_dop_without_payload_t();
+    (dop_with_payload_t()) -> raw_dop_with_payload_t().
 cast_to_raw_dop(T = #udist_dop_alias_send{}) -> setelement(1, T, ?DOP_ALIAS_SEND);
 cast_to_raw_dop(T = #udist_dop_alias_send_tt{}) -> setelement(1, T, ?DOP_ALIAS_SEND_TT);
 cast_to_raw_dop(T = #udist_dop_demonitor_p{}) -> setelement(1, T, ?DOP_DEMONITOR_P);
@@ -350,36 +291,7 @@ cast_to_raw_dop(T = #udist_dop_unlink{}) -> setelement(1, T, ?DOP_UNLINK);
 cast_to_raw_dop(T = #udist_dop_unlink_id{}) -> setelement(1, T, ?DOP_UNLINK_ID);
 cast_to_raw_dop(T = #udist_dop_unlink_id_ack{}) -> setelement(1, T, ?DOP_UNLINK_ID_ACK).
 
--spec get_dop_group
-    (dop_exit_t()) -> 'exit';
-    (dop_exit_tt_t()) -> 'exit';
-    (dop_payload_exit_t()) -> 'exit';
-    (dop_payload_exit_tt_t()) -> 'exit';
-    (dop_exit2_t()) -> 'exit2';
-    (dop_exit2_tt_t()) -> 'exit2';
-    (dop_payload_exit2_t()) -> 'exit2';
-    (dop_payload_exit2_tt_t()) -> 'exit2';
-    (dop_group_leader_t()) -> 'group_leader';
-    (dop_link_t()) -> 'link';
-    (dop_monitor_p_t()) -> 'monitor_related';
-    (dop_demonitor_p_t()) -> 'monitor_related';
-    (dop_monitor_p_exit_t()) -> 'monitor_related';
-    (dop_payload_monitor_p_exit_t()) -> 'monitor_related';
-    (dop_alias_send_t()) -> 'send_to_alias';
-    (dop_alias_send_tt_t()) -> 'send_to_alias';
-    (dop_reg_send_t()) -> 'send_to_name';
-    (dop_reg_send_tt_t()) -> 'send_to_name';
-    (dop_send_t()) -> 'send_to_pid';
-    (dop_send_tt_t()) -> 'send_to_pid';
-    (dop_send_sender_t()) -> 'send_to_pid';
-    (dop_send_sender_tt_t()) -> 'send_to_pid';
-    (dop_spawn_reply_t()) -> 'spawn_reply';
-    (dop_spawn_reply_tt_t()) -> 'spawn_reply';
-    (dop_spawn_request_t()) -> 'spawn_request';
-    (dop_spawn_request_tt_t()) -> 'spawn_request';
-    (dop_unlink_t()) -> 'unlink';
-    (dop_unlink_id_t()) -> 'unlink';
-    (dop_unlink_id_ack_t()) -> 'unlink'.
+-spec get_dop_group(dop_t()) -> atom().
 get_dop_group(#udist_dop_exit{}) -> 'exit';
 get_dop_group(#udist_dop_exit_tt{}) -> 'exit';
 get_dop_group(#udist_dop_payload_exit{}) -> 'exit';
@@ -410,36 +322,7 @@ get_dop_group(#udist_dop_unlink{}) -> 'unlink';
 get_dop_group(#udist_dop_unlink_id{}) -> 'unlink';
 get_dop_group(#udist_dop_unlink_id_ack{}) -> 'unlink'.
 
--spec get_dop_name
-    (dop_alias_send_t()) -> 'DOP_ALIAS_SEND';
-    (dop_alias_send_tt_t()) -> 'DOP_ALIAS_SEND_TT';
-    (dop_demonitor_p_t()) -> 'DOP_DEMONITOR_P';
-    (dop_exit_t()) -> 'DOP_EXIT';
-    (dop_exit2_t()) -> 'DOP_EXIT2';
-    (dop_exit2_tt_t()) -> 'DOP_EXIT2_TT';
-    (dop_exit_tt_t()) -> 'DOP_EXIT_TT';
-    (dop_group_leader_t()) -> 'DOP_GROUP_LEADER';
-    (dop_link_t()) -> 'DOP_LINK';
-    (dop_monitor_p_t()) -> 'DOP_MONITOR_P';
-    (dop_monitor_p_exit_t()) -> 'DOP_MONITOR_P_EXIT';
-    (dop_payload_exit_t()) -> 'DOP_PAYLOAD_EXIT';
-    (dop_payload_exit2_t()) -> 'DOP_PAYLOAD_EXIT2';
-    (dop_payload_exit2_tt_t()) -> 'DOP_PAYLOAD_EXIT2_TT';
-    (dop_payload_exit_tt_t()) -> 'DOP_PAYLOAD_EXIT_TT';
-    (dop_payload_monitor_p_exit_t()) -> 'DOP_PAYLOAD_MONITOR_P_EXIT';
-    (dop_reg_send_t()) -> 'DOP_REG_SEND';
-    (dop_reg_send_tt_t()) -> 'DOP_REG_SEND_TT';
-    (dop_send_t()) -> 'DOP_SEND';
-    (dop_send_sender_t()) -> 'DOP_SEND_SENDER';
-    (dop_send_sender_tt_t()) -> 'DOP_SEND_SENDER_TT';
-    (dop_send_tt_t()) -> 'DOP_SEND_TT';
-    (dop_spawn_reply_t()) -> 'DOP_SPAWN_REPLY';
-    (dop_spawn_reply_tt_t()) -> 'DOP_SPAWN_REPLY_TT';
-    (dop_spawn_request_t()) -> 'DOP_SPAWN_REQUEST';
-    (dop_spawn_request_tt_t()) -> 'DOP_SPAWN_REQUEST_TT';
-    (dop_unlink_t()) -> 'DOP_UNLINK';
-    (dop_unlink_id_t()) -> 'DOP_UNLINK_ID';
-    (dop_unlink_id_ack_t()) -> 'DOP_UNLINK_ID_ACK'.
+-spec get_dop_name(dop_t()) -> atom().
 get_dop_name(#udist_dop_alias_send{}) -> 'DOP_ALIAS_SEND';
 get_dop_name(#udist_dop_alias_send_tt{}) -> 'DOP_ALIAS_SEND_TT';
 get_dop_name(#udist_dop_demonitor_p{}) -> 'DOP_DEMONITOR_P';

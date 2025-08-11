@@ -1,3 +1,4 @@
+%%% % @format
 %%% %CopyrightBegin%
 %%%
 %%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
@@ -18,13 +19,12 @@
 %%%
 %%% %CopyrightEnd%
 %%%
-%%% % @format
 %% @oncall whatsapp_clr
 -ifndef(ERLDIST_FILTER_ERTS_DIST_HRL).
 
 -define(ERLDIST_FILTER_ERTS_DIST_HRL, 1).
 
-%%% See [erts/emulator/beam/dist.h](https://github.com/erlang/otp/blob/OTP-25.2.3/erts/emulator/beam/dist.h) in the
+%%% See [erts/emulator/beam/dist.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/dist.h) in the
 %%% Erlang/OTP source code.
 
 -define(DFLAG_PUBLISHED, 16#01).
@@ -64,6 +64,8 @@
 -define(DFLAG_NAME_ME, (16#2 bsl 32)).
 -define(DFLAG_V4_NC, (16#4 bsl 32)).
 -define(DFLAG_ALIAS, (16#8 bsl 32)).
+-define(DFLAG_LOCAL_EXT, (16#10 bsl 32)).
+-define(DFLAG_ALTACT_SIG, (16#20 bsl 32)).
 %%
 %% In term_to_binary/2, we will use DFLAG_ATOM_CACHE to mean
 %% DFLAG_DETERMINISTIC.
@@ -71,9 +73,16 @@
 -define(DFLAG_DETERMINISTIC, ?DFLAG_ATOM_CACHE).
 %% Mandatory flags for distribution in OTP 25.
 -define(DFLAG_DIST_MANDATORY_25,
-    (?DFLAG_EXTENDED_REFERENCES bor ?DFLAG_FUN_TAGS bor ?DFLAG_EXTENDED_PIDS_PORTS bor ?DFLAG_UTF8_ATOMS bor
+    (?DFLAG_EXTENDED_REFERENCES bor
+        ?DFLAG_FUN_TAGS bor
+        ?DFLAG_EXTENDED_PIDS_PORTS bor
+        ?DFLAG_UTF8_ATOMS bor
         ?DFLAG_NEW_FUN_TAGS bor
-        ?DFLAG_BIG_CREATION bor ?DFLAG_NEW_FLOATS bor ?DFLAG_MAP_TAG bor ?DFLAG_EXPORT_PTR_TAG bor ?DFLAG_BIT_BINARIES bor
+        ?DFLAG_BIG_CREATION bor
+        ?DFLAG_NEW_FLOATS bor
+        ?DFLAG_MAP_TAG bor
+        ?DFLAG_EXPORT_PTR_TAG bor
+        ?DFLAG_BIT_BINARIES bor
         ?DFLAG_BIT_BINARIES bor
         ?DFLAG_HANDSHAKE_23)
 ).
@@ -86,12 +95,25 @@
 %% If remote node (erl_interface) does not support these then we may need
 %% to transcode messages enqueued before connection setup was finished.
 %%
--define(DFLAG_DIST_HOPEFULLY, (?DFLAG_DIST_MONITOR bor ?DFLAG_DIST_MONITOR_NAME bor ?DFLAG_SPAWN bor ?DFLAG_ALIAS)).
+-define(DFLAG_DIST_HOPEFULLY,
+    (?DFLAG_DIST_MONITOR bor
+        ?DFLAG_DIST_MONITOR_NAME bor
+        ?DFLAG_SPAWN bor
+        ?DFLAG_ALTACT_SIG bor
+        ?DFLAG_ALIAS)
+).
 %% Our preferred set of flags. Used for connection setup handshake
 -define(DFLAG_DIST_DEFAULT,
-    (?DFLAG_DIST_MANDATORY bor ?DFLAG_DIST_HOPEFULLY bor ?DFLAG_UNICODE_IO bor ?DFLAG_DIST_HDR_ATOM_CACHE bor
+    (?DFLAG_DIST_MANDATORY bor
+        ?DFLAG_DIST_HOPEFULLY bor
+        ?DFLAG_UNICODE_IO bor
+        ?DFLAG_DIST_HDR_ATOM_CACHE bor
         ?DFLAG_SMALL_ATOM_TAGS bor
-        ?DFLAG_SEND_SENDER bor ?DFLAG_BIG_SEQTRACE_LABELS bor ?DFLAG_EXIT_PAYLOAD bor ?DFLAG_FRAGMENTS bor ?DFLAG_SPAWN bor
+        ?DFLAG_SEND_SENDER bor
+        ?DFLAG_BIG_SEQTRACE_LABELS bor
+        ?DFLAG_EXIT_PAYLOAD bor
+        ?DFLAG_FRAGMENTS bor
+        ?DFLAG_SPAWN bor
         ?DFLAG_ALIAS bor
         ?DFLAG_MANDATORY_25_DIGEST)
 ).
@@ -99,7 +121,10 @@
 -define(DFLAG_DIST_ADDABLE, ?DFLAG_DIST_DEFAULT).
 %% Flags rejectable by local distr implementation
 -define(DFLAG_DIST_REJECTABLE,
-    (?DFLAG_DIST_HDR_ATOM_CACHE bor ?DFLAG_HIDDEN_ATOM_CACHE bor ?DFLAG_FRAGMENTS bor ?DFLAG_ATOM_CACHE)
+    (?DFLAG_DIST_HDR_ATOM_CACHE bor
+        ?DFLAG_HIDDEN_ATOM_CACHE bor
+        ?DFLAG_FRAGMENTS bor
+        ?DFLAG_ATOM_CACHE)
 ).
 %% Flags for all features needing strict order delivery
 -define(DFLAG_DIST_STRICT_ORDER, ?DFLAG_DIST_HDR_ATOM_CACHE).
@@ -146,9 +171,16 @@
 
 -define(DOP_UNLINK_ID, 35).
 -define(DOP_UNLINK_ID_ACK, 36).
+-define(DOP_ALTACT_SIG_SEND, 37).
 % };
 
 -define(ERTS_DIST_SPAWN_FLAG_LINK, (1 bsl 0)).
 -define(ERTS_DIST_SPAWN_FLAG_MONITOR, (1 bsl 1)).
+
+-define(ERTS_DOP_ALTACT_SIG_FLG_PRIO, (1 bsl 0)).
+-define(ERTS_DOP_ALTACT_SIG_FLG_TOKEN, (1 bsl 1)).
+-define(ERTS_DOP_ALTACT_SIG_FLG_ALIAS, (1 bsl 2)).
+-define(ERTS_DOP_ALTACT_SIG_FLG_NAME, (1 bsl 3)).
+-define(ERTS_DOP_ALTACT_SIG_FLG_EXIT, (1 bsl 4)).
 
 -endif.

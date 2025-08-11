@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,18 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  19 May 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_prop).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 
@@ -41,13 +36,21 @@
 ]).
 
 %% Macros
+-ifdef(WHENFAIL).
+-undef(WHENFAIL).
+-endif.
+% eqWAlizer gets angry about `fun(() -> boolean())` not being a subtype of `fun(() -> proper:test())`
+-define(WHENFAIL(Action, Prop), proper:whenfail(?DELAY(Action), dynamic_cast(?DELAY(Prop)))).
 -define(VTERM_EQUALS(A, B), ?WHENFAIL(vterm_report_not_equal(A, B), A =:= B)).
 
 %%%=============================================================================
 %%% Helpers
 %%%=============================================================================
 
-%% @private
+-spec vdist_derive_atoms(VDistNoAtoms) -> {Atoms, VDistWithAtoms} when
+    VDistNoAtoms :: vdist:dop_t(),
+    Atoms :: tuple() | dynamic(),
+    VDistWithAtoms :: vdist:dop_t().
 vdist_derive_atoms(VDistNoAtoms) ->
     VTerm0 = vdist_dop:dop_to_control_message_vterm(VDistNoAtoms),
     {Atoms, VTerm1} = vterm_reference_atoms(VTerm0),
@@ -56,9 +59,9 @@ vdist_derive_atoms(VDistNoAtoms) ->
     {Atoms, VDistWithAtoms}.
 
 -spec vdist_test_vectors_derive_atoms([VDistNoAtoms]) -> [{VDistNoAtoms, {Atoms, VDistWithAtoms}}] when
-    VDistNoAtoms :: vdist:dop_t() | eqwalizer:dynamic(),
-    Atoms :: tuple() | eqwalizer:dynamic(),
-    VDistWithAtoms :: vdist:dop_t() | eqwalizer:dynamic().
+    VDistNoAtoms :: vdist:dop_t() | dynamic(),
+    Atoms :: tuple() | dynamic(),
+    VDistWithAtoms :: vdist:dop_t() | dynamic().
 vdist_test_vectors_derive_atoms([VDistNoAtoms | TestVectors]) ->
     {Atoms, VDistWithAtoms} = vdist_derive_atoms(VDistNoAtoms),
     [{VDistNoAtoms, {Atoms, VDistWithAtoms}} | vdist_test_vectors_derive_atoms(TestVectors)];
@@ -70,28 +73,28 @@ vterm_report_not_equal(A, B) ->
     io:format("Expected:~n~0tp~nActual:~n~0tp~n", [A, B]).
 
 -spec vterm_reference_atoms(VTerm) -> {Atoms, VTerm} when
-    VTerm :: vterm:t() | eqwalizer:dynamic(),
-    Atoms :: tuple() | eqwalizer:dynamic().
+    VTerm :: vterm:t() | dynamic(),
+    Atoms :: tuple() | dynamic().
 vterm_reference_atoms(VTerm0) ->
     {VTerm1, AtomMap} = vterm:xform(VTerm0, maps:new(), fun vterm_reference_atoms_xform/2),
     {VTerm2, undefined} = vterm:xform(VTerm1, undefined, fun vterm_repair_xform/2),
     Atoms = erlang:list_to_tuple([
         Atom
-     || {_Index, Atom} <- lists:sort([{Index, Atom} || {Atom, Index} <- maps:to_list(AtomMap)])
+     || {_Index, Atom} <- lists:sort([{Index, Atom} || Atom := Index <- AtomMap])
     ]),
     {Atoms, VTerm2}.
 
 -spec vterm_resolve_atoms(Atoms, VTerm) -> VTerm when
-    Atoms :: tuple() | eqwalizer:dynamic(),
-    VTerm :: vterm:t() | eqwalizer:dynamic().
+    Atoms :: tuple() | dynamic(),
+    VTerm :: vterm:t() | dynamic().
 vterm_resolve_atoms(Atoms, VTerm0) ->
     {VTerm1, Atoms} = vterm:xform(VTerm0, Atoms, fun vterm_resolve_atoms_xform/2),
     VTerm1.
 
 -spec vterm_test_vectors_resolve_atoms([{Atoms, VTerm}]) -> [{Atoms, VTerm, ExpectedVTerm}] when
-    Atoms :: tuple() | eqwalizer:dynamic(),
-    VTerm :: vterm:t() | eqwalizer:dynamic(),
-    ExpectedVTerm :: vterm:t() | eqwalizer:dynamic().
+    Atoms :: tuple() | dynamic(),
+    VTerm :: vterm:t() | dynamic(),
+    ExpectedVTerm :: vterm:t() | dynamic().
 vterm_test_vectors_resolve_atoms([{Atoms, VTerm} | TestVectors]) ->
     ExpectedVTerm = vterm_resolve_atoms(Atoms, VTerm),
     [{Atoms, VTerm, ExpectedVTerm} | vterm_test_vectors_resolve_atoms(TestVectors)];
@@ -266,7 +269,11 @@ prop_dist_int_to_vterm_3(_Config) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-compile({inline, [dynamic_cast/1]}).
+-spec dynamic_cast(term()) -> dynamic().
+dynamic_cast(X) -> X.
+
+-spec gen_vdist_test_vector() -> proper_types:type().
 gen_vdist_test_vector() ->
     ?LET(
         VDistNoAtoms,
@@ -280,7 +287,7 @@ gen_vdist_test_vector() ->
         end
     ).
 
-%% @private
+-spec gen_vterm_test_vector() -> proper_types:type().
 gen_vterm_test_vector() ->
     ?LET(
         VTerm,
@@ -292,14 +299,15 @@ gen_vterm_test_vector() ->
         end
     ).
 
-%% @private
+-spec vterm_repair_xform(VTerm, Acc) -> {cont, VTerm, Acc} when VTerm :: vterm:t(), Acc :: undefined.
 vterm_repair_xform(VTerm0 = #vterm_new_fun_ext{}, Acc) ->
     VTerm1 = vterm_new_fun_ext:repair_derived_size(VTerm0),
     {cont, VTerm1, Acc};
 vterm_repair_xform(VTerm, Acc) ->
     {cont, VTerm, Acc}.
 
-%% @private
+-spec vterm_reference_atoms_xform(VTerm, AtomMap) -> {cont, VTerm, AtomMap} when
+    VTerm :: vterm:t(), AtomMap :: #{atom() => vterm:u8()}.
 vterm_reference_atoms_xform(VTerm, AtomMap0) when ?is_vterm_atom_t(VTerm) ->
     Atom = vterm:simplify(VTerm),
     case maps:find(Atom, AtomMap0) of
@@ -307,7 +315,7 @@ vterm_reference_atoms_xform(VTerm, AtomMap0) when ?is_vterm_atom_t(VTerm) ->
             {cont, vterm_atom_cache_ref:new(Index), AtomMap0};
         error when map_size(AtomMap0) < 255 ->
             Index = map_size(AtomMap0),
-            AtomMap1 = maps:put(Atom, Index, AtomMap0),
+            AtomMap1 = AtomMap0#{Atom => Index},
             {cont, vterm_atom_cache_ref:new(Index), AtomMap1};
         error ->
             {cont, VTerm, AtomMap0}
@@ -315,7 +323,8 @@ vterm_reference_atoms_xform(VTerm, AtomMap0) when ?is_vterm_atom_t(VTerm) ->
 vterm_reference_atoms_xform(VTerm, AtomMap) ->
     {cont, VTerm, AtomMap}.
 
-%% @private
+-spec vterm_resolve_atoms_xform(VTerm, Atoms) -> {cont, VTerm, Atoms} when
+    VTerm :: vterm:t(), Atoms :: tuple() | dynamic().
 vterm_resolve_atoms_xform(#vterm_atom_cache_ref{index = Index}, Atoms) ->
     Atom = element(Index + 1, Atoms),
     {cont, vterm_atom_cache_ref_resolved:new(Index, Atom), Atoms};

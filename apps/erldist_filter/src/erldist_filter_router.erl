@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,16 +6,10 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  10 Aug 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_router).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -59,8 +54,8 @@
 -define(is_router_number(X), (is_integer(X) andalso (X) >= 1)).
 
 %% Types
--type gen_statem_event_content() :: eqwalizer:dynamic().
--type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | eqwalizer:dynamic().
+-type gen_statem_event_content() :: dynamic().
+-type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | dynamic().
 -type router_number() :: pos_integer().
 
 -export_type([
@@ -162,7 +157,12 @@ route(info, Info, Data0 = #data{handlers = Handlers0, monitors = Monitors0}) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec route_to_handler(Sysname, Operation, Data) -> HandleEventResult when
+    Sysname :: node(),
+    Operation :: tuple(),
+    State :: route,
+    Data :: data(),
+    HandleEventResult :: gen_statem:event_handler_result(State, Data).
 route_to_handler(Sysname, Operation, Data = #data{handlers = Handlers}) ->
     case maps:find(Sysname, Handlers) of
         {ok, HandlerPid} ->
@@ -172,7 +172,12 @@ route_to_handler(Sysname, Operation, Data = #data{handlers = Handlers}) ->
             start_and_route_to_handler(Sysname, Operation, Data)
     end.
 
-%% @private
+-spec start_and_route_to_handler(Sysname, Operation, Data) -> HandleEventResult when
+    Sysname :: node(),
+    Operation :: tuple(),
+    State :: route,
+    Data :: data(),
+    HandleEventResult :: gen_statem:event_handler_result(State, Data).
 start_and_route_to_handler(
     Sysname, Operation, Data0 = #data{handler_sup = HandlerSup, handlers = Handlers0, monitors = Monitors0}
 ) ->
@@ -180,8 +185,8 @@ start_and_route_to_handler(
         {ok, HandlerPid} when is_pid(HandlerPid) ->
             _ = catch erlang:send(HandlerPid, Operation, [noconnect]),
             HandlerMon = erlang:monitor(process, HandlerPid),
-            Handlers1 = maps:put(Sysname, HandlerPid, Handlers0),
-            Monitors1 = maps:put(HandlerMon, {Sysname, HandlerPid}, Monitors0),
+            Handlers1 = Handlers0#{Sysname => HandlerPid},
+            Monitors1 = Monitors0#{HandlerMon => {Sysname, HandlerPid}},
             Data1 = Data0#data{handlers = Handlers1, monitors = Monitors1},
             {keep_state, Data1}
     end.

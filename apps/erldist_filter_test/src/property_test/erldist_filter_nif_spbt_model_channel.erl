@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,18 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  29 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_spbt_model_channel).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
@@ -105,27 +100,27 @@
 -spec precondition(Model, Func, Args) -> boolean() when
     Model :: t(),
     Func :: atom(),
-    Args :: nil() | [eqwalizer:dynamic()].
+    Args :: nil() | [dynamic()].
 precondition(Model = #{'__type__' := ?MODULE}, Func, Args) ->
     case {Func, Args} of
         {channel_close, []} ->
             true;
         {channel_dop_with_payload, [Spec]} ->
-            case channel_send_packets(Model, maps:without([packets], Spec)) of
+            case channel_send_packets(Model, maps:remove(packets, Spec)) of
                 {ok, Spec, _NewModel} ->
                     true;
                 {ok, _BadSpec, _NewModel} ->
                     false
             end;
         {channel_dop_without_payload, [Spec]} ->
-            case channel_send_packets(Model, maps:without([packets], Spec)) of
+            case channel_send_packets(Model, maps:remove(packets, Spec)) of
                 {ok, Spec, _NewModel} ->
                     true;
                 {ok, _BadSpec, _NewModel} ->
                     false
             end;
         {channel_fill_atom_cache, [Spec]} ->
-            case maybe_fill_atom_cache(Model, maps:without([packets], Spec)) of
+            case maybe_fill_atom_cache(Model, maps:remove(packets, Spec)) of
                 {ok, Spec, _NewModel} ->
                     true;
                 {ok, _BadSpec, _NewModel} ->
@@ -140,8 +135,8 @@ precondition(Model = #{'__type__' := ?MODULE}, Func, Args) ->
 -spec postcondition(Model, Func, Args, Result) -> boolean() when
     Model :: t(),
     Func :: atom(),
-    Args :: nil() | [eqwalizer:dynamic()],
-    Result :: eqwalizer:dynamic().
+    Args :: nil() | [dynamic()],
+    Result :: dynamic().
 postcondition(Model = #{'__type__' := ?MODULE, entry := Entry}, Func, Args, Result) ->
     case {Func, Args} of
         {channel_close, []} ->
@@ -183,20 +178,20 @@ postcondition(Model = #{'__type__' := ?MODULE, entry := Entry}, Func, Args, Resu
 -spec next_state(Model, Func, Args, Result) -> Model when
     Model :: t(),
     Func :: atom(),
-    Args :: nil() | [eqwalizer:dynamic()],
-    Result :: eqwalizer:dynamic().
+    Args :: nil() | [dynamic()],
+    Result :: dynamic().
 next_state(Model0 = #{'__type__' := ?MODULE}, Func, Args, _Result) ->
     case {Func, Args} of
         {channel_dop_with_payload, [Spec = #{packets := Packets}]} ->
-            {ok, _Spec, Model1} = channel_send_packets(Model0, maps:without([packets], Spec)),
+            {ok, _Spec, Model1} = channel_send_packets(Model0, maps:remove(packets, Spec)),
             {ok, _Info, Model2} = channel_recv_packets(Model1, Packets),
             Model2;
         {channel_dop_without_payload, [Spec = #{packets := Packets}]} ->
-            {ok, _Spec, Model1} = channel_send_packets(Model0, maps:without([packets], Spec)),
+            {ok, _Spec, Model1} = channel_send_packets(Model0, maps:remove(packets, Spec)),
             {ok, _Info, Model2} = channel_recv_packets(Model1, Packets),
             Model2;
         {channel_fill_atom_cache, [Spec = #{packets := Packets}]} ->
-            {ok, _Spec, Model1} = maybe_fill_atom_cache(Model0, maps:without([packets], Spec)),
+            {ok, _Spec, Model1} = maybe_fill_atom_cache(Model0, maps:remove(packets, Spec)),
             {ok, _Info, Model2} = channel_recv_packets(Model1, Packets),
             Model2;
         {channel_get_rx_atom_cache, []} ->
@@ -238,19 +233,19 @@ get_header_modes(#{'__type__' := ?MODULE, distribution_flags := DFlags}) ->
     } = erldist_filter_nif:distribution_flags(),
     HM0 = #{},
     HM1 =
-        case (DFlags band DFLAG_FRAGMENTS) =/= 0 of
-            true -> HM0#{fragment => []};
-            false -> HM0
+        case (DFlags band DFLAG_FRAGMENTS) of
+            0 -> HM0;
+            _ -> HM0#{fragment => []}
         end,
     HM2 =
-        case (DFlags band DFLAG_DIST_HDR_ATOM_CACHE) =/= 0 of
-            true -> HM1#{normal => []};
-            false -> HM1
+        case (DFlags band DFLAG_DIST_HDR_ATOM_CACHE) of
+            0 -> HM1;
+            _ -> HM1#{normal => []}
         end,
     HM3 =
-        case (DFlags band (DFLAG_DIST_HDR_ATOM_CACHE bor DFLAG_FRAGMENTS)) =:= 0 of
-            true -> HM2#{pass_through => []};
-            false -> HM2
+        case (DFlags band (DFLAG_DIST_HDR_ATOM_CACHE bor DFLAG_FRAGMENTS)) of
+            0 -> HM2#{pass_through => []};
+            _ -> HM2
         end,
     {ok, HM3}.
 
@@ -272,7 +267,14 @@ is_sysname(#{'__type__' := ?MODULE}, _Sysname) ->
 channel_recv_packets(Model = #{'__type__' := ?MODULE}, Packets) when is_list(Packets) ->
     channel_recv_packets(Model, Packets, [], []).
 
-%% @private
+-spec channel_recv_packets(Model, Packets, Actions, Events) -> {ok, Info, Model} when
+    Model :: t(),
+    Packets :: [binary()],
+    Info :: #{actions := Actions, events := [{dop, ControlMessage, MaybePayload}]},
+    Events :: [{dop, ControlMessage, MaybePayload}],
+    Actions :: [erldist_filter_nif:action()],
+    ControlMessage :: vdist:control_message(),
+    MaybePayload :: undefined | vterm:t().
 channel_recv_packets(
     Model0 = #{'__type__' := ?MODULE, entry := Entry0, packet_size := 0}, [Packet | Packets], Actions, Events
 ) ->
@@ -446,7 +448,10 @@ cast_packets_to_fragments(#{'__type__' := ?MODULE}, []) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec do_decode_packets(
+    PacketSize :: non_neg_integer(),
+    Fragments :: [binary()]
+) -> [binary()].
 do_decode_packets(PacketSize = 0, [Fragment | Fragments]) ->
     [Fragment | do_decode_packets(PacketSize, Fragments)];
 do_decode_packets(PacketSize = 1, [<<PacketLength:8, Fragment:PacketLength/bytes>> | Packets]) ->
@@ -460,7 +465,10 @@ do_decode_packets(PacketSize = 8, [<<PacketLength:64, Fragment:PacketLength/byte
 do_decode_packets(_PacketSize, []) ->
     [].
 
-%% @private
+-spec do_encode_packets(
+    PacketSize :: non_neg_integer(),
+    Fragments :: [binary()]
+) -> [binary()].
 do_encode_packets(_PacketSize = 0, Packets = [_ | _]) ->
     Packets;
 do_encode_packets(PacketSize = 1, [Fragment | Fragments]) when byte_size(Fragment) =< 16#FF ->
@@ -474,13 +482,14 @@ do_encode_packets(PacketSize = 8, [Fragment | Fragments]) when byte_size(Fragmen
 do_encode_packets(_PacketSize, []) ->
     [].
 
-%% @private
+-spec maybe_drop_noop_actions(Model, Actions) -> Actions when
+    Model :: t(), Actions :: [erldist_filter_nif:action()].
 maybe_drop_noop_actions(_Model = #{'__type__' := ?MODULE}, Actions = [{emit, _}, {emit, _} | _]) ->
     lists:filter(fun should_keep_noop_action/1, Actions);
 maybe_drop_noop_actions(_Model = #{'__type__' := ?MODULE}, OtherResult) ->
     OtherResult.
 
-%% @private
+-spec should_keep_noop_action(erldist_filter_nif:action()) -> boolean().
 should_keep_noop_action({emit, Fragment}) ->
     case vdist_header_decode:decode_header(Fragment) of
         {ok, #vdist_fragment_header{fragment_id = 1}, EncControlMessage} ->

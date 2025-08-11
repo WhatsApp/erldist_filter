@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,19 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  13 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_proxy).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 -compile(warn_missing_spec_all).
--wacov(ignore).
 
 -behaviour(gen_server).
 
@@ -111,7 +105,7 @@ init({ParentPid, PacketSize, Sysname, Creation, ConnectionId, DistributionFlags}
     State = #state{channel = Channel, parent = {ParentPid, ParentMon}},
     {ok, State}.
 
--spec handle_call(eqwalizer:dynamic(), gen_server:from(), #state{}) ->
+-spec handle_call(dynamic(), gen_server:from(), #state{}) ->
     {reply, term(), #state{}} | {stop, normal, term(), #state{}}.
 handle_call(channel_close, _From, State0 = #state{channel = Channel}) when Channel =/= undefined ->
     try erldist_filter_nif:channel_close(Channel) of

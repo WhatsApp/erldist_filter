@@ -1,12 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/OTP-25.2.3/lib/kernel/include/net_address.hrl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-28/lib/kernel/include/net_address.hrl
 %% @oncall whatsapp_clr
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2016. All Rights Reserved.
-%% Copyright (c) Meta Platforms, Inc. and affiliates.
-%% Copyright (c) WhatsApp LLC
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1997-2025. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -26,9 +26,9 @@
 %% Generic address format
 
 -record(net_address,
-	{
-	 address,  %% opaque address
-	 host,     %% host name
-	 protocol, %% protocol
-	 family    %% address family
-	}).
+        {
+         address,  %% opaque address
+         host,     %% host name
+         protocol, %% protocol
+         family    %% address family
+        }).

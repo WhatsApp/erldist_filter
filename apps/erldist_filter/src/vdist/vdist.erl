@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,22 +6,14 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_dist.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
 
 %% API
 -export([
@@ -88,7 +81,7 @@
 %%% API functions
 %%%=============================================================================
 
--spec simplify(DOP) -> T when DOP :: vdist:dop_t(), T :: eqwalizer:dynamic().
+-spec simplify(DOP) -> T when DOP :: vdist:dop_t(), T :: dynamic().
 simplify(DOP) when ?is_vdist_dop_t(DOP) ->
     VT = vdist_dop:dop_to_control_message_vterm(DOP),
     vterm:simplify(VT).

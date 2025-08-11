@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -12,12 +13,11 @@
 %%% @end
 %%% Created :  19 May 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_SUITE).
+-typing([eqwalizer]).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 %% ct callbacks
@@ -81,6 +81,7 @@ groups() ->
             prop_dist_ext_to_vdist_2,
             prop_dist_ext_to_vterm_2,
             prop_dist_ext_to_vterm_3,
+            prop_dist_int_to_vdist_2,
             prop_dist_int_to_vterm_2,
             prop_dist_int_to_vterm_3
         ]}
@@ -245,16 +246,11 @@ prop_dist_ext_to_vdist_2() ->
     ].
 
 prop_dist_ext_to_vdist_2(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_ext_to_vdist_2,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_ext_to_vdist_2(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_ext_to_vterm_2() ->
     [
@@ -263,16 +259,11 @@ prop_dist_ext_to_vterm_2() ->
     ].
 
 prop_dist_ext_to_vterm_2(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_ext_to_vterm_2,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_ext_to_vterm_2(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_ext_to_vterm_3() ->
     [
@@ -281,16 +272,11 @@ prop_dist_ext_to_vterm_3() ->
     ].
 
 prop_dist_ext_to_vterm_3(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_ext_to_vterm_3,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_ext_to_vterm_3(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_int_to_vdist_2() ->
     [
@@ -299,16 +285,11 @@ prop_dist_int_to_vdist_2() ->
     ].
 
 prop_dist_int_to_vdist_2(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_int_to_vdist_2,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_int_to_vdist_2(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_int_to_vterm_2() ->
     [
@@ -317,16 +298,11 @@ prop_dist_int_to_vterm_2() ->
     ].
 
 prop_dist_int_to_vterm_2(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_int_to_vterm_2,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_int_to_vterm_2(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_int_to_vterm_3() ->
     [
@@ -335,16 +311,11 @@ prop_dist_int_to_vterm_3() ->
     ].
 
 prop_dist_int_to_vterm_3(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_prop,
-        prop_dist_int_to_vterm_3,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 1000}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_dist_int_to_vterm_3(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 %%%-----------------------------------------------------------------------------
 %%% Internal functions
@@ -352,7 +323,9 @@ prop_dist_int_to_vterm_3(Config) ->
 
 %% @private
 make_atom_i(Prefix, I) ->
-    erlang:binary_to_atom(unicode:characters_to_binary(lists:flatten(io_lib:format("~ts~w", [Prefix, I]))), unicode).
+    erlang:binary_to_atom(
+        <<_/binary>> = unicode:characters_to_binary(lists:flatten(io_lib:format("~ts~w", [Prefix, I]))), unicode
+    ).
 
 %% @private
 make_large_tuple_test_vector(N) ->

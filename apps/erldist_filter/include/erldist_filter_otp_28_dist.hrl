@@ -1,12 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/OTP-25.2.3/lib/kernel/include/dist.hrl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-28/lib/kernel/include/dist.hrl
 %% @oncall whatsapp_clr
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1999-2022. All Rights Reserved.
-%% Copyright (c) Meta Platforms, Inc. and affiliates.
-%% Copyright (c) WhatsApp LLC
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1999-2025. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -60,6 +60,8 @@
 -define(DFLAG_NAME_ME,      (16#02 bsl 32)).
 -define(DFLAG_V4_NC,        (16#04 bsl 32)).
 -define(DFLAG_ALIAS,        (16#08 bsl 32)).
+-define(DFLAG_LOCAL_EXT,    (16#10 bsl 32)). %% only used internally
+-define(DFLAG_ALTACT_SIG,   (16#20 bsl 32)).
 
 %% The following flags are mandatory in OTP 25. OTP 25 and higher
 %% will accept ?DFLAG_MANDATORY_25_DIGEST as a shorthand for all those
@@ -76,6 +78,14 @@
              ?DFLAG_MAP_TAG bor
              ?DFLAG_BIG_CREATION bor
              ?DFLAG_HANDSHAKE_23)).
+
+%% New mandatory flags in OTP 26
+-define(MANDATORY_DFLAGS_26, (?DFLAG_V4_NC bor
+                                  ?DFLAG_UNLINK_ID)).
+
+%% All mandatory flags
+-define(DFLAGS_MANDATORY, (?MANDATORY_DFLAGS_25 bor
+                               ?MANDATORY_DFLAGS_26)).
 
 %% Also update dflag2str() in ../src/dist_util.erl
 %% when adding flags...

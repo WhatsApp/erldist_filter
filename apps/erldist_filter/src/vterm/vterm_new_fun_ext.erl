@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vterm_new_fun_ext).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
@@ -21,8 +16,8 @@
 -behaviour(vterm_encode).
 -behaviour(vterm_simplify).
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -54,7 +49,7 @@
     OldIndex :: vterm:fixed_integer_t(),
     OldUniq :: vterm:fixed_integer_t(),
     Pid :: vterm:pid_t(),
-    FreeVars :: list(vterm:t()),
+    FreeVars :: [vterm:t()],
     T :: t().
 new(Size, Arity, Uniq, Index, NumFree, Module, OldIndex, OldUniq, Pid, FreeVars) when
     ?is_u32(Size) andalso
@@ -90,7 +85,7 @@ new(Size, Arity, Uniq, Index, NumFree, Module, OldIndex, OldUniq, Pid, FreeVars)
     OldIndex :: vterm:fixed_integer_t(),
     OldUniq :: vterm:fixed_integer_t(),
     Pid :: vterm:pid_t(),
-    FreeVars :: list(vterm:t()),
+    FreeVars :: [vterm:t()],
     T :: t().
 new_with_derived_size(Arity, Uniq, Index, NumFree, Module, OldIndex, OldUniq, Pid, FreeVars) when
     ?is_u8(Arity) andalso

@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_spbt_shim).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
@@ -104,8 +99,7 @@ channel_get_rx_atom_cache({channel, Channel}) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
--spec should_log_result(eqwalizer:dynamic()) -> boolean().
+-spec should_log_result(dynamic()) -> boolean().
 should_log_result({error, not_owner}) ->
     false;
 should_log_result(Result) ->

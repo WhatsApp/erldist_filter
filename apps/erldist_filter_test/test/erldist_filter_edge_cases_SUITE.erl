@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -12,12 +13,11 @@
 %%% @end
 %%% Created :  17 Jan 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_edge_cases_SUITE).
+-typing([eqwalizer]).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 %% ct callbacks

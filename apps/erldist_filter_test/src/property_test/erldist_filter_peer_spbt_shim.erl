@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,18 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  22 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_peer_spbt_shim).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 %% Shim API
 -export([
@@ -92,7 +87,12 @@ start_random_suffix_upeer_and_vpeer_from_label(Label) when is_list(Label) ->
     true = rpc(VPeer, net_kernel, connect_node, [UName]),
     {ok, {UPeer, VPeer}}.
 
-%% @private
+-spec start_peer(PeerNode, Module, FunctionName) -> {ok, Peer} when
+    PeerNode :: node(),
+    Module :: module(),
+    FunctionName :: atom(),
+    Peer :: {PeerNode, PeerPid},
+    PeerPid :: pid().
 start_peer(PeerNode, _Module, _FunctionName) ->
     [PeerName, PeerHost] = string:lexemes(atom_to_list(PeerNode), "@"),
     PeerOptions = #{
@@ -124,7 +124,7 @@ start_peer(PeerNode, _Module, _FunctionName) ->
             {ok, Peer}
     end.
 
-%% @private
+-spec flatten_peer_args(Args) -> Args when Args :: [dynamic()].
 flatten_peer_args([T | Rest]) when is_tuple(T) ->
     tuple_to_list(T) ++ flatten_peer_args(Rest);
 % flatten_peer_args([L | Rest]) when is_list(L) ->
@@ -219,6 +219,11 @@ upeer_send_sender(VNode, Term) ->
 %%% UNode/VNode Internal API functions
 %%%=============================================================================
 
+-spec unode_start_aliased_process(VNode, UAlias) -> {ReqId, VAlias} | no_return() when
+    VNode :: node(),
+    UAlias :: reference(),
+    ReqId :: reference(),
+    VAlias :: reference().
 unode_start_aliased_process(VNode, UAlias) ->
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_aliased_process_init, [UParent, UAlias], [{reply, yes}]),
@@ -238,7 +243,9 @@ vnode_aliased_process_init(UParent, UAlias) ->
     UParent ! {UParent, self(), VAlias},
     vnode_aliased_process_loop(VAlias, UAlias).
 
-%% @private
+-spec vnode_aliased_process_loop(VAlias, UAlias) -> no_return() when
+    VAlias :: reference(),
+    UAlias :: reference().
 vnode_aliased_process_loop(VAlias, UAlias) ->
     receive
         {UAlias, UNode, {ping, Term}} when UNode =/= node() ->
@@ -250,7 +257,10 @@ vnode_aliased_process_loop(VAlias, UAlias) ->
             exit(normal)
     end.
 
-%% @private
+-spec unode_start_registered_process(VNode, RegName) -> ReqId | no_return() when
+    VNode :: node(),
+    RegName :: atom(),
+    ReqId :: reference().
 unode_start_registered_process(VNode, RegName) ->
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_registered_process_init, [UParent, RegName], [{reply, yes}]),
@@ -270,7 +280,7 @@ vnode_registered_process_init(UParent, RegName) ->
     UParent ! {UParent, self(), RegName},
     vnode_registered_process_loop(RegName).
 
-%% @private
+-spec vnode_registered_process_loop(RegName) -> no_return() when RegName :: atom().
 vnode_registered_process_loop(RegName) ->
     receive
         {RegName, UNode, {ping, Term}} when UNode =/= node() ->
@@ -282,7 +292,11 @@ vnode_registered_process_loop(RegName) ->
             exit(normal)
     end.
 
-%% @private
+-spec unode_start_send_sender_process(VNode, UPid) -> {ReqId, VPid} | no_return() when
+    VNode :: node(),
+    UPid :: pid(),
+    ReqId :: reference(),
+    VPid :: pid().
 unode_start_send_sender_process(VNode, UPid) ->
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_send_sender_process_init, [UParent, UPid], [{reply, yes}]),
@@ -302,7 +316,9 @@ vnode_send_sender_process_init(UParent, UPid) ->
     UParent ! {UParent, self(), VPid},
     vnode_send_sender_process_loop(VPid, UPid).
 
-%% @private
+-spec vnode_send_sender_process_loop(VPid, UPid) -> no_return() when
+    VPid :: pid(),
+    UPid :: pid().
 vnode_send_sender_process_loop(VPid, UPid) ->
     receive
         {UPid, UNode, {ping, Term}} when UNode =/= node() ->
@@ -317,28 +333,28 @@ vnode_send_sender_process_loop(VPid, UPid) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-doc hidden.
 -spec rpc(Peer, Module, FunctionName, Arguments) -> Result when
     Peer :: upeer() | vpeer(),
     Module :: module(),
     FunctionName :: atom(),
-    Arguments :: nil() | [eqwalizer:dynamic()],
-    Result :: eqwalizer:dynamic().
+    Arguments :: nil() | [dynamic()],
+    Result :: dynamic().
 rpc(Peer = {_PeerNode, _PeerPid}, Module, FunctionName, Arguments) ->
     rpc(Peer, Module, FunctionName, Arguments, ?RPC_DEFAULT_TIMEOUT).
 
-%% @private
+-doc hidden.
 -spec rpc(Peer, Module, FunctionName, Arguments, Timeout) -> Result when
     Peer :: upeer() | vpeer(),
     Module :: module(),
     FunctionName :: atom(),
-    Arguments :: nil() | [eqwalizer:dynamic()],
+    Arguments :: nil() | [dynamic()],
     Timeout :: timeout(),
-    Result :: eqwalizer:dynamic().
+    Result :: dynamic().
 rpc(_Peer = {_PeerNode, PeerPid}, Module, FunctionName, Arguments, Timeout) ->
     peer:call(PeerPid, Module, FunctionName, Arguments, Timeout).
 
-%% @private
+-spec upeer_gen_spawn(Fun) -> Reply | no_return() when Fun :: fun(() -> Reply), Reply :: dynamic().
 upeer_gen_spawn(Fun) ->
     UParent = self(),
     {UPid, UMon} = spawn_opt(

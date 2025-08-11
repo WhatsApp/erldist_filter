@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -12,12 +13,10 @@
 %%% @end
 %%% Created :  26 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_conflict_SUITE).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 %% ct callbacks
@@ -443,7 +442,7 @@ do_gen_non_conflicting_alpha_set({Atom0, Count}, Seen0, Acc0) when is_integer(Co
             Atom1 = next_alpha_atom(Atom0),
             do_gen_non_conflicting_alpha_set({Atom1, Count}, Seen0, Acc0);
         false ->
-            Seen1 = maps:put(Index, [], Seen0),
+            Seen1 = Seen0#{Index => []},
             Acc1 = [Atom0 | Acc0],
             do_gen_non_conflicting_alpha_set({Atom0, Count - 1}, Seen1, Acc1)
     end;
@@ -454,7 +453,7 @@ do_gen_non_conflicting_alpha_set([Atom0 | Atoms], Seen0, Acc0) ->
             Atom1 = next_alpha_atom(Atom0),
             do_gen_non_conflicting_alpha_set([Atom1 | Atoms], Seen0, Acc0);
         false ->
-            Seen1 = maps:put(Index, [], Seen0),
+            Seen1 = Seen0#{Index => []},
             Acc1 = [Atom0 | Acc0],
             do_gen_non_conflicting_alpha_set(Atoms, Seen1, Acc1)
     end;

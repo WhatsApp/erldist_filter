@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,16 +6,10 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  10 Aug 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_handler).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -58,23 +53,24 @@
 %% Internal Types
 -type init_data() :: #init_data{}.
 -type data() :: #data{}.
--type gen_statem_event_content() :: eqwalizer:dynamic().
--type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | eqwalizer:dynamic().
+-type gen_statem_event_content() :: dynamic().
+-type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | dynamic().
 
 %% Types
 -type action() :: drop | keep.
 -type control_without_payload() :: udist:dop_without_payload_t().
 -type control_with_payload() :: udist:dop_with_payload_t().
--type decision() :: action() | {action(), control_without_payload()} | {action(), control_with_payload(), payload()}.
+-type decision() :: {action(), control_without_payload()} | {action(), control_with_payload(), payload()}.
+-type decision_result() :: action() | decision().
 -type hint() :: drop | safe | unsafe.
--type payload() :: term().
+-type payload() :: dynamic().
 
 % %% Callbacks
--callback classify(Hint :: hint(), Sysname :: node(), Control :: control_without_payload()) -> decision().
+-callback classify(Hint :: hint(), Sysname :: node(), Control :: control_without_payload()) -> decision_result().
 -callback classify(Hint :: hint(), Sysname :: node(), Control :: control_with_payload(), Payload :: payload()) ->
-    decision().
+    decision_result().
 -callback spawn_request_init(Sysname :: node(), Module :: module(), FunctionName :: atom(), Arguments :: [payload()]) ->
-    term() | no_return().
+    term().
 
 %% Macros
 -define(hint_drop_control(), handler_classify(Handler, drop, Sysname, Control)).
@@ -184,7 +180,7 @@ handle(
 %%% Internal Handler API functions
 %%%=============================================================================
 
-%% @private
+-doc hidden.
 -spec handler_classify(Handler, Hint, Sysname, Control) -> {Hint, Decision} when
     Handler :: undefined | module(),
     Hint :: hint(),
@@ -207,7 +203,7 @@ handler_classify(Handler, Hint, Sysname, Control) when is_atom(Handler) ->
             {Hint, {drop, Control}}
     end.
 
-%% @private
+-doc hidden.
 -spec handler_classify(Handler, Hint, Sysname, Control, Payload) -> {Hint, Decision} when
     Handler :: undefined | module(),
     Hint :: hint(),
@@ -235,7 +231,12 @@ handler_classify(Handler, Hint, Sysname, Control, Payload) when is_atom(Handler)
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec classify(Handler, Sysname, Control) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Sysname :: node(),
+    Control :: control_without_payload(),
+    Hint :: hint(),
+    Decision :: decision().
 classify(Handler, Sysname, Control) ->
     case udist:get_dop_group(Control) of
         exit2 ->
@@ -257,7 +258,13 @@ classify(Handler, Sysname, Control) ->
         % spawn_reply ->
     end.
 
-%% @private
+-spec classify(Handler, Sysname, Control, Payload) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Sysname :: node(),
+    Control :: control_with_payload(),
+    Payload :: payload(),
+    Hint :: hint(),
+    Decision :: decision().
 classify(Handler, Sysname, Control, Payload) when
     is_atom(Handler) andalso is_atom(Sysname) andalso ?is_udist_dop_with_payload_t(Control)
 ->
@@ -297,7 +304,13 @@ classify(Handler, Sysname, Control, Payload) when
         % spawn_reply ->
     end.
 
-%% @private
+-spec classify_send(Handler, Sysname, Control, Payload) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Sysname :: node(),
+    Control :: control_with_payload(),
+    Payload :: payload(),
+    Hint :: hint(),
+    Decision :: decision().
 classify_send(Handler, Sysname, Control, Payload) ->
     case Payload of
         {system, _From, _Request} ->
@@ -332,7 +345,13 @@ classify_send(Handler, Sysname, Control, Payload) ->
             ?hint_unsafe_payload()
     end.
 
-%% @private
+-spec classify_send_to_net_kernel(Handler, Sysname, Control, Payload) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Sysname :: node(),
+    Control :: control_with_payload(),
+    Payload :: payload(),
+    Hint :: hint(),
+    Decision :: decision().
 classify_send_to_net_kernel(Handler, Sysname, Control, Payload) ->
     case Payload of
         {'$gen_call', _From, {is_auth, Sysname}} ->
@@ -341,7 +360,13 @@ classify_send_to_net_kernel(Handler, Sysname, Control, Payload) ->
             ?hint_drop_payload()
     end.
 
-%% @private
+-spec classify_send_to_rex(Handler, Sysname, Control, Payload) -> {Hint, Decision} when
+    Handler :: undefined | module(),
+    Sysname :: node(),
+    Control :: control_with_payload(),
+    Payload :: payload(),
+    Hint :: hint(),
+    Decision :: decision().
 classify_send_to_rex(Handler, Sysname, Control, Payload) ->
     case Payload of
         {_From, features_request} ->
@@ -352,7 +377,7 @@ classify_send_to_rex(Handler, Sysname, Control, Payload) ->
             ?hint_drop_payload()
     end.
 
-%% @private
+-spec execute(Decision) -> ok when Decision :: decision().
 execute({drop, _Control}) ->
     ok;
 execute({drop, _Control, _Payload}) ->

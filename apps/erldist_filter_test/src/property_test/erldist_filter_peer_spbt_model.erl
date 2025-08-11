@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  22 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_peer_spbt_model).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
@@ -96,7 +91,7 @@ categorize_call(#{'__type__' := ?MODULE}, _Func, _Args) ->
     Model :: t(),
     Func :: atom(),
     Args :: [term()],
-    Result :: term(),
+    Result :: {ok, term()} | {var, term()} | {call, module(), atom(), [term()]},
     ExpectedResult :: term().
 dynamic_call(State0 = #{'__type__' := ?MODULE, upeer := nil}, start_upeer, [_UPeerNode], Result) ->
     UPeer = unwrap(Result),

@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_normal_header).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
@@ -20,9 +15,9 @@
 
 -behaviour(vdist_header_encode).
 
--include("erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
 % -include("erldist_filter_erts_dist.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -140,7 +135,7 @@ update_atom_cache(#vdist_normal_header{atom_cache_ref_entries = Entries}, Cache 
     Cache :: vdist_atom_cache:t(),
     Table :: vdist_atom_translation_table:t().
 update_atom_cache([#vdist_old_atom_cache_ref_entry{atom_cache_index = CacheIndex} | Entries], Cache, Table0) ->
-    case vdist_atom_cache:find(Cache, CacheIndex) of
+    case vdist_atom_cache:find_by_index(Cache, CacheIndex) of
         {ok, {CacheIndex, Atom}} ->
             {ok, Table1} = vdist_atom_translation_table:store(Table0, CacheIndex, Atom),
             update_atom_cache(Entries, Cache, Table1);

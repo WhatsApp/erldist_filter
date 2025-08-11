@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_entry_encode).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_dist.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
 
 %% API
 -export([
@@ -290,7 +285,15 @@ encode_with_pass_through_header(
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec do_encode_fragments(Entry, FragmentSize, SequenceId, FragmentId, EncPayload, Fragments) ->
+    {ok, Fragments, Entry}
+when
+    Entry :: vdist_entry:t(),
+    FragmentSize :: pos_integer(),
+    SequenceId :: vdist:sequence_id(),
+    FragmentId :: non_neg_integer(),
+    EncPayload :: binary(),
+    Fragments :: [binary()].
 do_encode_fragments(Entry, _FragmentSize, SequenceId, FragmentId = 1, EncPayload, Fragments) ->
     NextHeader = vdist_fragment_cont:new(SequenceId, FragmentId),
     EncNextHeader = vdist_header_encode:encode_header(NextHeader),
@@ -305,7 +308,10 @@ do_encode_fragments(Entry, FragmentSize, SequenceId, FragmentId, EncPayload, Fra
     NextFragment = <<EncNextHeader/bytes, EncPayloadHead/bytes>>,
     do_encode_fragments(Entry, FragmentSize, SequenceId, FragmentId - 1, EncPayloadTail, [NextFragment | Fragments]).
 
-%% @private
+-spec xform_cache_atoms(VTerm, CacheMap) -> VTermCont when
+    VTerm :: vterm:t(),
+    CacheMap :: vdist_atom_cache_map:t(),
+    VTermCont :: cont | {cont, VTerm, vdist_atom_cache_map:t()}.
 xform_cache_atoms(AtomVTerm, CacheMap0) when ?is_vterm_atom_t(AtomVTerm) ->
     Atom = vterm:simplify(AtomVTerm),
     case vdist_atom_cache_map:find_or_insert(CacheMap0, Atom) of

@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -27,12 +28,11 @@
 %%% @end
 %%% Created :  22 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_peer_spbt_SUITE).
+-typing([eqwalizer]).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 %% ct callbacks
@@ -71,16 +71,13 @@ all() ->
 groups() ->
     [
         {stateful_property_based_tests, [shuffle], [
-            % Disabled by default, GitHub CI does not like this :-(
-            % prop_serial_statem
-            % Disabled by default, Sandcastle does not like this :-(
-            % prop_parallel_statem
+            prop_serial_statem,
+            prop_parallel_statem
         ]}
     ].
 
-init_per_suite(Config0) ->
-    Config1 = ct_property_test:init_per_suite(Config0),
-    Config1.
+init_per_suite(Config) ->
+    Config.
 
 end_per_suite(_Config) ->
     ok.
@@ -119,16 +116,11 @@ prop_serial_statem() ->
     ].
 
 prop_serial_statem(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_peer_spbt_prop,
-        prop_serial_statem,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 100}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_peer_spbt_prop:prop_serial_statem(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 100}
+    ]).
 
 prop_parallel_statem() ->
     [
@@ -137,13 +129,28 @@ prop_parallel_statem() ->
     ].
 
 prop_parallel_statem(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_peer_spbt_prop,
-        prop_parallel_statem,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 100},
-            {numtests, 100}
-        ]
-    ).
+    case is_running_in_sandcastle() of
+        true ->
+            {skip, "Skipping parallel test for erldist_filter_peer_spbt_SUITE on Sandcastle"};
+        false ->
+            erldist_filter_proper:quickcheck(erldist_filter_peer_spbt_prop:prop_parallel_statem(Config), [
+                verbose,
+                {max_shrinks, 100},
+                {numtests, 100}
+            ])
+    end.
+
+%% @private
+-spec is_running_in_sandcastle() -> boolean().
+is_running_in_sandcastle() ->
+    % elp:ignore WA014 (no_os_getenv): used for skipping tests in Sandcastle that always get marked as flaky due to test infra issues
+    case os:getenv("SANDCASTLE_DIFF_ID") of
+        [$D | _] ->
+            true;
+        _ ->
+            % elp:ignore WA014 (no_os_getenv): used for skipping tests in Sandcastle that always get marked as flaky due to test infra issues
+            case os:getenv("SANDCASTLE") of
+                false -> false;
+                _ -> true
+            end
+    end.

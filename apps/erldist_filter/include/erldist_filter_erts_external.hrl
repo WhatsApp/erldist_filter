@@ -1,3 +1,4 @@
+%%% % @format
 %%% %CopyrightBegin%
 %%%
 %%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
@@ -18,7 +19,6 @@
 %%%
 %%% %CopyrightEnd%
 %%%
-%%% % @format
 %% @oncall whatsapp_clr
 -ifndef(ERLDIST_FILTER_ERTS_EXTERNAL_HRL).
 
@@ -66,7 +66,8 @@
 %% -define(ATOM_INTERNAL_REF2, $I).
 %% -define(ATOM_INTERNAL_REF3, $K).
 %% -define(BINARY_INTERNAL_REF, $J).
-%% -define(BIT_BINARY_INTERNAL_REF, $L).
+%% -define(BITSTRING_INTERNAL_REF, $L).
+%% -define(MAGIC_REF_INTERNAL_REF, $N).
 -define(COMPRESSED, $P).
 
 -define(VERSION_MAGIC, 131).

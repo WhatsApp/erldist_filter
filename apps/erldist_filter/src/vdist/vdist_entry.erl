@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,22 +6,16 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_entry).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_dist.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -126,7 +121,6 @@ is_tx_atom_cache_filled(#vdist_entry{tx_atom_cache = TxAtomCache = #vdist_atom_c
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
 -spec do_fill_tx_atom_cache(Entry, NoopControlMessage, KeysAdded, Fragments, Options) ->
     {ok, Fragments, Entry}
 when
@@ -151,7 +145,7 @@ do_fill_tx_atom_cache(
     Fragments1 = lists:append(Fragments0, NextFragments),
     {ok, Fragments1, Entry1}.
 
-%% @private
+-doc hidden.
 -spec reg_send_noop() -> {Message, Payload} when Message :: vdist:dop_with_payload_t(), Payload :: vterm:t().
 reg_send_noop() ->
     reg_send_noop(0, 0, 0).
@@ -162,7 +156,7 @@ reg_send_noop() ->
 % Payload = vterm_nil_ext:new(),
 % {RegSend, Payload}.
 
-%% @private
+-doc hidden.
 -spec reg_send_noop(Id, Serial, Creation) -> {Message, Payload} when
     Id :: non_neg_integer(),
     Serial :: non_neg_integer(),
@@ -177,7 +171,7 @@ reg_send_noop(Id, Serial, Creation) when ?is_u32(Id) andalso ?is_u32(Serial) and
     Payload = vterm_nil_ext:new(),
     {RegSend, Payload}.
 
-%% @private
+-doc hidden.
 -spec reg_send_noop_alt() -> {Message, Payload} when Message :: vdist:dop_with_payload_t(), Payload :: vterm:t().
 reg_send_noop_alt() ->
     reg_send_noop(1, 1, 1).

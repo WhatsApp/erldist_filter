@@ -1,3 +1,4 @@
+%%% % @format
 %%%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,20 +6,14 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vterm_atom).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
 
 -export([
     sequence_id/1
@@ -36,7 +31,6 @@ sequence_id(#vterm_small_atom_ext{len = Len, name = Name}) ->
 sequence_id(#vterm_small_atom_utf8_ext{len = Len, name = Name}) ->
     hash_u64(Len, Name).
 
-%% @private
 -spec hash_u64(Len, Name) -> Hash when Len :: non_neg_integer(), Name :: binary(), Hash :: non_neg_integer().
 hash_u64(Len, Name) ->
     ((erlang:phash2({Name, Len}, 16#FFFFFFFF) bsl 32) bor erlang:phash2({Len, Name}, 16#FFFFFFFF)) band

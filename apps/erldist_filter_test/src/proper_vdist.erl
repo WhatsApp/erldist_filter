@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,19 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  12 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(proper_vdist).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
--wacov(ignore).
+-compile(warn_missing_spec_all).
 
 -include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
@@ -499,7 +493,7 @@ vdist_payload(#vdist_dop_spawn_request_tt{arity = ArityVTerm}, Options) ->
 vdist_payload(_ControlMessage, Options) ->
     proper_vterm:vterm(Options).
 
-%% @private
+-spec needs_long_atoms([#vdist_new_atom_cache_ref_entry{}]) -> boolean().
 needs_long_atoms([#vdist_new_atom_cache_ref_entry{atom_text = AtomText} | _]) when byte_size(AtomText) > 255 ->
     true;
 needs_long_atoms([_H | T]) ->

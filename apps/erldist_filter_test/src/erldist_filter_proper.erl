@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,47 +6,34 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  12 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_proper).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 -compile(warn_missing_spec_all).
--wacov(ignore).
 
 %% PropEr Helpers
 -export([
-    quickcheck/4,
-    quickcheck/1
+    quickcheck/2,
+    present_result/4
 ]).
 
-%% Macros
--define(PROPER_QUICKCHECK_OPTIONS, '$proper_quickcheck_options').
+-define(UNKNOWN, "unknown_property").
 
 %%%=============================================================================
 %%% PropEr Helpers
 %%%=============================================================================
 
--spec quickcheck(Module, Function, Config, Options) -> true | {fail, Reason} when
-    Module :: module(),
-    Function :: atom(),
-    Config :: ct_suite:ct_config(),
-    Options :: eqwalizer:dynamic(),
-    Reason :: eqwalizer:dynamic().
-quickcheck(Module, Function, Config0, Options) ->
-    _ = erlang:put(?PROPER_QUICKCHECK_OPTIONS, {Module, Function, Config0, Options}),
-    Config1 = lists:keystore(property_test_tool, 1, Config0, {property_test_tool, ?MODULE}),
-    ct_property_test:quickcheck(undefined, Config1).
+-spec present_result(module(), list(), tuple(), proplists:proplist()) -> boolean().
+present_result(Module, Cmds, Triple, Config0) ->
+    Config = [{property_test_tool, proper}] ++ Config0,
+    ct_property_test:present_result(Module, Cmds, Triple, Config).
 
--spec quickcheck(undefined) -> true | Reason when Reason :: eqwalizer:dynamic().
-quickcheck(undefined) ->
-    {Module, Function, Config, Options0} = erlang:erase(?PROPER_QUICKCHECK_OPTIONS),
+-spec quickcheck(proper:outer_test(), Options) -> true | {fail, Reason} when
+    Options :: dynamic(),
+    Reason :: dynamic().
+quickcheck(OuterTest, Options0) ->
     {Store, Options1} =
         case lists:keytake(store, 1, Options0) of
             {value, StoreTuple = {store, _}, Opts1} ->
@@ -53,35 +41,58 @@ quickcheck(undefined) ->
             false ->
                 {false, Options0}
         end,
-    OuterTest = Module:Function(Config),
+    Options = [long_result, {to_file, user}] ++ Options1,
     Result =
-        try proper:quickcheck(OuterTest, Options1) of
-            true ->
-                true;
-            FailureResult ->
-                #{failure => FailureResult, counterexample => proper:counterexample()}
+        try proper:quickcheck(OuterTest, Options) of
+            true -> true;
+            {error, Reason} -> #{failure => Reason};
+            [CounterExample] -> #{counterexample => CounterExample};
+            CounterExamples -> #{counterexamples => CounterExamples}
         catch
-            Class:Reason:Stacktrace ->
-                #{error => {Class, Reason, Stacktrace}, counterexample => proper:counterexample()}
+            Class:Reason:Stacktrace -> #{error => {Class, Reason, Stacktrace}}
         end,
     case Result of
         true ->
             true;
         _ ->
-            ok =
-                case Store of
-                    {store, StoreFilename} ->
-                        {ok, IoDevice} = file:open(StoreFilename, [write, {encoding, utf8}]),
-                        io:format(IoDevice, "~p.~n", [{Module, Function, Result}]),
-                        _ = file:close(IoDevice),
-                        ok;
-                    false ->
-                        ok
-                end,
+            case Store of
+                {store, StoreFilename} ->
+                    {ok, IoDevice} = file:open(StoreFilename, [write, {encoding, utf8}]),
+                    io:format(IoDevice, "~p.~n", [Result]),
+                    _ = file:close(IoDevice),
+                    ok;
+                false ->
+                    ok
+            end,
             case Result of
                 #{error := {C, R, S}} ->
                     erlang:raise(C, R, S);
-                #{failure := Failure} ->
-                    Failure
+                Other ->
+                    {fail, {property_name(OuterTest), Other}}
+            end
+    end.
+
+-spec property_name(dynamic()) -> string().
+property_name({forall, _Generator, PropFun}) ->
+    extract_name_from_fun(PropFun);
+property_name({setup, _SetupFun, Prop}) ->
+    property_name(Prop);
+property_name({exists, _Generator, PropFun, _Not}) ->
+    extract_name_from_fun(PropFun);
+property_name(_) ->
+    ?UNKNOWN.
+
+-spec extract_name_from_fun(fun()) -> string().
+extract_name_from_fun(Fun) ->
+    FInfo = erlang:fun_info(Fun),
+    case proplists:get_value(name, FInfo) of
+        undefined ->
+            ?UNKNOWN;
+        FullName ->
+            L = erlang:atom_to_list(FullName),
+            case string:split(L, "/") of
+                [L] -> L;
+                [[$- | EncfunName], _] -> EncfunName;
+                [EncfunName, _] -> EncfunName
             end
     end.

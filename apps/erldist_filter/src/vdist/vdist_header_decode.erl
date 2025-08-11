@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_header_decode).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -85,7 +80,12 @@ decode_header(EncodedHeader) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec decode_atom_cache_ref_entry(
+    NewCacheEntryFlag :: 0 | 1,
+    SegmentIndex :: non_neg_integer(),
+    LOngAtoms :: boolean(),
+    EncodedReferences :: bitstring()
+) -> {ok, vdist:atom_cache_ref_entry(), bitstring()} | {error, term()}.
 decode_atom_cache_ref_entry(
     _NewCacheEntryFlag = 1,
     SegmentIndex,
@@ -106,7 +106,13 @@ decode_atom_cache_ref_entry(_NewCacheEntryFlag = 0, SegmentIndex, _LongAtoms, <<
     AtomCacheIndex = ((SegmentIndex band 7) bsl 8) + InternalSegmentIndex,
     {ok, vdist_old_atom_cache_ref_entry:new(AtomCacheIndex), Rest}.
 
-%% @private
+-spec decode_atom_cache_ref_entries(
+    NumberOfAtomCacheRefs :: integer(),
+    LongAtoms :: boolean(),
+    EncodedFlags :: bitstring(),
+    EncodedReferences :: bitstring(),
+    [vdist:atom_cache_ref_entry()]
+) -> {ok, [vdist:atom_cache_ref_entry()], bitstring()} | {error, term()}.
 decode_atom_cache_ref_entries(
     _NumberOfAtomCacheRefs = 1,
     LongAtoms,

@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,24 +6,16 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_spbt_statem).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -behaviour(proper_statem).
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
--include_lib("erldist_filter/include/erldist_filter.hrl").
 
 %% proper_statem callbacks
 -export([
@@ -60,14 +53,9 @@
 -define(is_creation(X), (is_integer(X) andalso X >= 0 andalso X =< 16#ffffffff)).
 -define(is_distribution_flags(X), (is_integer(X) andalso X >= 0 andalso X =< 16#ffffffffffffffff)).
 -define(is_packet_size(X), (X =:= 0 orelse X =:= 1 orelse X =:= 2 orelse X =:= 4 orelse X =:= 8)).
--define(is_symbol(X),
-    (is_tuple(X) andalso
-        ((tuple_size(X) =:= 2 andalso element(1, (X)) =:= var) orelse
-            (tuple_size(X) =:= 4 andalso element(1, (X)) =:= call)))
-).
 
 %% Types
--type channel_resource() :: erldist_filter_nif:channel() | eqwalizer:dynamic().
+-type channel_resource() :: erldist_filter_nif:channel() | dynamic().
 -type t() :: #{
     '__type__' := ?MODULE,
     channels := #{channel_resource() => ?MODEL_CHANNEL:t()}
@@ -125,7 +113,12 @@ command(SymbolicState = #{channels := Channels}) ->
         end
     ).
 
-%% @private
+-spec command_fill_atom_cache(
+    symbolic_state(),
+    erldist_filter_nif_spbt_model_channel:t(),
+    erldist_filter_nif_spbt_model_channel:header_modes(),
+    dynamic()
+) -> [dynamic()].
 command_fill_atom_cache(_SymbolicState, ModelChannel0, HeaderModes, ChannelT) ->
     AtomCacheSupported =
         case HeaderModes of
@@ -167,10 +160,10 @@ precondition(_SymbolicState = #{channels := Channels}, SymbolicCall) ->
         {call, _, channel_open, _} ->
             true;
         {call, _, Func, [{channel, ChannelResource} | Args]} ->
-            case maps:find(ChannelResource, Channels) of
-                {ok, ModelChannel} ->
+            case Channels of
+                #{ChannelResource := ModelChannel} ->
                     ?MODEL_CHANNEL:precondition(ModelChannel, Func, Args);
-                error ->
+                #{} ->
                     false
             end
     end.
@@ -178,7 +171,7 @@ precondition(_SymbolicState = #{channels := Channels}, SymbolicCall) ->
 -spec postcondition(DynamicState, SymbolicCall, Result) -> boolean() when
     DynamicState :: dynamic_state(),
     SymbolicCall :: proper_statem:symbolic_call(),
-    Result :: eqwalizer:dynamic().
+    Result :: dynamic().
 postcondition(_State = #{channels := Channels}, SymbolicCall, Result) ->
     case SymbolicCall of
         {call, _, channel_open, _} when is_pid(Result) orelse is_reference(Result) ->
@@ -190,7 +183,7 @@ postcondition(_State = #{channels := Channels}, SymbolicCall, Result) ->
 
 -spec next_state(State, Result, SymbolicCall) -> State when
     State :: symbolic_state() | dynamic_state(),
-    Result :: eqwalizer:dynamic(),
+    Result :: dynamic(),
     SymbolicCall :: proper_statem:symbolic_call().
 next_state(State0 = #{'__type__' := ?MODULE, channels := Channels0}, Result, SymbolicCall) ->
     case SymbolicCall of
@@ -202,7 +195,7 @@ next_state(State0 = #{'__type__' := ?MODULE, channels := Channels0}, Result, Sym
             ModelChannel = ?MODEL_CHANNEL:open(
                 ChannelResource, PacketSize, Sysname, Creation, ConnectionId, DistributionFlags
             ),
-            Channels1 = maps:put(ChannelResource, ModelChannel, Channels0),
+            Channels1 = Channels0#{ChannelResource => ModelChannel},
             State1 = State0#{channels := Channels1},
             State1;
         {call, _, channel_close, [{channel, ChannelResource}]} ->
@@ -212,7 +205,7 @@ next_state(State0 = #{'__type__' := ?MODULE, channels := Channels0}, Result, Sym
         {call, _, Func, [{channel, ChannelResource} | Args]} ->
             ModelChannel0 = maps:get(ChannelResource, Channels0),
             ModelChannel1 = ?MODEL_CHANNEL:next_state(ModelChannel0, Func, Args, Result),
-            Channels1 = maps:put(ChannelResource, ModelChannel1, Channels0),
+            Channels1 = Channels0#{ChannelResource => ModelChannel1},
             State1 = State0#{channels := Channels1},
             State1
     end.
@@ -341,19 +334,19 @@ is_channel_sysname(#{channels := ModelChannels}, Sysname) ->
     end,
     lists:any(Predicate, maps:values(ModelChannels)).
 
--spec unwrap_channel_resource({pid(), reference()} | eqwalizer:dynamic()) -> reference() | eqwalizer:dynamic().
+-spec unwrap_channel_resource({pid(), reference()} | dynamic()) -> reference() | dynamic().
 unwrap_channel_resource({Owner, ChannelResource}) when is_pid(Owner) andalso is_reference(ChannelResource) ->
     ChannelResource;
 unwrap_channel_resource(Symbol) ->
     maybe_unwrap(Symbol, ?MODULE, ?FUNCTION_NAME).
 
--spec unwrap_channel_owner({pid(), reference()} | eqwalizer:dynamic()) -> pid() | eqwalizer:dynamic().
+-spec unwrap_channel_owner({pid(), reference()} | dynamic()) -> pid() | dynamic().
 unwrap_channel_owner({Owner, ChannelResource}) when is_pid(Owner) andalso is_reference(ChannelResource) ->
     Owner;
 unwrap_channel_owner(Symbol) ->
     maybe_unwrap(Symbol, ?MODULE, ?FUNCTION_NAME).
 
-%% @private
+-spec maybe_unwrap(dynamic(), module(), atom()) -> dynamic().
 maybe_unwrap(Var = {var, _}, Module, Function) ->
     {call, Module, Function, [Var]};
 maybe_unwrap(Call = {call, Module, Function, [_Symbol]}, Module, Function) ->
@@ -361,7 +354,7 @@ maybe_unwrap(Call = {call, Module, Function, [_Symbol]}, Module, Function) ->
 maybe_unwrap(OtherCall = {call, _, _, _}, Module, Function) ->
     {call, Module, Function, [OtherCall]}.
 
--spec unwrap_ok({ok, Result} | eqwalizer:dynamic()) -> Result | eqwalizer:dynamic().
+-spec unwrap_ok({ok, Result} | dynamic()) -> Result | dynamic().
 unwrap_ok({ok, Result}) ->
     Result;
 unwrap_ok(AlreadyWrappedCall = {call, ?MODULE, unwrap_ok, [_]}) ->

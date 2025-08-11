@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -25,12 +26,11 @@
 %%% @end
 %%% Created :  27 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif_spbt_SUITE).
+-typing([eqwalizer]).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
 %% ct callbacks
@@ -63,15 +63,13 @@ all() ->
 groups() ->
     [
         {stateful_property_based_tests, [parallel], [
-            prop_serial_statem
-            % Disabled by default, Sandcastle does not like this :-(
-            % prop_parallel_statem
+            prop_serial_statem,
+            prop_parallel_statem
         ]}
     ].
 
-init_per_suite(Config0) ->
-    Config1 = ct_property_test:init_per_suite(Config0),
-    Config1.
+init_per_suite(Config) ->
+    Config.
 
 end_per_suite(_Config) ->
     ok.
@@ -93,19 +91,11 @@ prop_serial_statem() ->
     ].
 
 prop_serial_statem(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_spbt_prop,
-        prop_serial_statem,
-        Config,
-        [
-            verbose,
-            {max_shrinks, 10},
-            {numtests, 100}
-            % {on_output, fun(Fmt, Args) -> io:format(user, Fmt, Args) end},
-            % {store, "counterexample.consult"}
-            % {store, filename:join([os:getenv("HOME"), "local", "erldist_filter", "counterexample.consult"])}
-        ]
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_spbt_prop:prop_serial_statem(Config), [
+        verbose,
+        {max_shrinks, 10},
+        {numtests, 100}
+    ]).
 
 prop_parallel_statem() ->
     [
@@ -113,11 +103,11 @@ prop_parallel_statem() ->
         {timetrap, {seconds, 600}}
     ].
 
-% elp:ignore W0008 (unreachable_test)
 prop_parallel_statem(Config) ->
-    erldist_filter_proper:quickcheck(
-        erldist_filter_nif_spbt_prop,
-        prop_parallel_statem,
-        Config,
-        []
-    ).
+    erldist_filter_proper:quickcheck(erldist_filter_nif_spbt_prop:prop_parallel_statem(Config), [
+        verbose,
+        % These settings are only for sanity testing on CI.
+        % For load testing, run it overnight locally with higher numbers.
+        {max_shrinks, 1},
+        {numtests, 1}
+    ]).

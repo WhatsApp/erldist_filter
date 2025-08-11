@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,19 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  12 Oct 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(proper_vterm).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
--wacov(ignore).
+-compile(warn_missing_spec_all).
 
 -include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
@@ -376,16 +370,13 @@ vterm_map_ext(Opts) ->
         {Arity, Pairs},
         ?LET(
             Arity,
-            % TODO(T138525006): fix upstream OTP, decoding maps with Arity > 32 are very broken
-            % Uncomment to break everything :-)
-            % u32(),
-            mostly(integer(0, 4), integer(5, 32)),
+            mostly(integer(0, 4), integer(5, 33)),
             {Arity, vterm_map_ext_pairs(Arity, Opts)}
         ),
         vterm_map_ext:new(Arity, Pairs)
     ).
 
-%% @private
+-spec vterm_map_ext_pairs(non_neg_integer(), proper_vterm:options()) -> proper_types:type().
 vterm_map_ext_pairs(Arity, Opts) ->
     %% Sort the keys (easier for humans to read when debugging failures)
     ?LET(
@@ -615,7 +606,7 @@ vterm_v4_port_ext() ->
 vterm_v4_port_ext(Opts) ->
     ?LET({Node, Id, Creation}, {vterm_atom(Opts), u64(), u32()}, vterm_v4_port_ext:new(Node, Id, Creation)).
 
--spec check_for_map_bug(eqwalizer:dynamic()) -> boolean().
+-spec check_for_map_bug(dynamic()) -> boolean().
 check_for_map_bug([]) ->
     true;
 check_for_map_bug([H | T]) ->
@@ -633,7 +624,7 @@ check_for_map_bug(T) when is_tuple(T) ->
 check_for_map_bug(_) ->
     true.
 
-%% @private
+-spec check_for_map_bug(list(), map()) -> boolean().
 check_for_map_bug([], _M) ->
     true;
 check_for_map_bug([K | Ks], M) ->
@@ -655,12 +646,12 @@ check_for_map_bug([K | Ks], M) ->
             false
     end.
 
-%% @private
+-spec simplify_map_key(vterm:t()) -> vterm:t().
 simplify_map_key(VT0) ->
     {VT1, undefined} = vterm:xform(VT0, undefined, fun simplify_map_key/2),
     vterm:simplify(VT1).
 
-%% @private
+-spec simplify_map_key(vterm:t(), undefined) -> vterm:xform_result(vterm:t(), undefined).
 simplify_map_key(#vterm_atom_cache_ref{index = Index}, Acc) ->
     IndexAtom = erlang:list_to_atom("ATOM_CACHE_REF:" ++ erlang:integer_to_list(Index)),
     {cont, vterm:expand(IndexAtom), Acc};

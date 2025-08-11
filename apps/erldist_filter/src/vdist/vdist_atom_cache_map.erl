@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_atom_cache_map).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -77,10 +72,10 @@ find_or_insert(
             {error, {already_present, OtherEntry}};
         error ->
             InternalIndex = map_size(Entries0),
-            case vdist_atom_cache:find(Cache0, CacheIndex) of
+            case vdist_atom_cache:find_by_index(Cache0, CacheIndex) of
                 {ok, {CacheIndex, Atom}} ->
                     AtomCacheRefEntry = vdist_old_atom_cache_ref_entry:new(CacheIndex),
-                    Entries1 = maps:put(CacheIndex, {InternalIndex, Atom, AtomCacheRefEntry}, Entries0),
+                    Entries1 = Entries0#{CacheIndex => {InternalIndex, Atom, AtomCacheRefEntry}},
                     CacheMap1 = CacheMap0#vdist_atom_cache_map{entries = Entries1},
                     {ok, InternalIndex, CacheMap1};
                 _Other ->
@@ -96,7 +91,7 @@ find_or_insert(
                                 LongAtoms0
                         end,
                     AtomCacheRefEntry = vdist_new_atom_cache_ref_entry:new(CacheIndex, AtomText),
-                    Entries1 = maps:put(CacheIndex, {InternalIndex, Atom, AtomCacheRefEntry}, Entries0),
+                    Entries1 = Entries0#{CacheIndex => {InternalIndex, Atom, AtomCacheRefEntry}},
                     CacheMap1 = CacheMap0#vdist_atom_cache_map{
                         long_atoms = LongAtoms1, cache = Cache1, entries = Entries1
                     },

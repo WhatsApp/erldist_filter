@@ -12,5 +12,4 @@ BreakBeforeBraces: Linux
 ColumnLimit: 132
 IndentWidth: 4
 SortIncludes: false
-InsertNewlineAtEOF: true
 ...

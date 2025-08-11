@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -12,7 +13,6 @@
 %%% @end
 %%% Created :  20 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 %% @oncall whatsapp_clr
 -ifndef(ERLDIST_FILTER_HRL).
 

@@ -1,9 +1,11 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/OTP-25.2.3/lib/kernel/src/inet6_tcp_dist.erl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-28/lib/kernel/src/inet6_tcp_dist.erl
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2021. All Rights Reserved.
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1997-2025. All Rights Reserved.
 %% Copyright (c) Meta Platforms, Inc. and affiliates.
 %% Copyright (c) WhatsApp LLC
 %%
@@ -21,12 +23,12 @@
 %%
 %% %CopyrightEnd%
 %%
--module(erldist_filter_otp_25_2_3_inet6_tcp_dist).
--compile(warn_missing_spec).
+-module(erldist_filter_otp_28_inet6_tcp_dist).
+-moduledoc false.
+-compile(warn_missing_spec_all).
 -oncall("whatsapp_clr").
--wacov(ignore).
 
--include_lib("erldist_filter/include/erldist_filter_otp_25_2_3_net_address.hrl").
+-include_lib("erldist_filter/include/erldist_filter_otp_28_net_address.hrl").
 
 %% Handles the connection setup phase with other Erlang nodes.
 
@@ -43,7 +45,7 @@
 -spec select(Node) -> boolean() when
     Node :: node().
 select(Node) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_select(inet6_tcp, Node).
+    erldist_filter_otp_28_inet_tcp_dist:gen_select(inet6_tcp, Node).
 
 %% ------------------------------------------------------------
 %%  Get address family
@@ -52,7 +54,7 @@ select(Node) ->
 
 -spec address() -> Address :: #net_address{}.
 address() ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_address(inet6_tcp).
+    erldist_filter_otp_28_inet_tcp_dist:gen_address(inet6_tcp).
 
 %% ------------------------------------------------------------
 %% Create the listen socket, i.e. the port that this erlang
@@ -70,7 +72,7 @@ when
     Creation :: 1..16#FFFFFFFF,
     Reason :: system_limit | inet:posix().
 listen(Name, Host) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_listen(inet6_tcp, Name, Host).
+    erldist_filter_otp_28_inet_tcp_dist:gen_listen(inet6_tcp, Name, Host).
 
 %% ------------------------------------------------------------
 %% Accepts new connection attempts from other Erlang nodes.
@@ -79,7 +81,7 @@ listen(Name, Host) ->
 -spec accept(Listen) -> AcceptPid :: pid() when
     Listen :: gen_tcp:socket().
 accept(Listen) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_accept(inet6_tcp, Listen).
+    erldist_filter_otp_28_inet_tcp_dist:gen_accept(inet6_tcp, Listen).
 
 %% ------------------------------------------------------------
 %% Accepts a new connection attempt from another Erlang node.
@@ -95,7 +97,7 @@ when
     Allowed :: list(),
     SetupTime :: non_neg_integer().
 accept_connection(AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_accept_connection(inet6_tcp, AcceptPid, Socket, MyNode, Allowed, SetupTime).
+    erldist_filter_otp_28_inet_tcp_dist:gen_accept_connection(inet6_tcp, AcceptPid, Socket, MyNode, Allowed, SetupTime).
 
 %% ------------------------------------------------------------
 %% Setup a new connection to another Erlang node.
@@ -111,7 +113,7 @@ when
     LongOrShortNames :: shortnames | longnames,
     SetupTime :: non_neg_integer().
 setup(Node, Type, MyNode, LongOrShortNames,SetupTime) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:gen_setup(inet6_tcp, Node, Type, MyNode, LongOrShortNames, SetupTime).
+    erldist_filter_otp_28_inet_tcp_dist:gen_setup(inet6_tcp, Node, Type, MyNode, LongOrShortNames, SetupTime).
 
 %%
 %% Close a socket.
@@ -124,14 +126,14 @@ close(Socket) ->
 -spec is_node_name(Node) -> boolean() when
     Node :: node().
 is_node_name(Node) when is_atom(Node) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:is_node_name(Node).
+    erldist_filter_otp_28_inet_tcp_dist:is_node_name(Node).
 
 -spec setopts(ListeningSocket, Options) -> ok | {error, Error} when
     ListeningSocket :: gen_tcp:socket(),
     Options :: [inet:socket_setopt()],
     Error :: inet:posix() | {badopts, Options}.
 setopts(S, Opts) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:setopts(S, Opts).
+    erldist_filter_otp_28_inet_tcp_dist:setopts(S, Opts).
 
 -spec getopts(ListeningSocket, Options) ->
     {ok, OptionValues}
@@ -142,4 +144,4 @@ when
     OptionValues :: [inet:socket_optval()],
     Error :: inet:posix().
 getopts(S, Opts) ->
-    erldist_filter_otp_25_2_3_inet_tcp_dist:getopts(S, Opts).
+    erldist_filter_otp_28_inet_tcp_dist:getopts(S, Opts).

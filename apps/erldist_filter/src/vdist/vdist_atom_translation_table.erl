@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_atom_translation_table).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_external.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
 
 %% API
 -export([
@@ -55,10 +50,10 @@ new() ->
 find(#vdist_atom_translation_table{entries = Entries}, Index) when
     is_integer(Index) andalso Index >= 0 andalso Index =< ?ERTS_MAX_INTERNAL_ATOM_CACHE_ENTRIES
 ->
-    case maps:find(Index, Entries) of
-        {ok, {_CacheIndex, Atom}} ->
+    case Entries of
+        #{Index := {_CacheIndex, Atom}} ->
             {ok, Atom};
-        error ->
+        #{} ->
             {error, not_found}
     end.
 
@@ -80,7 +75,7 @@ store(Table0 = #vdist_atom_translation_table{entries = Entries0}, CacheIndex, At
     is_integer(CacheIndex) andalso is_atom(Atom)
 ->
     Index = map_size(Entries0),
-    Entries1 = maps:put(Index, {CacheIndex, Atom}, Entries0),
+    Entries1 = Entries0#{Index => {CacheIndex, Atom}},
     Table1 = Table0#vdist_atom_translation_table{entries = Entries1},
     {ok, Table1}.
 
@@ -88,7 +83,11 @@ store(Table0 = #vdist_atom_translation_table{entries = Entries0}, CacheIndex, At
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec do_rfind(Iterator, Atom) -> {ok, Index} | {error, not_found} when
+    Iterator :: maps:iterator(Index, {CacheIndex, Atom}),
+    CacheIndex :: vdist_atom_cache:index(),
+    Atom :: atom(),
+    Index :: index().
 do_rfind(Iterator, Atom) ->
     case maps:next(Iterator) of
         {InternalIndex, {_CacheIndex, Atom}, _NextIterator} ->

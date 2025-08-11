@@ -83,7 +83,7 @@ else ifeq ($(PLATFORM),darwin)
 	CXX ?= c++
 	CFLAGS ?= -O2 -g -ggdb -std=c23 -Wall -Wmissing-prototypes
 	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -Wall
-	LDFLAGS ?= -flat_namespace -undefined suppress
+	LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
 else ifeq ($(PLATFORM),freebsd)
 	CC ?= cc
 	CXX ?= c++

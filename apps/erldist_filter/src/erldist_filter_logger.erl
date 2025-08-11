@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,16 +6,10 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  10 May 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_logger).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -66,7 +61,7 @@
 
 %% Types
 -type batch_event() :: {erldist_filter_nif:logger_time(), erldist_filter_nif:logger_event()}.
--type gen_statem_event_content() :: eqwalizer:dynamic().
+-type gen_statem_event_content() :: dynamic().
 -type handle_batch_result() :: handle_batch_result(handler_state()).
 -type handle_batch_result(State) ::
     handle_events
@@ -80,11 +75,11 @@
 -type handle_info_result() :: handle_info_result(handler_state()).
 -type handle_info_result(State) :: cont | {cont, State} | stop | {stop, stop_reason()} | {stop, stop_reason(), State}.
 -type handler() :: module().
--type handler_options() :: term() | eqwalizer:dynamic().
--type handler_state() :: term() | eqwalizer:dynamic().
+-type handler_options() :: term() | dynamic().
+-type handler_state() :: term() | dynamic().
 -type init_result() :: init_result(handler_state()).
 -type init_result(State) :: {ok, State} | ignore | {stop, stop_reason()}.
--type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | eqwalizer:dynamic().
+-type stop_reason() :: normal | shutdown | {shutdown, term()} | term() | dynamic().
 -type worker_number() :: pos_integer().
 
 -export_type([
@@ -115,17 +110,17 @@
 -callback handle_control_event(
     Time :: erldist_filter_nif:logger_time(),
     Sysname :: node(),
-    Control :: eqwalizer:dynamic(),
+    Control :: dynamic(),
     HandlerState :: handler_state()
 ) -> handle_event_result().
 -callback handle_payload_event(
     Time :: erldist_filter_nif:logger_time(),
     Sysname :: node(),
-    Control :: eqwalizer:dynamic(),
-    Payload :: eqwalizer:dynamic(),
+    Control :: dynamic(),
+    Payload :: dynamic(),
     HandlerState :: handler_state()
 ) -> handle_event_result().
--callback handle_info(Info :: term() | eqwalizer:dynamic(), HandlerState :: handler_state()) -> handle_info_result().
+-callback handle_info(Info :: term() | dynamic(), HandlerState :: handler_state()) -> handle_info_result().
 -callback terminate(Reason :: stop_reason(), HandlerState :: handler_state()) -> Ignored :: term().
 
 -optional_callbacks([
@@ -348,7 +343,9 @@ wait(info, Info, Data) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec handler_info(gen_statem_event_content(), data()) -> gen_statem:event_handler_result(State, Data) when
+    State :: recv | wait,
+    Data :: data().
 handler_info(Info, Data0 = #data{handler = Handler, handler_state = HandlerState0}) ->
     case erlang:function_exported(Handler, handle_info, 2) of
         true ->

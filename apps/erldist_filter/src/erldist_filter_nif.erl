@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,19 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  20 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_nif).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--wacov(ignore).
 
 -on_load(init/0).
 
@@ -190,7 +184,7 @@
 }.
 -type logger() :: erlang:nif_resource().
 -type logger_event() :: {sysname(), logger_event_atoms(), logger_event_control(), logger_event_payload()}.
--type logger_event_atoms() :: tuple() | eqwalizer:dynamic().
+-type logger_event_atoms() :: tuple() | dynamic().
 -type logger_event_control() :: undefined | binary().
 -type logger_event_payload() :: undefined | binary().
 -type logger_inspection() :: #{
@@ -229,6 +223,9 @@
     memory := world_stat_group_memory(),
     slots := non_neg_integer()
 }.
+
+-type option() ::
+    compact_fragments | deep_packet_inspection | logging | redirect_dist_operations | untrusted.
 
 -export_type([
     action/0,
@@ -335,26 +332,16 @@ channel_set_tracing_process(_Channel, _NewTracePid) ->
 config_get() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec config_get
-    (compact_fragments) -> boolean();
-    (deep_packet_inspection) -> boolean();
-    (logging) -> boolean();
-    (redirect_dist_operations) -> boolean();
-    (untrusted) -> boolean().
+-spec config_get(option()) -> boolean().
 config_get(_Key) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec config_set
-    (compact_fragments, boolean()) -> ok;
-    (deep_packet_inspection, boolean()) -> ok;
-    (logging, boolean()) -> ok;
-    (redirect_dist_operations, boolean()) -> ok;
-    (untrusted, boolean()) -> ok.
+-spec config_set(option(), boolean()) -> ok.
 config_set(_Key, _Val) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec dist_ext_to_term(AtomsTuple, InputBinary) -> Term when
-    AtomsTuple :: logger_event_atoms(), InputBinary :: binary(), Term :: eqwalizer:dynamic().
+    AtomsTuple :: logger_event_atoms(), InputBinary :: binary(), Term :: dynamic().
 dist_ext_to_term(_AtomsTuple, _InputBinary) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -463,7 +450,7 @@ world_stats_get() ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-doc hidden.
 -spec init() -> ok | Error when
     Error :: {error, {Reason, Text :: string()}},
     Reason :: load_failed | bad_lib | load | reload | upgrade | old_code.

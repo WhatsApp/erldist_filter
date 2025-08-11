@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,18 +6,12 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  22 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_peer_spbt_statem).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 
 -behaviour(proper_statem).
 
@@ -77,7 +72,10 @@ command(SymbolicState) ->
             return({call, ?SHIM, start_upeer, [UPeerNode]})
     end.
 
-%% @private
+-spec command(
+    symbolic_state(),
+    erldist_filter_peer_spbt_model:upeer()
+) -> proper_types:type().
 command(SymbolicState, UPeer) ->
     case ?MODEL:vpeer(SymbolicState) of
         {ok, VPeer} ->
@@ -87,7 +85,11 @@ command(SymbolicState, UPeer) ->
             return({call, ?SHIM, start_vpeer, [VPeerNode]})
     end.
 
-%% @private
+-spec command(
+    symbolic_state(),
+    erldist_filter_peer_spbt_model:upeer(),
+    erldist_filter_peer_spbt_model:vpeer()
+) -> proper_types:type().
 command(_SymbolicState, UPeer, VPeer) ->
     U = exactly(UPeer),
     V = exactly(VPeer),
@@ -117,7 +119,11 @@ precondition(SymbolicState, SymbolicCall) ->
             end
     end.
 
-%% @private
+-spec precondition(
+    dynamic_state(),
+    proper_statem:symbolic_call(),
+    erldist_filter_peer_spbt_model:upeer()
+) -> boolean().
 precondition(SymbolicState, SymbolicCall, UPeer) ->
     case ?MODEL:vpeer(SymbolicState) of
         {ok, VPeer} ->
@@ -134,7 +140,12 @@ precondition(SymbolicState, SymbolicCall, UPeer) ->
             end
     end.
 
-%% @private
+-spec precondition(
+    dynamic_state(),
+    proper_statem:symbolic_call(),
+    erldist_filter_peer_spbt_model:upeer(),
+    erldist_filter_peer_spbt_model:vpeer()
+) -> boolean().
 precondition(_SymbolicState, SymbolicCall, _UPeer, _VPeer) ->
     % UPeer and VPeer HAVE been started, only INVALID commands are `start_upeer' and `start_vpeer`
     case SymbolicCall of
@@ -149,7 +160,7 @@ precondition(_SymbolicState, SymbolicCall, _UPeer, _VPeer) ->
 -spec postcondition(DynamicState, SymbolicCall, Result) -> boolean() when
     DynamicState :: dynamic_state(),
     SymbolicCall :: proper_statem:symbolic_call(),
-    Result :: eqwalizer:dynamic().
+    Result :: dynamic().
 postcondition(DynamicState, SymbolicCall = {call, _, Func, Args}, Result) ->
     case ?MODEL:categorize_call(DynamicState, Func, Args) of
         {ok, dynamic} ->
@@ -173,7 +184,7 @@ postcondition(DynamicState, SymbolicCall = {call, _, Func, Args}, Result) ->
 
 -spec next_state(State, Result, SymbolicCall) -> State when
     State :: symbolic_state() | dynamic_state(),
-    Result :: eqwalizer:dynamic(),
+    Result :: dynamic(),
     SymbolicCall :: proper_statem:symbolic_call().
 next_state(State, Result, _SymbolicCall = {call, _, Func, Args}) ->
     case ?MODEL:categorize_call(State, Func, Args) of

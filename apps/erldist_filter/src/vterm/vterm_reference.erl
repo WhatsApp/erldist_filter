@@ -1,3 +1,4 @@
+%%% % @format
 %%%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,20 +6,14 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vterm_reference).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
 
 -export([
     sequence_id/1
@@ -32,7 +27,6 @@ sequence_id(#vterm_new_reference_ext{creation = Creation, ids = Ids}) ->
 sequence_id(#vterm_reference_ext{id = Id, creation = Creation}) ->
     hash_u64([Id], Creation).
 
-%% @private
 -spec hash_u64(Ids, Creation) -> Hash when
     Ids :: [non_neg_integer()], Creation :: non_neg_integer(), Hash :: non_neg_integer().
 hash_u64(Ids, Creation) ->

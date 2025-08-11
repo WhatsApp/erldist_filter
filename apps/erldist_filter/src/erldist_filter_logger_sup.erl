@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,14 +6,8 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  10 May 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_logger_sup).
 -compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
@@ -100,7 +95,6 @@ init({Handler, HandlerOptions, WorkerCount}) when ?is_handler(Handler) andalso ?
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
 -spec make_child_specs(Handler, HandlerOptions, WorkerCount, ChildSpecs) -> ChildSpecs when
     Handler :: erldist_filter_logger:handler(),
     HandlerOptions :: erldist_filter_logger:handler_options(),

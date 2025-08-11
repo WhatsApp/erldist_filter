@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,21 +6,15 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  27 Mar 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(vdist_entry_decode).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
--include("erldist_filter.hrl").
--include("erldist_filter_erts_dist.hrl").
+-include_lib("erldist_filter/include/erldist_filter.hrl").
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
 
 %% API
 -export([
@@ -53,7 +48,18 @@ decode(Entry = #vdist_entry{}, Input) when is_binary(Input) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec do_decode_fragment_header(
+    OldEntry,
+    Header,
+    EncControlMessage
+) -> {ok, ControlMessage, MaybePayload, NewEntry, Rest} | {cont, NewEntry} when
+    OldEntry :: vdist_entry:t(),
+    Header :: vdist_fragment_header:t(),
+    EncControlMessage :: binary(),
+    ControlMessage :: vdist:dop_t(),
+    MaybePayload :: vterm:t() | undefined,
+    NewEntry :: vdist_entry:t(),
+    Rest :: binary().
 do_decode_fragment_header(
     Entry0 = #vdist_entry{dflags = DFlags, rx_sequences = Sequences0, rx_atom_cache = AtomCache0},
     Header = #vdist_fragment_header{sequence_id = SequenceId, fragment_id = FragmentCount},
@@ -67,12 +73,23 @@ do_decode_fragment_header(
         false ->
             FragmentId = FragmentCount,
             FragContHeader = vdist_fragment_cont:new(SequenceId, FragmentId),
-            Sequences1 = maps:put(SequenceId, External, Sequences0),
+            Sequences1 = Sequences0#{SequenceId => External},
             Entry1 = Entry0#vdist_entry{rx_sequences = Sequences1, rx_atom_cache = AtomCache1},
             do_decode_fragment_cont(Entry1, FragContHeader, Fragment)
     end.
 
-%% @private
+-spec do_decode_fragment_cont(
+    OldEntry,
+    Header,
+    EncControlMessage
+) -> {ok, ControlMessage, MaybePayload, NewEntry, Rest} | {cont, NewEntry} when
+    OldEntry :: vdist_entry:t(),
+    Header :: vdist_fragment_cont:t(),
+    EncControlMessage :: binary(),
+    ControlMessage :: vdist:dop_t(),
+    MaybePayload :: vterm:t() | undefined,
+    NewEntry :: vdist_entry:t(),
+    Rest :: binary().
 do_decode_fragment_cont(
     Entry0 = #vdist_entry{dflags = DFlags, rx_sequences = Sequences0},
     Header = #vdist_fragment_cont{sequence_id = SequenceId},
@@ -82,7 +99,7 @@ do_decode_fragment_cont(
         {ok, External0 = #vdist_external{}} ->
             case vdist_external:decode_next_fragment(External0, Header, Fragment) of
                 {cont, External1} ->
-                    Sequences1 = maps:put(SequenceId, External1, Sequences0),
+                    Sequences1 = Sequences0#{SequenceId => External1},
                     Entry1 = Entry0#vdist_entry{rx_sequences = Sequences1},
                     {cont, Entry1};
                 {ok, EncControlMessage, AtomTable = #vdist_atom_translation_table{}} ->
@@ -104,7 +121,18 @@ do_decode_fragment_cont(
             end
     end.
 
-%% @private
+-spec do_decode_normal_header(
+    OldEntry,
+    Header,
+    EncControlMessage
+) -> {ok, ControlMessage, MaybePayload, NewEntry, Rest} | {cont, NewEntry} when
+    OldEntry :: vdist_entry:t(),
+    Header :: vdist_normal_header:t(),
+    EncControlMessage :: binary(),
+    ControlMessage :: vdist:dop_t(),
+    MaybePayload :: vterm:t() | undefined,
+    NewEntry :: vdist_entry:t(),
+    Rest :: binary().
 do_decode_normal_header(
     Entry0 = #vdist_entry{dflags = DFlags, rx_atom_cache = AtomCache0}, Header, EncControlMessage
 ) when
@@ -124,7 +152,18 @@ do_decode_normal_header(
             {ok, ControlMessage, Payload, Entry1, Rest}
     end.
 
-%% @private
+-spec do_decode_pass_through_header(
+    OldEntry,
+    Header,
+    EncControlMessage
+) -> {ok, ControlMessage, MaybePayload, NewEntry, Rest} | {cont, NewEntry} when
+    OldEntry :: vdist_entry:t(),
+    Header :: vdist_pass_through_header:t(),
+    EncControlMessage :: binary(),
+    ControlMessage :: vdist:dop_t(),
+    MaybePayload :: vterm:t() | undefined,
+    NewEntry :: vdist_entry:t(),
+    Rest :: binary().
 do_decode_pass_through_header(Entry = #vdist_entry{rx_atom_cache = undefined}, _Header, EncControlMessage) ->
     {ok, ControlMessageVTerm, EncPayload} = vterm_decode:external_binary_to_vterm(EncControlMessage),
     ControlMessage = vdist_dop:control_message_vterm_to_dop(ControlMessageVTerm),
@@ -136,7 +175,10 @@ do_decode_pass_through_header(Entry = #vdist_entry{rx_atom_cache = undefined}, _
             {ok, ControlMessage, Payload, Entry, Rest}
     end.
 
-%% @private
+-spec xform_lookup_atoms(
+    VTerm :: vterm:t(),
+    AtomTable :: vdist_atom_translation_table:t()
+) -> {cont, vterm_atom_cache_ref_resolved:t(), vdist_atom_translation_table:t()} | cont.
 xform_lookup_atoms(#vterm_atom_cache_ref{index = InternalIndex}, AtomTable) ->
     case vdist_atom_translation_table:find(AtomTable, InternalIndex) of
         {ok, Atom} ->

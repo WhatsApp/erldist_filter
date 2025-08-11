@@ -1,3 +1,4 @@
+%%% % @format
 %%%-----------------------------------------------------------------------------
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
@@ -5,16 +6,10 @@
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
 %%%
-%%% @author Andrew Bennett <potatosaladx@meta.com>
-%%% @copyright (c) Meta Platforms, Inc. and affiliates.
-%%% @doc
-%%%
-%%% @end
 %%% Created :  10 Aug 2023 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
-%%% % @format
 -module(erldist_filter_routers_sup).
--compile(warn_missing_spec).
+-compile(warn_missing_spec_all).
 -author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
@@ -108,7 +103,9 @@ init({RouterCount}) when ?is_router_count(RouterCount) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
-%% @private
+-spec make_child_specs(RouterCount, ChildSpecs) -> ChildSpecs when
+    RouterCount :: router_count(),
+    ChildSpecs :: [supervisor:child_spec()].
 make_child_specs(0, ChildSpecs) ->
     ChildSpecs;
 make_child_specs(RouterCount, ChildSpecs) when ?is_router_count(RouterCount) ->
