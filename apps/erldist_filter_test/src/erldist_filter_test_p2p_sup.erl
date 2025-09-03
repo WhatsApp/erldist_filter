@@ -50,7 +50,9 @@ child_spec() ->
     Setup :: erldist_filter_test_p2p:setup(),
     Teardown :: erldist_filter_test_p2p:teardown(),
     StartChildReturn :: supervisor:startchild_ret().
-start_child(OwnerPid, Label, Setup, Teardown) when is_pid(OwnerPid) andalso is_binary(Label) andalso is_function(Setup, 1) andalso is_function(Teardown, 2) ->
+start_child(OwnerPid, Label, Setup, Teardown) when
+    is_pid(OwnerPid) andalso is_binary(Label) andalso is_function(Setup, 1) andalso is_function(Teardown, 2)
+->
     supervisor:start_child(?MODULE, [OwnerPid, Label, Setup, Teardown]).
 
 -spec start_link() -> supervisor:startlink_ret().

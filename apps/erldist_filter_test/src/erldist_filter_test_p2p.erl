@@ -154,7 +154,9 @@ child_spec() ->
     Label :: label(),
     Setup :: setup(),
     Teardown :: teardown().
-start_link(OwnerPid, Label, Setup, Teardown) when is_pid(OwnerPid) andalso is_binary(Label) andalso is_function(Setup, 1) andalso is_function(Teardown, 2) ->
+start_link(OwnerPid, Label, Setup, Teardown) when
+    is_pid(OwnerPid) andalso is_binary(Label) andalso is_function(Setup, 1) andalso is_function(Teardown, 2)
+->
     InitData = #init_data{
         owner_pid = OwnerPid,
         label = Label,
