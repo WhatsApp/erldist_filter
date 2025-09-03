@@ -13,9 +13,11 @@ defmodule EDF do
         EDF.RecordExtractor.extract_all(from_lib: "erldist_filter/include/udist.hrl")
     )
 
-  for {record, %{fields: fields}} <- records do
-    Record.defrecord(record, fields)
-  end
+  metadata =
+    for {record, %{fields: fields}} <- records do
+      Record.defrecord(record, fields)
+      %{kind: :defrecord, fields: :lists.map(&elem(&1, 0), fields), tag: record, name: record}
+    end
 
   [record_guards0, record_guards1 | record_guards_rest] =
     for {record, %{fields: fields}} <- records, into: [] do
@@ -160,6 +162,6 @@ defmodule EDF do
 
   @spec record_definitions :: [%{fields: [atom()], kind: :defrecord, name: atom(), tag: atom()}, ...]
   def record_definitions() do
-    @__records__
+    unquote(Macro.escape(metadata))
   end
 end
