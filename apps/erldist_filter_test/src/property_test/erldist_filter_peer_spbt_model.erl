@@ -23,8 +23,7 @@
 ]).
 %% Model API
 -export([
-    upeer/1,
-    vpeer/1
+    p2p/1
 ]).
 %% Internal API
 -export([
@@ -32,17 +31,12 @@
 ]).
 
 %% Types
--type upeer() :: {node(), pid()}.
--type vpeer() :: {node(), pid()}.
 -type t() :: #{
     '__type__' := ?MODULE,
-    upeer := nil | upeer(),
-    vpeer := nil | vpeer()
+    p2p := nil | pid()
 }.
 
 -export_type([
-    upeer/0,
-    vpeer/0,
     t/0
 ]).
 
@@ -55,11 +49,10 @@
 initial_state() ->
     #{
         '__type__' => ?MODULE,
-        upeer => nil,
-        vpeer => nil
+        p2p => nil
     }.
 
--spec initial_state([{atom(), term()}] | #{atom() => term()}) -> Model when
+-spec initial_state([{atom(), dynamic()}] | #{atom() => dynamic()}) -> Model when
     Model :: t().
 initial_state(List) when is_list(List) ->
     initial_state(maps:from_list(List));
@@ -69,16 +62,9 @@ initial_state(Map) when is_map(Map) ->
 -spec categorize_call(Model, Func, Args) -> {ok, dynamic | symbolic} | error when
     Model :: t(),
     Func :: atom(),
-    Args :: [term()].
-categorize_call(#{'__type__' := ?MODULE, upeer := OldUPeer}, start_upeer, [_UPeer]) ->
-    case OldUPeer of
-        nil ->
-            {ok, dynamic};
-        _ ->
-            error
-    end;
-categorize_call(#{'__type__' := ?MODULE, vpeer := OldVPeer}, start_vpeer, [_VPeer]) ->
-    case OldVPeer of
+    Args :: [dynamic()].
+categorize_call(#{'__type__' := ?MODULE, p2p := OldP2P}, open_p2p, [_Label]) ->
+    case OldP2P of
         nil ->
             {ok, dynamic};
         _ ->
@@ -93,18 +79,12 @@ categorize_call(#{'__type__' := ?MODULE}, _Func, _Args) ->
     Args :: [term()],
     Result :: {ok, term()} | {var, term()} | {call, module(), atom(), [term()]},
     ExpectedResult :: term().
-dynamic_call(State0 = #{'__type__' := ?MODULE, upeer := nil}, start_upeer, [_UPeerNode], Result) ->
-    UPeer = unwrap(Result),
+dynamic_call(State0 = #{'__type__' := ?MODULE, p2p := nil}, open_p2p, [_Label], Result) ->
+    P2P = unwrap(Result),
     State1 = State0#{
-        upeer := UPeer
+        p2p := P2P
     },
-    {State1, {ok, UPeer}};
-dynamic_call(State0 = #{'__type__' := ?MODULE, vpeer := nil}, start_vpeer, [_VPeerNode], Result) ->
-    VPeer = unwrap(Result),
-    State1 = State0#{
-        vpeer := VPeer
-    },
-    {State1, {ok, VPeer}}.
+    {State1, {ok, P2P}}.
 
 -spec symbolic_call(Model, Func, Args) -> {Model, ExpectedResult} when
     Model :: t(),
@@ -113,17 +93,21 @@ dynamic_call(State0 = #{'__type__' := ?MODULE, vpeer := nil}, start_vpeer, [_VPe
     ExpectedResult :: term().
 symbolic_call(State0 = #{'__type__' := ?MODULE}, noop, []) ->
     {State0, ok};
-symbolic_call(State0 = #{'__type__' := ?MODULE, upeer := UPeer, vpeer := VPeer}, Func, Args) when
-    UPeer =/= nil andalso VPeer =/= nil
-->
+symbolic_call(State0 = #{'__type__' := ?MODULE, p2p := P2P}, Func, Args) when P2P =/= nil ->
     case {Func, Args} of
-        {ping, [UPeer, VPeer]} ->
+        {ping, [P2P]} ->
             {State0, pong};
-        {alias_send, [UPeer, VPeer, _Term]} ->
+        {alias_priority_send, [P2P, _Term]} ->
             {State0, pong};
-        {reg_send, [UPeer, VPeer, _RegName, _Term]} ->
+        {alias_send, [P2P, _Term]} ->
             {State0, pong};
-        {send_sender, [UPeer, VPeer, _Term]} ->
+        {exit2_priority_signal, [P2P, _Term]} ->
+            {State0, pong};
+        {exit2_signal, [P2P, _Term]} ->
+            {State0, pong};
+        {reg_send, [P2P, _RegName, _Term]} ->
+            {State0, pong};
+        {send_sender, [P2P, _Term]} ->
             {State0, pong}
     end.
 
@@ -131,21 +115,13 @@ symbolic_call(State0 = #{'__type__' := ?MODULE, upeer := UPeer, vpeer := VPeer},
 %%% Model API functions
 %%%=============================================================================
 
--spec upeer(Model) -> {ok, UPeer} | error when
+-spec p2p(Model) -> {ok, P2P} | error when
     Model :: t(),
-    UPeer :: upeer().
-upeer(#{'__type__' := ?MODULE, upeer := nil}) ->
+    P2P :: pid().
+p2p(#{'__type__' := ?MODULE, p2p := nil}) ->
     error;
-upeer(#{'__type__' := ?MODULE, upeer := UPeer}) ->
-    {ok, UPeer}.
-
--spec vpeer(Model) -> {ok, VPeer} | error when
-    Model :: t(),
-    VPeer :: vpeer().
-vpeer(#{'__type__' := ?MODULE, vpeer := nil}) ->
-    error;
-vpeer(#{'__type__' := ?MODULE, vpeer := VPeer}) ->
-    {ok, VPeer}.
+p2p(#{'__type__' := ?MODULE, p2p := P2P}) ->
+    {ok, P2P}.
 
 %%%=============================================================================
 %%% Internal API functions

@@ -90,6 +90,13 @@
     token = undefined :: vterm:t()
 }).
 
+-record(vdist_dop_altact_sig_send, {
+    flags :: vterm:fixed_integer_t(),
+    sender_pid :: vterm:pid_t(),
+    to :: vterm:pid_t() | vterm:reference_t() | vterm:atom_t(),
+    token = none :: none | {some, vterm:t()}
+}).
+
 -record(vdist_dop_demonitor_p, {
     from_pid = undefined :: vterm:pid_t(),
     to_proc = undefined :: vterm:atom_t() | vterm:pid_t(),
@@ -281,6 +288,7 @@
 -define(is_vdist_dop_with_payload_t(T),
     (is_record(T, vdist_dop_alias_send) orelse
         is_record(T, vdist_dop_alias_send_tt) orelse
+        is_record(T, vdist_dop_altact_sig_send) orelse
         is_record(T, vdist_dop_payload_exit) orelse
         is_record(T, vdist_dop_payload_exit2) orelse
         is_record(T, vdist_dop_payload_exit2_tt) orelse

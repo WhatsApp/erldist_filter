@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
 
 /* Macros */
 
@@ -43,6 +43,12 @@ extern "C" {
 
 /* Type Definitions */
 
+enum edf_trap_result_tag_t {
+    EDF_TRAP_RESULT_TAG_YIELD = -1,
+    EDF_TRAP_RESULT_TAG_ERR = 0,
+    EDF_TRAP_RESULT_TAG_OK = 1,
+};
+
 typedef struct edf_trap_s edf_trap_t;
 typedef struct edf_trap_result_s edf_trap_result_t;
 typedef enum edf_trap_result_tag_t edf_trap_result_tag_t;
@@ -53,12 +59,6 @@ typedef void (*edf_trap_state_release_t)(ErlNifEnv *caller_env, edf_trap_t *trap
 typedef void (*edf_trap_state_dtor_t)(ErlNifEnv *caller_env, edf_trap_t *trap, void *arg);
 typedef void (*edf_trap_state_edit_t)(ErlNifEnv *caller_env, edf_trap_t *trap, void *arg, edf_trap_result_t *result);
 typedef edf_trap_result_t (*edf_trap_state_next_t)(ErlNifEnv *caller_env, edf_trap_t *trap, void *arg);
-
-enum edf_trap_result_tag_t {
-    EDF_TRAP_RESULT_TAG_YIELD = -1,
-    EDF_TRAP_RESULT_TAG_ERR = 0,
-    EDF_TRAP_RESULT_TAG_OK = 1,
-};
 
 struct edf_trap_result_s {
     edf_trap_result_tag_t tag;

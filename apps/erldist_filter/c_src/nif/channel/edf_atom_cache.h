@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
 #include "../erts/external.h"
 #include "edf_atom_text.h"
 

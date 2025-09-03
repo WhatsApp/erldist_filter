@@ -21,9 +21,6 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct vdist_dop_s vdist_dop_t;
-typedef enum vdist_dop_tag_t vdist_dop_tag_t;
-
 enum vdist_dop_tag_t {
     VDIST_DOP_TAG_FREE = 0,
     VDIST_DOP_TAG_LINK = DOP_LINK,
@@ -55,7 +52,11 @@ enum vdist_dop_tag_t {
     VDIST_DOP_TAG_ALIAS_SEND_TT = DOP_ALIAS_SEND_TT,
     VDIST_DOP_TAG_UNLINK_ID = DOP_UNLINK_ID,
     VDIST_DOP_TAG_UNLINK_ID_ACK = DOP_UNLINK_ID_ACK,
+    VDIST_DOP_TAG_ALTACT_SIG_SEND = DOP_ALTACT_SIG_SEND,
 };
+
+typedef struct vdist_dop_s vdist_dop_t;
+typedef enum vdist_dop_tag_t vdist_dop_tag_t;
 
 typedef struct vdist_dop_data_link_s vdist_dop_data_link_t;
 typedef struct vdist_dop_data_send_s vdist_dop_data_send_t;
@@ -86,6 +87,7 @@ typedef struct vdist_dop_data_alias_send_s vdist_dop_data_alias_send_t;
 typedef struct vdist_dop_data_alias_send_tt_s vdist_dop_data_alias_send_tt_t;
 typedef struct vdist_dop_data_unlink_id_s vdist_dop_data_unlink_id_t;
 typedef struct vdist_dop_data_unlink_id_ack_s vdist_dop_data_unlink_id_ack_t;
+typedef struct vdist_dop_data_altact_sig_send_s vdist_dop_data_altact_sig_send_t;
 
 struct vdist_dop_data_link_s {
     vterm_t from_pid; // vterm:pid_t()
@@ -273,6 +275,13 @@ struct vdist_dop_data_unlink_id_ack_s {
     vterm_t to_pid;   // vterm:pid_t()
 };
 
+struct vdist_dop_data_altact_sig_send_s {
+    vterm_t flags;      // vterm:fixed_integer_t()
+    vterm_t sender_pid; // vterm:pid_t()
+    vterm_t to;         // vterm:pid_t() | vterm:atom_t() | vterm:reference_t()
+    vterm_t token;      // none | {some, vterm:t()}
+};
+
 struct vdist_dop_s {
     vdist_dop_tag_t tag;
     union {
@@ -305,6 +314,7 @@ struct vdist_dop_s {
         vdist_dop_data_alias_send_tt_t alias_send_tt;
         vdist_dop_data_unlink_id_t unlink_id;
         vdist_dop_data_unlink_id_ack_t unlink_id_ack;
+        vdist_dop_data_altact_sig_send_t altact_sig_send;
     } data;
 };
 

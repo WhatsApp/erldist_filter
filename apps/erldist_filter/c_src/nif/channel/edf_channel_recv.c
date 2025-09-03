@@ -218,6 +218,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 }
                 trap->packet_count += 1;
                 CHANNEL_RX_STATS_COUNT(trap->channel, packet_count, 1);
+                CHANNEL_RX_STATS_COUNT(trap->channel, dist_tick_count, 1);
                 goto transition_to_packet_header;
             }
 

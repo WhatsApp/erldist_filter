@@ -1,0 +1,1016 @@
+%%% % @format
+%%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%-----------------------------------------------------------------------------
+-module(erldist_filter_config_SUITE).
+-moduledoc """
+Test suite for `erldist_filter_nif` configuration options.
+
+Tests the various configuration modes of the Erlang Distribution Filter system,
+including:
+
+- **Fragment Compaction**: Tests fragment compression and optimization features
+- **Deep Packet Inspection (DPI)**: Tests analysis of Erlang distribution packets
+- **Traffic Logging**: Tests event logging capabilities
+- **Traffic Control**: Tests dropping and redirecting of distribution operations
+
+The test suite covers different distribution operations:
+- Process spawning (spawn requests/replies)
+- Process linking/unlinking
+- Process monitoring and exits
+- Message sending (to PIDs, names, aliases)
+- Group leader operations
+
+Each test group verifies behavior across different packet fragmentation modes
+(normal, fragmented, pass-through) and various configuration combinations.
+""".
+-moduledoc #{author => ["Andrew Bennett <potatosaladx@meta.com>"]}.
+-moduledoc #{created => "2023-05-11", modified => "2025-08-21"}.
+-moduledoc #{copyright => "Meta Platforms, Inc. and affiliates."}.
+-compile(warn_missing_spec_all).
+-oncall("whatsapp_clr").
+
+-include_lib("stdlib/include/assert.hrl").
+
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
+
+-behaviour(ct_suite).
+
+%% ct_suite callbacks
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2
+]).
+
+%% Common Test Cases
+-export([
+    compact_fragments_spawn_request_test/3,
+    logging_spawn_request_test/3
+]).
+
+%% Test Cases
+-export([
+~J{ for header in ctx.test.config.headers_list }.
+    compact_fragments_~J< header.key >._spawn_request_test/0,
+    compact_fragments_~J< header.key >._spawn_request_test/1,
+~J{ endfor }.
+~J{ for header in ctx.test.config.headers_list }.
+    logging_~J< header.key >._spawn_request_test/0,
+    logging_~J< header.key >._spawn_request_test/1,
+~J{ endfor }.
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+    traffic_drop_~J< header.key >._~J< traffic.key >._test/0,
+    traffic_drop_~J< header.key >._~J< traffic.key >._test/1,
+    ~J{ endfor }.
+~J{ endfor }.
+~J{ set traffic_redirect_joiner = joiner(",") }.
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+    ~J< traffic_redirect_joiner() >. traffic_redirect_~J< header.key >._~J< traffic.key >._test/0,
+    traffic_redirect_~J< header.key >._~J< traffic.key >._test/1
+    ~J{ endfor }.
+~J{ endfor }.
+]).
+
+%% Deep Packet Inspection Test Cases
+-export([
+~J{ set dpi_joiner = joiner(",") }.
+~J{ for traffic in ctx.test.config.traffic_list }.
+    ~J< dpi_joiner() >. dpi_~J< traffic.key >._test/4
+~J{ endfor }.
+]).
+
+%% Dist Operation functions
+-export([
+    dop_alias_send_noop/3,
+    dop_alias_send_tt_noop/4,
+    dop_altact_sig_send_noop/6,
+    dop_exit_noop/3,
+    dop_exit_tt_noop/4,
+    dop_payload_exit_noop/3,
+    dop_payload_exit_tt_noop/4,
+    dop_exit2_noop/3,
+    dop_exit2_tt_noop/4,
+    dop_payload_exit2_noop/3,
+    dop_payload_exit2_tt_noop/4,
+    dop_group_leader_noop/3,
+    dop_link_noop/3,
+    dop_monitor_p_noop/3,
+    dop_demonitor_p_noop/3,
+    dop_monitor_p_exit_noop/3,
+    dop_payload_monitor_p_exit_noop/3,
+    dop_reg_send_noop/4,
+    dop_reg_send_tt_noop/5,
+    dop_send_noop/3,
+    dop_send_tt_noop/4,
+    dop_send_sender_noop/3,
+    dop_send_sender_tt_noop/4,
+    dop_spawn_reply_noop/3,
+    dop_spawn_reply_tt_noop/4,
+    dop_spawn_request_noop/3,
+    dop_spawn_request_tt_noop/4,
+    dop_unlink_noop/3,
+    dop_unlink_id_noop/3,
+    dop_unlink_id_ack_noop/3,
+    spawn_request_noop/3
+]).
+
+%%%=============================================================================
+%%% ct_suite callbacks
+%%%=============================================================================
+
+-spec all() -> erldist_filter_test:all().
+all() ->
+    [
+        {group, config}
+    ].
+
+-spec groups() -> erldist_filter_test:groups().
+groups() ->
+    [
+        {config, [shuffle], [
+~J{ for header in ctx.test.config.headers_list }.
+            compact_fragments_~J< header.key >._spawn_request_test,
+~J{ endfor }.
+~J{ for header in ctx.test.config.headers_list }.
+            logging_~J< header.key >._spawn_request_test,
+~J{ endfor }.
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+            traffic_drop_~J< header.key >._~J< traffic.key >._test,
+    ~J{ endfor }.
+~J{ endfor }.
+~J{ set traffic_redirect_joiner = joiner(",") }.
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+    ~J< traffic_redirect_joiner() >. traffic_redirect_~J< header.key >._~J< traffic.key >._test
+    ~J{ endfor }.
+~J{ endfor }.
+        ]}
+    ].
+
+-spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
+init_per_suite(Config) ->
+    Config.
+
+-spec end_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_suite().
+end_per_suite(_Config) ->
+    ok.
+
+-spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_group().
+init_per_group(_Group, Config) ->
+    ok = config_set_default(),
+    Config.
+
+-spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_group().
+end_per_group(_Group, _Config) ->
+    ok = config_set_default(),
+    ok.
+
+%%%=============================================================================
+%%% Common Test Cases
+%%%=============================================================================
+
+-spec compact_fragments_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
+    Config :: ct_suite:ct_config(),
+    DFlags :: erldist_filter_nif_types:flag(),
+    SendOptions :: vdist_entry_encode:options().
+compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
+    ConfigMap = #{
+        compact_fragments => true,
+        deep_packet_inspection => false,
+        logging => false,
+        redirect_dist_operations => false
+    },
+    ok = config_set(ConfigMap),
+    PacketSize = 4,
+    [A, B, C] = [a, b, c],
+    Sysname = 'nonode@nohost',
+    Channel = erldist_filter_nif:channel_open(PacketSize, Sysname, 0, 0, DFlags),
+    C0 = vedf_channel:new(PacketSize, DFlags, ConfigMap),
+    ControlA = spawn_request_noop(0, 0, 0),
+    ControlB = spawn_request_noop(1, 1, 1),
+    ControlC = spawn_request_noop(2, 2, 2),
+    LargeBin = binary:copy(<<"a">>, 255),
+    Payload = [{LargeBin, A, B, C}],
+    {ok, P0, C0} = vedf_channel:send_encode(C0, ControlA, vterm:expand(Payload), SendOptions),
+    {ok, A1, C1} = vedf_channel:recv(C0, P0),
+    {ok, P1, C1} = vedf_channel:send_encode(C1, ControlB, vterm:expand(Payload), SendOptions),
+    {ok, A2, C2} = vedf_channel:recv(C1, P1),
+    {ok, P2, C2} = vedf_channel:send_encode(C2, ControlC, vterm:expand(Payload), SendOptions),
+    {ok, A3, C3} = vedf_channel:recv(C2, P2),
+    AllPackets = lists:concat([P0, P1, P2]),
+    AllActions = lists:concat([A1, A2, A3]),
+    ?assertEqual(AllActions, simplify_logger_time(erldist_filter_nif:channel_recv(Channel, AllPackets))),
+    _ = C3,
+    ok = erldist_filter_nif:channel_close(Channel),
+    ok = config_set_default(),
+    ok.
+
+-spec logging_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
+    Config :: ct_suite:ct_config(),
+    DFlags :: erldist_filter_nif_types:flag(),
+    SendOptions :: vdist_entry_encode:options().
+logging_spawn_request_test(_Config, DFlags, SendOptions) ->
+    ConfigMap = #{
+        compact_fragments => true,
+        deep_packet_inspection => true,
+        logging => true,
+        redirect_dist_operations => false
+    },
+    ok = config_set(ConfigMap),
+    ?assertEqual([], erldist_filter_nif:logger_list()),
+    _OldCapacity = erldist_filter_nif:logger_set_capacity(2),
+    Logger = erldist_filter_nif:logger_open(),
+    LoggerSelectHandle = flush_logger(Logger),
+    PacketSize = 4,
+    [A, B, C] = [a, b, c],
+    Sysname = 'nonode@nohost',
+    Channel = erldist_filter_nif:channel_open(PacketSize, Sysname, 0, 0, DFlags),
+    C0 = vedf_channel:new(PacketSize, DFlags, ConfigMap#{sysname => Sysname}),
+    ControlA = spawn_request_noop(0, 0, 0),
+    ControlB = spawn_request_noop(1, 1, 1),
+    ControlC = spawn_request_noop(2, 2, 2),
+    LargeBin = binary:copy(<<"a">>, 255),
+    Payload = [{LargeBin, A, B, C}],
+    {ok, P0, C0} = vedf_channel:send_encode(C0, ControlA, vterm:expand(Payload), SendOptions),
+    {ok, A1, C1} = vedf_channel:recv(C0, P0),
+    {ok, P1, C1} = vedf_channel:send_encode(C1, ControlB, vterm:expand(Payload), SendOptions),
+    {ok, A2, C2} = vedf_channel:recv(C1, P1),
+    {ok, P2, C2} = vedf_channel:send_encode(C2, ControlC, vterm:expand(Payload), SendOptions),
+    {ok, A3, C3} = vedf_channel:recv(C2, P2),
+    AllPackets = lists:concat([P0, P1, P2]),
+    AllActions0 = lists:concat([A1, A2, A3]),
+    {AllActions, [_Log_A, Log_B, Log_C]} = extract_action_logs(AllActions0, [], []),
+    {log, _, {_, {Sysname, Atoms_B, Control_B, Payload_B}}} = Log_B,
+    {log, _, {_, {Sysname, Atoms_C, Control_C, Payload_C}}} = Log_C,
+    ?assertEqual(AllActions, erldist_filter_nif:channel_recv(Channel, AllPackets)),
+    _ = C3,
+    LoggerMessage = first_message_in_mailbox(1000),
+    ?assertEqual({'$logger', Logger, select, LoggerSelectHandle}, LoggerMessage),
+    ?assertMatch(
+        {2, 1, [{_, {Sysname, Atoms_B, Control_B, Payload_B}}, {_, {Sysname, Atoms_C, Control_C, Payload_C}}]},
+        erldist_filter_nif:logger_recv(Logger)
+    ),
+    ok = erldist_filter_nif:channel_close(Channel),
+    _ = flush_logger(Logger),
+    ok = erldist_filter_nif:logger_close(Logger),
+    ok = config_set_default(),
+    ok.
+
+%%%=============================================================================
+%%% Test Cases
+%%%=============================================================================
+
+~J{ for header in ctx.test.config.headers_list }.
+-spec compact_fragments_~J< header.key >._spawn_request_test() -> erldist_filter_test:testcase_info().
+compact_fragments_~J< header.key >._spawn_request_test() ->
+    [
+        {doc, "Tests sending multiple ~J< header.label >. packets to erldist_filter_nif and that compact_fragments works"},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec compact_fragments_~J< header.key >._spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+compact_fragments_~J< header.key >._spawn_request_test(Config) ->
+    #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
+    SendOptions = #{
+        header_mode => ~J< header.mode >.
+        ~J{ if header.fragment_size }.
+        , fragment_size => ~J< ctx.erlang_hex(header.fragment_size) >.
+        ~J{ endif }.
+    },
+    compact_fragments_spawn_request_test(Config, DFlags, SendOptions).
+
+~J{ endfor }.
+
+~J{ for header in ctx.test.config.headers_list }.
+-spec logging_~J< header.key >._spawn_request_test() -> erldist_filter_test:testcase_info().
+logging_~J< header.key >._spawn_request_test() ->
+    [
+        {doc, "Tests sending multiple ~J< header.label >. packets to erldist_filter_nif and that logging works"},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec logging_~J< header.key >._spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+logging_~J< header.key >._spawn_request_test(Config) ->
+    #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
+    SendOptions = #{
+        header_mode => ~J< header.mode >.
+        ~J{ if header.fragment_size }.
+        , fragment_size => ~J< ctx.erlang_hex(header.fragment_size) >.
+        ~J{ endif }.
+    },
+    logging_spawn_request_test(Config, DFlags, SendOptions).
+
+~J{ endfor }.
+
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+-spec traffic_drop_~J< header.key >._~J< traffic.key >._test() -> erldist_filter_test:testcase_info().
+traffic_drop_~J< header.key >._~J< traffic.key >._test() ->
+    [
+        {doc, "Tests sending ~J< header.label >. traffic to erldist_filter_nif and checks that dropping works for all ~J< traffic.key >. type operations"},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec traffic_drop_~J< header.key >._~J< traffic.key >._test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+traffic_drop_~J< header.key >._~J< traffic.key >._test(Config) ->
+    #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
+    SendOptions = #{
+        header_mode => ~J< header.mode >.
+        ~J{ if header.fragment_size }.
+        , fragment_size => ~J< ctx.erlang_hex(header.fragment_size) >.
+        ~J{ endif }.
+    },
+    dpi_~J< traffic.key >._test(Config, DFlags, SendOptions, #{redirect_dist_operations => false}).
+
+    ~J{ endfor }.
+~J{ endfor }.
+~J{ for header in ctx.test.config.headers_list }.
+    ~J{ for traffic in ctx.test.config.traffic_list }.
+-spec traffic_redirect_~J< header.key >._~J< traffic.key >._test() -> erldist_filter_test:testcase_info().
+traffic_redirect_~J< header.key >._~J< traffic.key >._test() ->
+    [
+        {doc, "Tests sending ~J< header.label >. traffic to erldist_filter_nif and checks that redirecting works for all ~J< traffic.key >. type operations"},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config) ->
+    #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
+    SendOptions = #{
+        header_mode => ~J< header.mode >.
+        ~J{ if header.fragment_size }.
+        , fragment_size => ~J< ctx.erlang_hex(header.fragment_size) >.
+        ~J{ endif }.
+    },
+    dpi_~J< traffic.key >._test(Config, DFlags, SendOptions, #{redirect_dist_operations => true}).
+
+    ~J{ endfor }.
+~J{ endfor }.
+
+%%%=============================================================================
+%%% Deep Packet Inspection Test Cases
+%%%=============================================================================
+
+~J{ for dpi in ctx.test.config.dpi_list }.
+-spec ~J< dpi.key >.(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
+    Config :: ct_suite:ct_config(),
+    DFlags :: erldist_filter_nif_types:flag(),
+    SendOptions :: vdist_entry_encode:options(),
+    ConfigMap :: erldist_filter_nif_types:config_map_set().
+~J< dpi.key >.(_Config, DFlags, SendOptions, ConfigMap0) ->
+    ConfigMap = ConfigMap0#{compact_fragments => true, deep_packet_inspection => true, logging => true, otp_name_blocklist => true},
+    ok = config_set(ConfigMap),
+    PacketSize = 4,
+    [A, B, C] = [a, b, c],
+    Sysname = 'nonode@nohost',
+    Channel0 = erldist_filter_nif:channel_open(PacketSize, Sysname, 0, 0, DFlags),
+    Channel1 = erldist_filter_nif:channel_open(PacketSize, Sysname, 0, 0, DFlags),
+    C0 = vedf_channel:new(PacketSize, DFlags, ConfigMap#{sysname => Sysname}),
+    Token = vterm:expand(<<"token">>),
+    LargeBin = binary:copy(<<"a">>, 255),
+    NestedPayload = [{LargeBin, A, B, C}],
+    ?assertEqual([], erldist_filter_nif:logger_list()),
+    _OldCapacity = erldist_filter_nif:logger_set_capacity(~J< dpi.logger_capacity >.),
+    Logger = erldist_filter_nif:logger_open(),
+    LoggerSelectHandle = flush_logger(Logger),
+~J{ if dpi.has_setup }.
+    ~J< dpi.setup >.
+~J{ endif }.
+~J{ for packet in dpi.packets_list }.
+    Control~J< packet.index >. = ~J< packet.call >.,
+~J{ endfor }.
+~J{ for packet in dpi.packets_list }.
+    ~J{ if packet.has_payload }.
+    {ok, P~J< packet.index >., C~J< packet.index >.} = vedf_channel:send_encode(C~J< packet.index >., Control~J< packet.index >., vterm:expand(~J< packet.payload >.), SendOptions),
+    ~J{ else }.
+    {ok, P~J< packet.index >., C~J< packet.index >.} = vedf_channel:send_encode(C~J< packet.index >., Control~J< packet.index >., SendOptions),
+    ~J{ endif }.
+    {ok, A~J< packet.index + 1 >., C~J< packet.index + 1 >.} = vedf_channel:recv(C~J< packet.index >., P~J< packet.index >.),
+~J{ endfor }.
+    ~J{ set all_packets_joiner = joiner(",") }.
+    AllPackets = lists:concat([~J{ for packet in dpi.packets_list }.~J< all_packets_joiner() >.P~J< packet.index >.~J{ endfor }.]),
+    ~J{ set all_actions_joiner = joiner(",") }.
+    AllActions0 = lists:concat([~J{ for packet in dpi.packets_list }.~J< all_actions_joiner() >.A~J< packet.index + 1 >.~J{ endfor }.]),
+    ~J{ set all_actions_log_joiner = joiner(",") }.
+    {AllActions, [~J{ for packet in dpi.packets_list }.~J{ if packet.log }.~J< all_actions_log_joiner() ->.~J{ if packet.drop }._~J{ endif }.Log_~J< packet.index >.~J{ endif }.~J{ endfor }.]} =
+        extract_action_logs(AllActions0, [], []),
+~J{ for packet in dpi.packets_list }.
+    ~J{ if not packet.drop and packet.log }.
+    {log, _, {_, {Sysname, Atoms_~J< packet.index >., Control_~J< packet.index >., Payload_~J< packet.index >.}}} = Log_~J< packet.index >.,
+    ~J{ endif }.
+~J{ endfor }.
+    ?assertEqual(AllActions, erldist_filter_nif:channel_recv(Channel0, AllPackets)),
+    _ = C~J< dpi.packets_list | length >.,
+~J{ if dpi.logger_capacity == 0 }.
+    _ = LoggerSelectHandle,
+~J{ else }.
+    LoggerMessage = first_message_in_mailbox(1000),
+    ?assertEqual({'$logger', Logger, select, LoggerSelectHandle}, LoggerMessage),
+    LoggerRecv = erldist_filter_nif:logger_recv(Logger),
+    ~J{ set logger_recv_joiner = joiner(",") }.
+    ?assertMatch({~J< dpi.logger_capacity >., ~J< dpi.drop_count >., [~J{ for packet in dpi.packets_keep }.~J< logger_recv_joiner() >._~J{ endfor }.]}, LoggerRecv),
+    {_, _, LoggerEvents0} = LoggerRecv,
+    ~J{ set log_event_joiner = joiner(",") }.
+    [
+~J{ for packet in dpi.packets_keep }.
+    ~J< log_event_joiner() >.LogEvent_~J< packet.index >.
+~J{ endfor }.
+    ] = simplify_logger_events(LoggerEvents0),
+~J{ for packet in dpi.packets_keep }.
+    ?assertEqual({~J< loop.index >., {Sysname, Atoms_~J< packet.index >., Control_~J< packet.index >., Payload_~J< packet.index >.}}, LogEvent_~J< packet.index >.),
+~J{ endfor }.
+~J{ endif }.
+    ?assertEqual(
+        AllActions, lists:flatten([erldist_filter_nif:channel_recv(Channel1, Packet) || Packet <- AllPackets])
+    ),
+    ok = erldist_filter_nif:channel_close(Channel1),
+    ok = erldist_filter_nif:channel_close(Channel0),
+    _ = flush_logger(Logger),
+    ok = erldist_filter_nif:logger_close(Logger),
+    ok = config_set_default(),
+    ok.
+
+~J{ endfor }.
+
+%%%=============================================================================
+%%% Dist Operation functions
+%%%=============================================================================
+
+-spec dop_alias_send_noop(Id, Serial, Creation) -> DopAliasSend when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopAliasSend :: vdist_dop_alias_send:t().
+dop_alias_send_noop(Id, Serial, Creation) ->
+    EmptyAtom = vterm_atom_utf8_ext:new(0, <<>>),
+    FromPid = vterm_new_pid_ext:new(EmptyAtom, Id, Serial, Creation),
+    Alias = vterm_newer_reference_ext:new(1, EmptyAtom, Creation, [Id]),
+    vdist_dop_alias_send:new(FromPid, Alias).
+
+-spec dop_alias_send_tt_noop(Id, Serial, Creation, Token) -> DopAliasSendTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopAliasSendTT :: vdist_dop_alias_send_tt:t().
+dop_alias_send_tt_noop(Id, Serial, Creation, Token) ->
+    EmptyAtom = vterm_atom_utf8_ext:new(0, <<>>),
+    FromPid = vterm_new_pid_ext:new(EmptyAtom, Id, Serial, Creation),
+    Alias = vterm_newer_reference_ext:new(1, EmptyAtom, Creation, [Id]),
+    vdist_dop_alias_send_tt:new(FromPid, Alias, Token).
+
+-spec dop_altact_sig_send_noop(Id, Serial, Creation, Flags, OptionToken) -> DopAltactSigSend when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Flags :: vdist_dop_altact_sig_send:flags(),
+    OptionToken :: none | {some, Token},
+    Token :: vterm:t(),
+    DopAltactSigSend :: vdist_dop_altact_sig_send:t().
+dop_altact_sig_send_noop(Id, Serial, Creation, Flags, OptionToken) ->
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FlagsList = vdist_dop_altact_sig_send:flags_as_list(Flags),
+    FlagsMap = #{Flag => [] || Flag <- FlagsList},
+    To =
+        case FlagsMap of
+            #{exit := _, alias := _} ->
+                vterm_newer_reference_ext:new(1, NodeB, Creation, [Id]);
+            #{exit := _} ->
+                vterm_new_pid_ext:new(NodeB, Id, Serial, Creation);
+            #{alias := _} ->
+                vterm_newer_reference_ext:new(1, NodeB, Creation, [Id]);
+            #{name := _} ->
+                vterm_atom_utf8_ext:new(1, <<"c">>);
+            #{} ->
+                vterm_new_pid_ext:new(NodeB, Id, Serial, Creation)
+        end,
+    dop_altact_sig_send_noop(Id, Serial, Creation, Flags, To, OptionToken).
+
+-spec dop_altact_sig_send_noop(Id, Serial, Creation, Flags, To, OptionToken) -> DopAltactSigSend when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Flags :: vdist_dop_altact_sig_send:flags(),
+    To :: vterm:pid_t() | vterm:reference_t() | vterm:atom_t(),
+    OptionToken :: none | {some, Token},
+    Token :: vterm:t(),
+    DopAltactSigSend :: vdist_dop_altact_sig_send:t().
+dop_altact_sig_send_noop(Id, Serial, Creation, Flags, To, OptionToken) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    SenderPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    FlagsVTerm = vdist_dop_altact_sig_send:flags_as_vterm(Flags),
+    case OptionToken of
+        none ->
+            vdist_dop_altact_sig_send:new(FlagsVTerm, SenderPid, To);
+        {some, Token} ->
+            vdist_dop_altact_sig_send:new(FlagsVTerm, SenderPid, To, Token)
+    end.
+
+-spec dop_exit_noop(Id, Serial, Creation) -> DopExit when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopExit :: vdist_dop_exit:t().
+dop_exit_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    Reason = vterm_atom_utf8_ext:new(6, <<"killed">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_exit:new(FromPid, ToPid, Reason).
+
+-spec dop_exit_tt_noop(Id, Serial, Creation, Token) -> DopExitTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopExitTT :: vdist_dop_exit_tt:t().
+dop_exit_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    Reason = vterm_atom_utf8_ext:new(6, <<"killed">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_exit_tt:new(FromPid, ToPid, Token, Reason).
+
+-spec dop_payload_exit_noop(Id, Serial, Creation) -> DopPayloadExit when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopPayloadExit :: vdist_dop_payload_exit:t().
+dop_payload_exit_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_payload_exit:new(FromPid, ToPid).
+
+-spec dop_payload_exit_tt_noop(Id, Serial, Creation, Token) -> DopPayloadExitTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopPayloadExitTT :: vdist_dop_payload_exit_tt:t().
+dop_payload_exit_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_payload_exit_tt:new(FromPid, ToPid, Token).
+
+-spec dop_exit2_noop(Id, Serial, Creation) -> DopExit2 when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopExit2 :: vdist_dop_exit2:t().
+dop_exit2_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    Reason = vterm_atom_utf8_ext:new(4, <<"kill">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_exit2:new(FromPid, ToPid, Reason).
+
+-spec dop_exit2_tt_noop(Id, Serial, Creation, Token) -> DopExit2TT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopExit2TT :: vdist_dop_exit2_tt:t().
+dop_exit2_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    Reason = vterm_atom_utf8_ext:new(4, <<"kill">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_exit2_tt:new(FromPid, ToPid, Token, Reason).
+
+-spec dop_payload_exit2_noop(Id, Serial, Creation) -> DopPayloadExit2 when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopPayloadExit2 :: vdist_dop_payload_exit2:t().
+dop_payload_exit2_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_payload_exit2:new(FromPid, ToPid).
+
+-spec dop_payload_exit2_tt_noop(Id, Serial, Creation, Token) -> DopPayloadExit2TT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopPayloadExit2TT :: vdist_dop_payload_exit2_tt:t().
+dop_payload_exit2_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_payload_exit2_tt:new(FromPid, ToPid, Token).
+
+-spec dop_group_leader_noop(Id, Serial, Creation) -> DopGroupLeader when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopGroupLeader :: vdist_dop_group_leader:t().
+dop_group_leader_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_group_leader:new(FromPid, ToPid).
+
+-spec dop_link_noop(Id, Serial, Creation) -> DopLink when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopLink :: vdist_dop_link:t().
+dop_link_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_link:new(FromPid, ToPid).
+
+-spec dop_monitor_p_noop(Id, Serial, Creation) -> DopMonitorP when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopMonitorP :: vdist_dop_monitor_p:t().
+dop_monitor_p_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToProc = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    Ref = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    vdist_dop_monitor_p:new(FromPid, ToProc, Ref).
+
+-spec dop_demonitor_p_noop(Id, Serial, Creation) -> DopDemonitorP when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopDemonitorP :: vdist_dop_demonitor_p:t().
+dop_demonitor_p_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToProc = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    Ref = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    vdist_dop_demonitor_p:new(FromPid, ToProc, Ref).
+
+-spec dop_monitor_p_exit_noop(Id, Serial, Creation) -> DopMonitorPExit when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopMonitorPExit :: vdist_dop_monitor_p_exit:t().
+dop_monitor_p_exit_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromProc = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Ref = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    Reason = vterm_atom_utf8_ext:new(6, <<"killed">>),
+    vdist_dop_monitor_p_exit:new(FromProc, ToPid, Ref, Reason).
+
+-spec dop_payload_monitor_p_exit_noop(Id, Serial, Creation) -> DopPayloadMonitorPExit when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopPayloadMonitorPExit :: vdist_dop_payload_monitor_p_exit:t().
+dop_payload_monitor_p_exit_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromProc = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Ref = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    vdist_dop_payload_monitor_p_exit:new(FromProc, ToPid, Ref).
+
+-spec dop_reg_send_noop(Id, Serial, Creation, ToName) -> DopRegSend when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    ToName :: vterm:atom_t(),
+    DopRegSend :: vdist_dop_reg_send:t().
+dop_reg_send_noop(Id, Serial, Creation, ToName) ->
+    Unused = vterm_atom_utf8_ext:new(0, <<>>),
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    vdist_dop_reg_send:new(FromPid, Unused, ToName).
+
+-spec dop_reg_send_tt_noop(Id, Serial, Creation, ToName, Token) -> DopRegSendTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    ToName :: vterm:atom_t(),
+    Token :: vterm:t(),
+    DopRegSendTT :: vdist_dop_reg_send_tt:t().
+dop_reg_send_tt_noop(Id, Serial, Creation, ToName, Token) ->
+    Unused = vterm_atom_utf8_ext:new(0, <<>>),
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    vdist_dop_reg_send_tt:new(FromPid, Unused, ToName, Token).
+
+-spec dop_send_noop(Id, Serial, Creation) -> DopSend when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopSend :: vdist_dop_send:t().
+dop_send_noop(Id, Serial, Creation) ->
+    Unused = vterm_atom_utf8_ext:new(0, <<>>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_send:new(Unused, ToPid).
+
+-spec dop_send_tt_noop(Id, Serial, Creation, Token) -> DopSendTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopSendTT :: vdist_dop_send_tt:t().
+dop_send_tt_noop(Id, Serial, Creation, Token) ->
+    Unused = vterm_atom_utf8_ext:new(0, <<>>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_send_tt:new(Unused, ToPid, Token).
+
+-spec dop_send_sender_noop(Id, Serial, Creation) -> DopSendSender when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopSendSender :: vdist_dop_send_sender:t().
+dop_send_sender_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_send_sender:new(FromPid, ToPid).
+
+-spec dop_send_sender_tt_noop(Id, Serial, Creation, Token) -> DopSendSenderTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopSendSenderTT :: vdist_dop_send_sender_tt:t().
+dop_send_sender_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_send_sender_tt:new(FromPid, ToPid, Token).
+
+-spec dop_spawn_reply_noop(Id, Serial, Creation) -> DopSpawnReply when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopSpawnReply :: vdist_dop_spawn_reply:t().
+dop_spawn_reply_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    ReqId = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    To = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Flags = vterm_small_integer_ext:new(2),
+    Result = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_spawn_reply:new(ReqId, To, Flags, Result).
+
+-spec dop_spawn_reply_tt_noop(Id, Serial, Creation, Token) -> DopSpawnReplyTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopSpawnReplyTT :: vdist_dop_spawn_reply_tt:t().
+dop_spawn_reply_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    ReqId = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    To = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Flags = vterm_small_integer_ext:new(2),
+    Result = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_spawn_reply_tt:new(ReqId, To, Flags, Result, Token).
+
+-spec dop_spawn_request_noop(Id, Serial, Creation) -> DopSpawnRequest when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopSpawnRequest :: vdist_dop_spawn_request:t().
+dop_spawn_request_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    UndefinedAtom = vterm_atom_utf8_ext:new(9, <<"undefined">>),
+    ReqId = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    GroupLeaderPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Module = UndefinedAtom,
+    Function = UndefinedAtom,
+    Arity = vterm_small_integer_ext:new(1),
+    OptList = [],
+    vdist_dop_spawn_request:new(ReqId, FromPid, GroupLeaderPid, Module, Function, Arity, OptList).
+
+-spec dop_spawn_request_tt_noop(Id, Serial, Creation, Token) -> DopSpawnRequestTT when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    Token :: vterm:t(),
+    DopSpawnRequestTT :: vdist_dop_spawn_request_tt:t().
+dop_spawn_request_tt_noop(Id, Serial, Creation, Token) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    UndefinedAtom = vterm_atom_utf8_ext:new(9, <<"undefined">>),
+    ReqId = vterm_newer_reference_ext:new(1, NodeA, Creation, [Id]),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    GroupLeaderPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    Module = UndefinedAtom,
+    Function = UndefinedAtom,
+    Arity = vterm_small_integer_ext:new(1),
+    OptList = [],
+    vdist_dop_spawn_request_tt:new(ReqId, FromPid, GroupLeaderPid, Module, Function, Arity, OptList, Token).
+
+-spec dop_unlink_noop(Id, Serial, Creation) -> DopUnlink when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopUnlink :: vdist_dop_unlink:t().
+dop_unlink_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    vdist_dop_unlink:new(FromPid, ToPid).
+
+-spec dop_unlink_id_noop(Id, Serial, Creation) -> DopUnlinkId when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopUnlinkId :: vdist_dop_unlink_id:t().
+dop_unlink_id_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    IdInteger = vterm_integer_ext:new(Id + 1024),
+    vdist_dop_unlink_id:new(IdInteger, FromPid, ToPid).
+
+-spec dop_unlink_id_ack_noop(Id, Serial, Creation) -> DopUnlinkIdAck when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopUnlinkIdAck :: vdist_dop_unlink_id_ack:t().
+dop_unlink_id_ack_noop(Id, Serial, Creation) ->
+    NodeA = vterm_atom_utf8_ext:new(1, <<"a">>),
+    NodeB = vterm_atom_utf8_ext:new(1, <<"b">>),
+    FromPid = vterm_new_pid_ext:new(NodeA, Id, Serial, Creation),
+    ToPid = vterm_new_pid_ext:new(NodeB, Id, Serial, Creation),
+    IdInteger = vterm_integer_ext:new(Id + 1024),
+    vdist_dop_unlink_id_ack:new(IdInteger, FromPid, ToPid).
+
+-spec spawn_request_noop(Id, Serial, Creation) -> DopSpawnRequest when
+    Id :: vterm:u32(),
+    Serial :: vterm:u32(),
+    Creation :: vterm:u32(),
+    DopSpawnRequest :: vdist_dop_spawn_request:t().
+spawn_request_noop(Id, Serial, Creation) ->
+    EmptyAtom = vterm_atom_utf8_ext:new(0, <<>>),
+    UndefinedAtom = vterm_atom_utf8_ext:new(9, <<"undefined">>),
+    ReqId = vterm_newer_reference_ext:new(1, EmptyAtom, Creation, [Id]),
+    FromPid = vterm_new_pid_ext:new(EmptyAtom, Id, Serial, Creation),
+    GroupLeaderPid = vterm_new_pid_ext:new(EmptyAtom, Id, Serial, Creation),
+    Module = UndefinedAtom,
+    Function = UndefinedAtom,
+    Arity = vterm_small_integer_ext:new(1),
+    OptList = [],
+    vdist_dop_spawn_request:new(ReqId, FromPid, GroupLeaderPid, Module, Function, Arity, OptList).
+
+%%%-----------------------------------------------------------------------------
+%%% Internal functions
+%%%-----------------------------------------------------------------------------
+
+%% @private
+-spec config_set_default() -> ok.
+config_set_default() ->
+    config_set(#{}).
+
+%% @private
+-spec config_set(ConfigMapSet) -> ok when
+    ConfigMapSet :: erldist_filter_nif_types:config_map_set().
+config_set(ConfigMapSet1) ->
+    DefaultConfigMapSet =
+        #{
+            ConfigKey =>
+                case ConfigVal of
+                    _ when is_boolean(ConfigVal) -> false;
+                    _ when is_integer(ConfigVal) -> 0
+                end
+         || ConfigKey := ConfigVal <- erldist_filter_nif:config_get()
+        },
+    ConfigMapSet2 = maps:merge(DefaultConfigMapSet, ConfigMapSet1),
+    erldist_filter_nif:config_set(ConfigMapSet2).
+
+%% @private
+-spec extract_action_logs(ActionListIn, ActionListOut, LogListOut) -> {ActionListOut, LogListOut} when
+    ActionListIn :: [Action],
+    Action :: erldist_filter_nif:action(),
+    ActionListOut :: [Action],
+    LogListOut :: [Log],
+    Log :: erldist_filter_nif:action_log().
+extract_action_logs([Action = {log, _, _} | Rest], Actions, Logs) ->
+    extract_action_logs(Rest, Actions, [Action | Logs]);
+extract_action_logs([Action | Rest], Actions, Logs) ->
+    extract_action_logs(Rest, [Action | Actions], Logs);
+extract_action_logs([], Actions, Logs) ->
+    {lists:reverse(Actions), lists:reverse(Logs)}.
+
+%% @private
+-spec first_message_in_mailbox(Timeout) -> Msg when
+    Timeout :: timeout(),
+    Msg :: dynamic().
+first_message_in_mailbox(Timeout) ->
+    receive
+        Msg ->
+            Msg
+    after Timeout ->
+        erlang:error(timeout_waiting_for_first_message_in_mailbox)
+    end.
+
+%% @private
+-spec flush_logger(Logger) -> LoggerSelectHandle when
+    Logger :: erldist_filter_nif:logger(),
+    LoggerSelectHandle :: erldist_filter_nif:logger_select_handle().
+flush_logger(Logger) ->
+    case erldist_filter_nif:logger_recv(Logger) of
+        {_QueueSize, _QueueDrop, _Events} ->
+            flush_logger(Logger);
+        {select, LoggerSelectHandle} ->
+            LoggerSelectHandle
+    end.
+
+%% @private
+-spec simplify_logger_events(Events) -> Events when
+    Events :: [Event],
+    Event :: {LoggerTime, LoggerEvent},
+    LoggerTime :: erldist_filter_nif:logger_time(),
+    LoggerEvent :: erldist_filter_nif:logger_event().
+simplify_logger_events(Events) ->
+    simplify_logger_events(Events, 1).
+
+%% @private
+-spec simplify_logger_events(Events, SimpleTime) -> Events when
+    Events :: [Event],
+    Event :: {LoggerTime, LoggerEvent},
+    LoggerTime :: erldist_filter_nif:logger_time(),
+    LoggerEvent :: erldist_filter_nif:logger_event(),
+    SimpleTime :: erldist_filter_nif:logger_time().
+simplify_logger_events(Events, SimpleTime) ->
+    simplify_logger_events(Events, SimpleTime, []).
+
+%% @private
+-spec simplify_logger_events(Events, SimpleTime, Acc) -> Events when
+    Events :: [Event],
+    Event :: {LoggerTime, LoggerEvent},
+    LoggerTime :: erldist_filter_nif:logger_time(),
+    LoggerEvent :: erldist_filter_nif:logger_event(),
+    SimpleTime :: erldist_filter_nif:logger_time(),
+    Acc :: [Event].
+simplify_logger_events([{_LoggerTime, LoggerEvent} | Events], SimpleTime, Acc) ->
+    Event = {SimpleTime, LoggerEvent},
+    simplify_logger_events(Events, SimpleTime + 1, [Event | Acc]);
+simplify_logger_events([], _SimpleTime, Acc) ->
+    lists:reverse(Acc).
+
+%% @private
+-spec simplify_logger_time(Events) -> Events when
+    Events :: [Event],
+    Event :: erldist_filter_nif:action_log().
+simplify_logger_time(Events) ->
+    simplify_logger_time(Events, 0).
+
+%% @private
+-spec simplify_logger_time(Events, SimpleTime) -> Events when
+    Events :: [Event],
+    Event :: erldist_filter_nif:action_log(),
+    SimpleTime :: erldist_filter_nif:logger_time().
+simplify_logger_time(Events, SimpleTime) ->
+    simplify_logger_time(Events, SimpleTime, []).
+
+%% @private
+-spec simplify_logger_time(Events, SimpleTime, Acc) -> Events when
+    Events :: [Event],
+    Event :: erldist_filter_nif:action_log(),
+    SimpleTime :: erldist_filter_nif:logger_time(),
+    Acc :: [Event].
+simplify_logger_time([{log, FragmentCount, {_LoggerTime, LoggerEvent}} | Events], SimpleTime, Acc) ->
+    Event = {log, FragmentCount, {SimpleTime, LoggerEvent}},
+    simplify_logger_time(Events, SimpleTime + 1, [Event | Acc]);
+simplify_logger_time([Event | Events], SimpleTime, Acc) ->
+    simplify_logger_time(Events, SimpleTime, [Event | Acc]);
+simplify_logger_time([], _SimpleTime, Acc) ->
+    lists:reverse(Acc).

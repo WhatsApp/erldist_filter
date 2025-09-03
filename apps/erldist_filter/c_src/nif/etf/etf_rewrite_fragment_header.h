@@ -19,9 +19,6 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct etf_rewrite_fragment_header_trap_s etf_rewrite_fragment_header_trap_t;
-typedef enum etf_rewrite_fragment_header_trap_state_t etf_rewrite_fragment_header_trap_state_t;
-
 enum etf_rewrite_fragment_header_trap_state_t {
     ETF_REWRITE_FRAGMENT_HEADER_TRAP_STATE_INIT = 0,
     ETF_REWRITE_FRAGMENT_HEADER_TRAP_STATE_FIND_CONFLICTS,
@@ -30,6 +27,9 @@ enum etf_rewrite_fragment_header_trap_state_t {
     ETF_REWRITE_FRAGMENT_HEADER_TRAP_STATE_ENCODE,
     ETF_REWRITE_FRAGMENT_HEADER_TRAP_STATE_DONE,
 };
+
+typedef struct etf_rewrite_fragment_header_trap_s etf_rewrite_fragment_header_trap_t;
+typedef enum etf_rewrite_fragment_header_trap_state_t etf_rewrite_fragment_header_trap_state_t;
 
 struct etf_rewrite_fragment_header_trap_s {
     edf_trap_t super;

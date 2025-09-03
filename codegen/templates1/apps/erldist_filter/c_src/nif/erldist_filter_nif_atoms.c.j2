@@ -1,0 +1,31 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "erldist_filter_nif_atoms.h"
+
+/* Global Variables */
+
+static erldist_filter_nif_atom_table_t erldist_filter_nif_atom_table_internal;
+erldist_filter_nif_atom_table_t *erldist_filter_nif_atom_table = &erldist_filter_nif_atom_table_internal;
+
+/* Function Definitions */
+
+void
+erldist_filter_nif_make_atoms(ErlNifEnv *env)
+{
+#define MAKE_ATOM(Id, Value)                                                                                                       \
+    {                                                                                                                              \
+        erldist_filter_nif_atom_table->ATOM_##Id = enif_make_atom(env, Value);                                                     \
+    }
+    /* clang-format off */ //-
+{% for atom in ctx.nif.atoms_list %}
+    MAKE_ATOM({{atom.name}}, "{{ atom.name }}");
+{% endfor %}
+/* clang-format on */ //-
+#undef MAKE_ATOM
+}

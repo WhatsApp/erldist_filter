@@ -5,43 +5,28 @@
 # LICENSE.md file in the root directory of this source tree.
 
 defmodule ErldistFilterElixirTests.Peers do
-  @sup :erldist_filter_peer_spbt_sup
   @shim :erldist_filter_peer_spbt_shim
   @handler ErldistFilterElixirTests.QueueHandler
   @logger ErldistFilterElixirTests.QueueLogger
 
   def setup(test_module) do
     {:ok, {^test_module, test_bytecode, test_filename}} = read_module(test_module)
-    {:ok, _} = force_clean_start_supervisor()
-    # {:ok, _} = :supervisor.start_child(:kernel_sup, @sup.child_spec())
-    {:ok, {upeer, vpeer}} = @shim.start_random_suffix_upeer_and_vpeer_from_label(~c"edf-elixir")
-    :ok = rpc(upeer, __MODULE__, :enable_erldist_filter, [])
-    :ok = rpc(vpeer, __MODULE__, :enable_erldist_filter, [])
-    {:module, ^test_module} = rpc(upeer, :code, :load_binary, [test_module, test_filename, test_bytecode])
-    {:module, ^test_module} = rpc(vpeer, :code, :load_binary, [test_module, test_filename, test_bytecode])
-    {:ok, {upeer, vpeer}}
-  end
+    {:ok, _} = :application.ensure_all_started(:erldist_filter_test)
 
-  defp force_clean_start_supervisor() do
-    case :supervisor.start_child(:kernel_sup, @sup.child_spec()) do
-      {:ok, sup_pid} ->
-        {:ok, sup_pid}
-
-      {:error, {:already_started, sup_pid}} ->
-        force_clean_start_supervisor(sup_pid, :supervisor.which_children(sup_pid))
-
-      error ->
-        error
+    setup_fun = fn peer ->
+      {:ok, _} = rpc(peer, :application, :ensure_all_started, [:elixir])
+      :ok = rpc(peer, __MODULE__, :enable_erldist_filter, [])
+      {:module, ^test_module} = rpc(peer, :code, :load_binary, [test_module, test_filename, test_bytecode])
+      :ignored
     end
-  end
 
-  defp force_clean_start_supervisor(sup_pid, [{id, _child, _type, _modules} | children]) do
-    :ok = @sup.stop_child(id)
-    force_clean_start_supervisor(sup_pid, children)
-  end
+    teardown_fun = fn peer, :ignored ->
+      :ok = rpc(peer, __MODULE__, :disable_erldist_filter, [])
+      :ignored
+    end
 
-  defp force_clean_start_supervisor(sup_pid, []) do
-    {:ok, sup_pid}
+    p2p = :erldist_filter_test_p2p.open("erldist-filter-elixir-tests-peers", setup_fun, teardown_fun)
+    {:ok, p2p}
   end
 
   defp read_module(module) do
@@ -57,13 +42,8 @@ defmodule ErldistFilterElixirTests.Peers do
     end
   end
 
-  def teardown({upeer = {upeer_node, _upeer_pid}, vpeer = {vpeer_node, _vpeer_pid}}) do
-    :ok = rpc(upeer, __MODULE__, :disable_erldist_filter, [])
-    :ok = rpc(vpeer, __MODULE__, :disable_erldist_filter, [])
-    :ok = @sup.stop_child(vpeer_node)
-    :ok = @sup.stop_child(upeer_node)
-    # _ = :supervisor.terminate_child(:kernel_sup, @sup)
-    # _ = :supervisor.delete_child(:kernel_sup, @sup)
+  def teardown(p2p) when is_pid(p2p) do
+    :ok = :erldist_filter_test_p2p.close(p2p)
     :ok
   end
 

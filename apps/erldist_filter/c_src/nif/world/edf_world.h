@@ -13,9 +13,9 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
-#include "../core/linklist.h"
-#include "../core/rwlock.h"
+#include "../erldist_filter_nif.h"
+#include "../../primitive/linklist.h"
+#include "../core/xnif_rwlock.h"
 #include "../channel/edf_channel_stats.h"
 
 /* Macro Definitions */
@@ -69,7 +69,7 @@ struct edf_world_slot_s {
 struct edf_world_table_s {
     linklist_t _link;
     ErlNifTSDKey key;
-    core_rwlock_t rwlock;
+    xnif_rwlock_t rwlock;
 };
 
 /* Global Declarations */

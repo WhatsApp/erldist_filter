@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "edf_channel_stats.h"
+
+static void edf_channel_stats_dop_init_empty(edf_channel_stats_dop_t *dop);
+
+void
+edf_channel_stats_init_empty(edf_channel_stats_t *stats)
+{
+    /* clang-format off */ //-
+{% for stat in ctx.channel.stats_list %}
+{% if stat.c_kind == "uint64_t" %}
+    stats->{{ stat.key }} = 0;
+{% else %}
+    (void)edf_channel_stats_dop_init_empty(&stats->{{ stat.key }});
+{% endif %}
+{% endfor %}
+    /* clang-format on */ //-
+    return;
+}
+
+inline void
+edf_channel_stats_dop_init_empty(edf_channel_stats_dop_t *dop)
+{
+    dop->seen = 0;
+    dop->emit = 0;
+    dop->drop = 0;
+    return;
+}

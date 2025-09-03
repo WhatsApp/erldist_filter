@@ -7,7 +7,9 @@
  */
 
 #include "udist.h"
+#include "../blocklist/edf_otp_name_blocklist.h"
 #include "../channel/edf_channel.h"
+#include "../config/edf_config.h"
 #include "../etf/etf_decode.h"
 #include "../uterm/uterm.h"
 
@@ -42,6 +44,8 @@ static int udist_classify_send_to_net_kernel(ErlNifEnv *caller_env, vterm_env_t 
                                              bool is_pass_through, slice_t *payload, ERL_NIF_TERM *err_termp);
 static int udist_classify_send_to_rex(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
                                       slice_t *payload, ERL_NIF_TERM *err_termp);
+static int udist_classify_send_to_otp_name(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted,
+                                           bool is_pass_through, slice_t *payload, ERL_NIF_TERM *err_termp);
 
 int
 udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through, slice_t *payload,
@@ -89,10 +93,12 @@ udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untr
             LOG_DROP_OR_REDIRECT();
             return 1;
         }
-        if (up->control.data.send_to == ATOM(net_kernel)) {
+        if (up->control.data.send.to == ATOM(net_kernel)) {
             return udist_classify_send_to_net_kernel(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
-        } else if (up->control.data.send_to == ATOM(rex)) {
+        } else if (up->control.data.send.to == ATOM(rex)) {
             return udist_classify_send_to_rex(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
+        } else if (edf_config_is_otp_name_blocklist_enabled() && edf_otp_name_is_blocked(up->control.data.send.to)) {
+            return udist_classify_send_to_otp_name(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
         }
         return udist_classify_send(caller_env, vtenv, up, untrusted, is_pass_through, payload, err_termp);
     }
@@ -385,6 +391,22 @@ udist_classify_send_to_rex(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *u
     return 1;
 }
 
+int
+udist_classify_send_to_otp_name(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through,
+                                slice_t *payload, ERL_NIF_TERM *err_termp)
+{
+    // REG_SEND: OTP registered process name
+    //
+    // Redirect the message (drop it).
+    if (payload == NULL) {
+        *err_termp = EXCP_ERROR(caller_env, "Call to udist_classify_send_to_otp_name() failed: payload is NULL\n");
+        return 0;
+    }
+    // LOG, DROP or REDIRECT
+    LOG_DROP_OR_REDIRECT();
+    return 1;
+}
+
 #undef LOG_REDIRECT_SPAWN_REQUEST
 #undef LOG_DROP_OR_REDIRECT
 #undef LOG_DROP
@@ -484,6 +506,9 @@ udist_get_channel_stats_dop(udist_t *up, edf_channel_stats_t *stats, edf_channel
         break;
     case DOP_UNLINK_ID_ACK:
         *statsdopp = &stats->dop_unlink_id_ack;
+        break;
+    case DOP_ALTACT_SIG_SEND:
+        *statsdopp = &stats->dop_altact_sig_send;
         break;
     default:
         return 0;
@@ -585,6 +610,9 @@ udist_get_dop_string(const udist_t *up, const char **name)
         break;
     case DOP_UNLINK_ID_ACK:
         *name = "DOP_UNLINK_ID_ACK";
+        break;
+    case DOP_ALTACT_SIG_SEND:
+        *name = "DOP_ALTACT_SIG_SEND";
         break;
     default:
         return 0;

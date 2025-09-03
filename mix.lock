@@ -1,4 +1,4 @@
 %{
   "elixir_make": {:hex, :elixir_make, "0.7.7", "7128c60c2476019ed978210c245badf08b03dbec4f24d05790ef791da11aa17c", [:mix], [{:castore, "~> 0.1 or ~> 1.0", [hex: :castore, repo: "hexpm", optional: true]}], "hexpm", "5bc19fff950fad52bbe5f211b12db9ec82c6b34a9647da0c2224b8b8464c7e6c"},
-  "proper": {:git, "https://github.com/proper-testing/proper.git", "a5ae5669f01143b0828fc21667d4f5e344aa760b", [branch: "master"]},
+  "proper": {:hex, :proper, "1.5.0", "4a87ce8b219858e64c9aa015f4f7ed739d0ac3ca6bfd77fa62794617ee784225", [:rebar3], [], "hexpm", "fbf7cf0625e5441a314514f7d8e1eaff52090fcd94ff34b5171ff293d3f9969a"},
 }

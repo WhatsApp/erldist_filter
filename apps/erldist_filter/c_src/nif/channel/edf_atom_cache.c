@@ -40,7 +40,6 @@ edf_atom_cache_destroy(edf_atom_cache_t *cache)
     }
     for (i = 0; i < ERTS_ATOM_CACHE_SIZE; i++) {
         if (cache->entries[i] != THE_NON_VALUE) {
-            (void)edf_atom_text_release(cache->entries[i]);
             cache->entries[i] = THE_NON_VALUE;
         }
     }
@@ -59,9 +58,6 @@ edf_atom_cache_maybe_overwrite(edf_atom_cache_t *cache, int cache_index, ERL_NIF
         return 1;
     }
     cache->entries[cache_index] = new_atom;
-    if (old_atom != THE_NON_VALUE) {
-        (void)edf_atom_text_release(old_atom);
-    }
     return 1;
 }
 
@@ -155,9 +151,6 @@ edf_atom_translation_table_destroy(edf_atom_translation_table_t *attab)
     attab->long_atoms = false;
     attab->size = 0;
     for (i = 0; i < ERTS_MAX_INTERNAL_ATOM_CACHE_ENTRIES + 1; i++) {
-        if (attab->entries[i].atom != THE_NON_VALUE) {
-            (void)edf_atom_text_release(attab->entries[i].atom);
-        }
         attab->entries[i].atom = THE_NON_VALUE;
         attab->entries[i].cache_index = -1;
         attab->entries[i].new_entry = false;
@@ -172,9 +165,6 @@ edf_atom_translation_table_set_entry(edf_atom_translation_table_t *attab, int ca
 {
     if (attab == NULL || internal_index < 0 || internal_index >= (int)(attab->size) || cache_index < 0 ||
         cache_index >= ERTS_ATOM_CACHE_SIZE) {
-        return 0;
-    }
-    if (!edf_atom_text_keep(atom)) {
         return 0;
     }
     attab->entries[internal_index].atom = atom;

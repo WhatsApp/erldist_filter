@@ -31,6 +31,13 @@
     token :: term()
 }).
 
+-record(udist_dop_altact_sig_send, {
+    flags :: integer(),
+    sender_pid :: pid(),
+    to :: pid() | atom() | reference(),
+    token :: none | {some, term()}
+}).
+
 -record(udist_dop_demonitor_p, {
     from_pid :: pid(),
     to_proc :: atom() | pid(),
@@ -209,7 +216,9 @@
     (is_record(T, udist_dop_exit2) orelse
         is_record(T, udist_dop_exit2_tt) orelse
         is_record(T, udist_dop_payload_exit2) orelse
-        is_record(T, udist_dop_payload_exit2_tt))
+        is_record(T, udist_dop_payload_exit2_tt) orelse
+        (is_record(T, udist_dop_altact_sig_send) andalso
+            (T)#udist_dop_altact_sig_send.flags band ?ERTS_DOP_ALTACT_SIG_FLG_EXIT =/= 0))
 ).
 
 -define(is_udist_dop_group_leader_t(T),
@@ -229,19 +238,27 @@
 
 -define(is_udist_dop_send_to_alias_t(T),
     (is_record(T, udist_dop_alias_send) orelse
-        is_record(T, udist_dop_alias_send_tt))
+        is_record(T, udist_dop_alias_send_tt) orelse
+        (is_record(T, udist_dop_altact_sig_send) andalso
+            (T)#udist_dop_altact_sig_send.flags band ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS =/= 0))
 ).
 
 -define(is_udist_dop_send_to_name_t(T),
     (is_record(T, udist_dop_reg_send) orelse
-        is_record(T, udist_dop_reg_send_tt))
+        is_record(T, udist_dop_reg_send_tt) orelse
+        (is_record(T, udist_dop_altact_sig_send) andalso
+            (T)#udist_dop_altact_sig_send.flags band ?ERTS_DOP_ALTACT_SIG_FLG_NAME =/= 0))
 ).
 
 -define(is_udist_dop_send_to_pid_t(T),
     (is_record(T, udist_dop_send) orelse
         is_record(T, udist_dop_send_tt) orelse
         is_record(T, udist_dop_send_sender) orelse
-        is_record(T, udist_dop_send_sender_tt))
+        is_record(T, udist_dop_send_sender_tt) orelse
+        (is_record(T, udist_dop_altact_sig_send) andalso
+            (T)#udist_dop_altact_sig_send.flags band
+                (?ERTS_DOP_ALTACT_SIG_FLG_ALIAS bor ?ERTS_DOP_ALTACT_SIG_FLG_EXIT bor ?ERTS_DOP_ALTACT_SIG_FLG_NAME) =:=
+                0))
 ).
 
 -define(is_udist_dop_spawn_reply_t(T),
@@ -280,6 +297,7 @@
 -define(is_udist_dop_with_payload_t(T),
     (is_record(T, udist_dop_alias_send) orelse
         is_record(T, udist_dop_alias_send_tt) orelse
+        is_record(T, udist_dop_altact_sig_send) orelse
         is_record(T, udist_dop_payload_exit) orelse
         is_record(T, udist_dop_payload_exit2) orelse
         is_record(T, udist_dop_payload_exit2_tt) orelse

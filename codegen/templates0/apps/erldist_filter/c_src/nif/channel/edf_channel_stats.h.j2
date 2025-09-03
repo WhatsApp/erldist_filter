@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#ifndef EDF_CHANNEL_STATS_H
+#define EDF_CHANNEL_STATS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "../erldist_filter_nif.h"
+
+/* Macro Definitions */
+
+/* Type Definitions */
+
+typedef struct edf_channel_stats_s edf_channel_stats_t;
+typedef struct edf_channel_stats_dop_s edf_channel_stats_dop_t;
+
+struct edf_channel_stats_dop_s {
+    uint64_t seen;
+    uint64_t emit;
+    uint64_t drop;
+};
+
+struct edf_channel_stats_s {
+    /* clang-format off */ //-
+{% for stat in ctx.channel.stats_list %}
+    {{ stat.c_kind }} {{ stat.key }};
+{% endfor %} /* clang-format on */ //-
+};
+
+/* Function Declarations */
+
+extern void edf_channel_stats_init_empty(edf_channel_stats_t *stats);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "core/portable_endian.h"
+#include "../primitive/portable_endian.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -22,7 +22,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <erl_nif.h>
+#include "erl_nif_trampoline.h"
 
 /* Type Definitions */
 

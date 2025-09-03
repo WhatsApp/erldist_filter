@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#ifndef ERLDIST_FILTER_NIF_ATOMS_H
+#define ERLDIST_FILTER_NIF_ATOMS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <erl_nif.h>
+
+/* Type Definitions */
+
+typedef struct erldist_filter_nif_atom_table_s erldist_filter_nif_atom_table_t;
+
+struct erldist_filter_nif_atom_table_s {
+    /* clang-format off */ //-
+{%- for atom in ctx.nif.atoms_list %}
+    ERL_NIF_TERM ATOM_{{ atom.name }};
+{% endfor %}
+    /* clang-format on */ //-
+};
+
+/* Global Variables */
+
+extern erldist_filter_nif_atom_table_t *erldist_filter_nif_atom_table;
+
+/* Macros */
+
+#define ATOM(Id) erldist_filter_nif_atom_table->ATOM_##Id
+
+/* Function Declarations */
+
+extern void erldist_filter_nif_make_atoms(ErlNifEnv *env);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

@@ -89,6 +89,14 @@ control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
             Alias = B,
             TraceToken = C,
             vdist_dop_alias_send_tt:new(FromPid, Alias, TraceToken);
+        ?DOP_ALTACT_SIG_SEND when
+            ?is_vterm_fixed_integer_t(A) andalso ?is_vterm_pid_t(B) andalso
+                (?is_vterm_pid_t(C) orelse ?is_vterm_atom_t(C) orelse ?is_vterm_reference_t(C))
+        ->
+            Flags = A,
+            SenderPid = B,
+            To = C,
+            vdist_dop_altact_sig_send:new(Flags, SenderPid, To);
         ?DOP_DEMONITOR_P when
             ?is_vterm_pid_t(A) andalso (?is_vterm_pid_t(B) orelse ?is_vterm_atom_t(B)) andalso ?is_vterm_reference_t(C)
         ->
@@ -158,6 +166,15 @@ control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
     end;
 control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
     case IntegerDOP of
+        ?DOP_ALTACT_SIG_SEND when
+            ?is_vterm_fixed_integer_t(A) andalso ?is_vterm_pid_t(B) andalso
+                (?is_vterm_pid_t(C) orelse ?is_vterm_atom_t(C) orelse ?is_vterm_reference_t(C)) andalso ?is_vterm_t(D)
+        ->
+            Flags = A,
+            SenderPid = B,
+            To = C,
+            Token = D,
+            vdist_dop_altact_sig_send:new(Flags, SenderPid, To, Token);
         ?DOP_EXIT_TT when
             ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) andalso ?is_vterm_t(D)
         ->

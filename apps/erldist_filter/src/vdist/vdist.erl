@@ -50,6 +50,7 @@
 -type dop_with_payload_t() ::
     vdist_dop_alias_send:t()
     | vdist_dop_alias_send_tt:t()
+    | vdist_dop_altact_sig_send:t()
     | vdist_dop_payload_exit:t()
     | vdist_dop_payload_exit_tt:t()
     | vdist_dop_payload_exit2:t()

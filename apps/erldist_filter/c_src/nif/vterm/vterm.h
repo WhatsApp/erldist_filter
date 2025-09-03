@@ -64,42 +64,6 @@ extern "C" {
 
 /* Type Definitions */
 
-enum __vterm_tag_t {
-    VTERM_TAG_LAZY_TERM = -3,
-    VTERM_TAG_NIF_TERM = -2,
-    VTERM_TAG_ATOM_CACHE_REF_RESOLVED = -1,
-    VTERM_TAG_THE_NON_VALUE = 0,
-    VTERM_TAG_SMALL_INTEGER_EXT = SMALL_INTEGER_EXT,
-    VTERM_TAG_INTEGER_EXT = INTEGER_EXT,
-    VTERM_TAG_FLOAT_EXT = FLOAT_EXT,
-    VTERM_TAG_ATOM_EXT = ATOM_EXT,
-    VTERM_TAG_SMALL_ATOM_EXT = SMALL_ATOM_EXT,
-    VTERM_TAG_REFERENCE_EXT = REFERENCE_EXT,
-    VTERM_TAG_NEW_REFERENCE_EXT = NEW_REFERENCE_EXT,
-    VTERM_TAG_NEWER_REFERENCE_EXT = NEWER_REFERENCE_EXT,
-    VTERM_TAG_PORT_EXT = PORT_EXT,
-    VTERM_TAG_NEW_PORT_EXT = NEW_PORT_EXT,
-    VTERM_TAG_NEW_FLOAT_EXT = NEW_FLOAT_EXT,
-    VTERM_TAG_PID_EXT = PID_EXT,
-    VTERM_TAG_NEW_PID_EXT = NEW_PID_EXT,
-    VTERM_TAG_SMALL_TUPLE_EXT = SMALL_TUPLE_EXT,
-    VTERM_TAG_LARGE_TUPLE_EXT = LARGE_TUPLE_EXT,
-    VTERM_TAG_NIL_EXT = NIL_EXT,
-    VTERM_TAG_STRING_EXT = STRING_EXT,
-    VTERM_TAG_LIST_EXT = LIST_EXT,
-    VTERM_TAG_BINARY_EXT = BINARY_EXT,
-    VTERM_TAG_BIT_BINARY_EXT = BIT_BINARY_EXT,
-    VTERM_TAG_SMALL_BIG_EXT = SMALL_BIG_EXT,
-    VTERM_TAG_LARGE_BIG_EXT = LARGE_BIG_EXT,
-    VTERM_TAG_NEW_FUN_EXT = NEW_FUN_EXT,
-    VTERM_TAG_EXPORT_EXT = EXPORT_EXT,
-    VTERM_TAG_MAP_EXT = MAP_EXT,
-    VTERM_TAG_ATOM_UTF8_EXT = ATOM_UTF8_EXT,
-    VTERM_TAG_SMALL_ATOM_UTF8_EXT = SMALL_ATOM_UTF8_EXT,
-    VTERM_TAG_V4_PORT_EXT = V4_PORT_EXT,
-    VTERM_TAG_ATOM_CACHE_REF = ATOM_CACHE_REF,
-};
-
 typedef struct vterm_data_lazy_term_s vterm_data_lazy_term_t;
 typedef struct vterm_data_nif_term_s vterm_data_nif_term_t;
 typedef struct vterm_data_atom_cache_ref_resolved_s vterm_data_atom_cache_ref_resolved_t;
@@ -442,7 +406,8 @@ static int vterm_is_tuple(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_likely_gen_reply_tag(vterm_env_t *vtenv, vterm_t *vtp);
 static int vterm_is_proper_list(vterm_env_t *vtenv, vterm_t *vtp);
 static int vterm_get_atom(vterm_env_t *vtenv, vterm_t *vtp, ERL_NIF_TERM *atomp);
-static int vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encodingp, const uint8_t **namep, size_t *lenp);
+static int vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErlNifCharEncoding *encodingp, const uint8_t **namep,
+                               size_t *lenp);
 static int vterm_get_fixed_integer(vterm_env_t *vtenv, vterm_t *vtp, int32_t *fixed_integer);
 static int vterm_get_list(vterm_env_t *vtenv, vterm_t *vtp, uint32_t *list_length, vterm_t *elements[], vterm_t *tail);
 static int vterm_get_pid(vterm_env_t *vtenv, vterm_t *vtp, ERL_NIF_TERM *pidp);
@@ -945,7 +910,7 @@ vterm_get_atom(vterm_env_t *vtenv, vterm_t *vtp, ERL_NIF_TERM *atomp)
 }
 
 inline int
-vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encodingp, const uint8_t **namep, size_t *lenp)
+vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErlNifCharEncoding *encodingp, const uint8_t **namep, size_t *lenp)
 {
     if (!vterm_is_atom(vtenv, vtp)) {
         return 0;
@@ -957,7 +922,7 @@ vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encoding
     case VTERM_TAG_ATOM_EXT: {
         vterm_data_atom_ext_t *dp = &(*vtp)->data.atom_ext;
         if (encodingp != NULL) {
-            *encodingp = ERTS_ATOM_ENC_LATIN1;
+            *encodingp = ERL_NIF_LATIN1;
         }
         if (namep != NULL) {
             *namep = dp->name;
@@ -970,7 +935,7 @@ vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encoding
     case VTERM_TAG_SMALL_ATOM_EXT: {
         vterm_data_small_atom_ext_t *dp = &(*vtp)->data.small_atom_ext;
         if (encodingp != NULL) {
-            *encodingp = ERTS_ATOM_ENC_LATIN1;
+            *encodingp = ERL_NIF_LATIN1;
         }
         if (namep != NULL) {
             *namep = dp->name;
@@ -983,7 +948,7 @@ vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encoding
     case VTERM_TAG_ATOM_UTF8_EXT: {
         vterm_data_atom_utf8_ext_t *dp = &(*vtp)->data.atom_utf8_ext;
         if (encodingp != NULL) {
-            *encodingp = ERTS_ATOM_ENC_UTF8;
+            *encodingp = ERL_NIF_UTF8;
         }
         if (namep != NULL) {
             *namep = dp->name;
@@ -996,7 +961,7 @@ vterm_get_atom_text(vterm_env_t *vtenv, vterm_t *vtp, ErtsAtomEncoding *encoding
     case VTERM_TAG_SMALL_ATOM_UTF8_EXT: {
         vterm_data_small_atom_utf8_ext_t *dp = &(*vtp)->data.small_atom_utf8_ext;
         if (encodingp != NULL) {
-            *encodingp = ERTS_ATOM_ENC_UTF8;
+            *encodingp = ERL_NIF_UTF8;
         }
         if (namep != NULL) {
             *namep = dp->name;

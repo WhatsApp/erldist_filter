@@ -14,7 +14,8 @@ defmodule UntrustedTest do
   require EDF
 
   test "enabling untrusted mode captures extra traffic" do
-    {:ok, {upeer = {unode, _}, vpeer = {vnode, _}}} = @peers.setup(__MODULE__)
+    {:ok, p2p} = @peers.setup(__MODULE__)
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
@@ -87,11 +88,12 @@ defmodule UntrustedTest do
     assert([] === @peers.handler_export(upeer))
     assert([] === @peers.handler_export(vpeer))
 
-    :ok = @peers.teardown({upeer, vpeer})
+    :ok = @peers.teardown(p2p)
   end
 
   test "untrusted nodes cannot halt peers" do
-    {:ok, {upeer = {unode, _}, vpeer = {vnode, _}}} = setup_untrusted()
+    {:ok, p2p} = setup_untrusted()
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
 
     assert(match?(:unauthorized, @peers.rpc(upeer, :erpc, :call, [vnode, System, :halt, [1]])))
 
@@ -126,11 +128,12 @@ defmodule UntrustedTest do
 
     assert(match?([], @peers.handler_export(upeer)))
 
-    teardown_untrusted({upeer, vpeer})
+    teardown_untrusted(p2p)
   end
 
   test "untrusted nodes cannot abuse supervisors on peers" do
-    {:ok, {upeer = {unode, _}, vpeer = {vnode, _}}} = setup_untrusted()
+    {:ok, p2p} = setup_untrusted()
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
 
     child_spec = %{
       id: :halter,
@@ -178,11 +181,12 @@ defmodule UntrustedTest do
       )
     )
 
-    teardown_untrusted({upeer, vpeer})
+    teardown_untrusted(p2p)
   end
 
   test "untrusted nodes cannot abuse I/O requests on peers" do
-    {:ok, {upeer = {unode, _}, vpeer = {vnode, _}}} = setup_untrusted()
+    {:ok, p2p} = setup_untrusted()
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
 
     assert(
       match?(
@@ -236,11 +240,12 @@ defmodule UntrustedTest do
       )
     )
 
-    teardown_untrusted({upeer, vpeer})
+    teardown_untrusted(p2p)
   end
 
   def setup_untrusted() do
-    {:ok, {upeer = {unode, _}, vpeer = {vnode, _}}} = @peers.setup(__MODULE__)
+    {:ok, p2p} = @peers.setup(__MODULE__)
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
@@ -258,10 +263,11 @@ defmodule UntrustedTest do
     @peers.enable_untrusted(upeer)
     @peers.enable_untrusted(vpeer)
 
-    {:ok, {upeer, vpeer}}
+    {:ok, p2p}
   end
 
-  def teardown_untrusted({upeer = {unode, _}, vpeer = {vnode, _}}) do
+  def teardown_untrusted(p2p) when is_pid(p2p) do
+    %{upeer: upeer = {unode, _}, vpeer: vpeer = {vnode, _}} = :erldist_filter_test_p2p.peers(p2p)
     @peers.disable_untrusted(upeer)
     @peers.disable_untrusted(vpeer)
 
@@ -273,7 +279,7 @@ defmodule UntrustedTest do
     assert([] === @peers.handler_export(upeer))
     assert([] === @peers.handler_export(vpeer))
 
-    :ok = @peers.teardown({upeer, vpeer})
+    :ok = @peers.teardown(p2p)
   end
 
   def __after_compile__(env, bytecode) do

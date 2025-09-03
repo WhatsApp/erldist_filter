@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
 #include "../channel/edf_external.h"
 #include "../trap/edf_trap.h"
 #include "../vec.h"

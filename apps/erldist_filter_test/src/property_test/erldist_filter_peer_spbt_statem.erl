@@ -30,10 +30,7 @@
 -export([
     gen_payload/0,
     gen_reg_name/0,
-    gen_reg_name/2,
-    gen_upeer_node/0,
-    gen_vpeer_node/0,
-    gen_vpeer_node/1
+    gen_reg_name/1
 ]).
 
 %% Types
@@ -64,55 +61,42 @@ initial_state() ->
 
 -spec command(symbolic_state()) -> proper_types:type().
 command(SymbolicState) ->
-    case ?MODEL:upeer(SymbolicState) of
-        {ok, UPeer} ->
-            command(SymbolicState, UPeer);
+    case ?MODEL:p2p(SymbolicState) of
+        {ok, P2P} ->
+            command(SymbolicState, P2P);
         error ->
-            UPeerNode = gen_upeer_node(),
-            return({call, ?SHIM, start_upeer, [UPeerNode]})
+            return({call, ?SHIM, open_p2p, [<<>>]})
     end.
 
 -spec command(
     symbolic_state(),
-    erldist_filter_peer_spbt_model:upeer()
+    erldist_filter_peer_spbt_model:p2p()
 ) -> proper_types:type().
-command(SymbolicState, UPeer) ->
-    case ?MODEL:vpeer(SymbolicState) of
-        {ok, VPeer} ->
-            command(SymbolicState, UPeer, VPeer);
-        error ->
-            VPeerNode = gen_vpeer_node(UPeer),
-            return({call, ?SHIM, start_vpeer, [VPeerNode]})
-    end.
-
--spec command(
-    symbolic_state(),
-    erldist_filter_peer_spbt_model:upeer(),
-    erldist_filter_peer_spbt_model:vpeer()
-) -> proper_types:type().
-command(_SymbolicState, UPeer, VPeer) ->
-    U = exactly(UPeer),
-    V = exactly(VPeer),
+command(_SymbolicState, P2P) ->
+    X = exactly(P2P),
     oneof([
-        {call, ?SHIM, ping, [U, V]},
-        {call, ?SHIM, alias_send, [U, V, gen_payload()]},
-        {call, ?SHIM, reg_send, [U, V, gen_reg_name(UPeer, VPeer), gen_payload()]},
-        {call, ?SHIM, send_sender, [U, V, gen_payload()]}
+        {call, ?SHIM, ping, [X]},
+        {call, ?SHIM, alias_priority_send, [X, gen_payload()]},
+        {call, ?SHIM, alias_send, [X, gen_payload()]},
+        {call, ?SHIM, exit2_priority_signal, [X, gen_payload()]},
+        {call, ?SHIM, exit2_signal, [X, gen_payload()]},
+        {call, ?SHIM, reg_send, [X, gen_reg_name(P2P), gen_payload()]},
+        {call, ?SHIM, send_sender, [X, gen_payload()]}
     ]).
 
 -spec precondition(SymbolicState, SymbolicCall) -> boolean() when
     SymbolicState :: dynamic_state(),
     SymbolicCall :: proper_statem:symbolic_call().
 precondition(SymbolicState, SymbolicCall) ->
-    case ?MODEL:upeer(SymbolicState) of
-        {ok, UPeer} ->
-            precondition(SymbolicState, SymbolicCall, UPeer);
+    case ?MODEL:p2p(SymbolicState) of
+        {ok, P2P} ->
+            precondition(SymbolicState, SymbolicCall, P2P);
         error ->
-            % UPeer HAS NOT been started, only VALID command is `start_upeer'
+            % P2P HAS NOT been started, only VALID command is `open_p2p`
             case SymbolicCall of
                 {call, _, noop, _} ->
                     true;
-                {call, _, start_upeer, _} ->
+                {call, _, open_p2p, _} ->
                     true;
                 {call, _, _, _} ->
                     false
@@ -122,36 +106,12 @@ precondition(SymbolicState, SymbolicCall) ->
 -spec precondition(
     dynamic_state(),
     proper_statem:symbolic_call(),
-    erldist_filter_peer_spbt_model:upeer()
+    erldist_filter_peer_spbt_model:p2p()
 ) -> boolean().
-precondition(SymbolicState, SymbolicCall, UPeer) ->
-    case ?MODEL:vpeer(SymbolicState) of
-        {ok, VPeer} ->
-            precondition(SymbolicState, SymbolicCall, UPeer, VPeer);
-        error ->
-            % VPeer HAS NOT been started, only VALID command is `start_vpeer'
-            case SymbolicCall of
-                {call, _, noop, _} ->
-                    true;
-                {call, _, start_vpeer, _} ->
-                    true;
-                {call, _, _, _} ->
-                    false
-            end
-    end.
-
--spec precondition(
-    dynamic_state(),
-    proper_statem:symbolic_call(),
-    erldist_filter_peer_spbt_model:upeer(),
-    erldist_filter_peer_spbt_model:vpeer()
-) -> boolean().
-precondition(_SymbolicState, SymbolicCall, _UPeer, _VPeer) ->
-    % UPeer and VPeer HAVE been started, only INVALID commands are `start_upeer' and `start_vpeer`
+precondition(_SymbolicState, SymbolicCall, _P2P) ->
+    % P2P HAS been started, only INVALID commands are `open_p2p`
     case SymbolicCall of
-        {call, _, start_upeer, _} ->
-            false;
-        {call, _, start_vpeer, _} ->
+        {call, _, open_p2p, _} ->
             false;
         {call, _, _, _} ->
             true
@@ -216,49 +176,16 @@ gen_reg_name() ->
             erlang:whereis(RegName) =:= undefined
     ).
 
--spec gen_reg_name(UPeer, VPeer) -> Type when
-    UPeer :: erldist_filter_peer_spbt_model:upeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
-    VPeer :: erldist_filter_peer_spbt_model:vpeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
+-spec gen_reg_name(P2P) -> Type when
+    P2P :: erldist_filter_peer_spbt_model:p2p() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
     Type :: proper_types:type() | proper_statem:symbolic_call().
-gen_reg_name(UPeer = {UPeerNode, UPeerPid}, VPeer = {VPeerNode, VPeerPid}) when
-    is_atom(UPeerNode) andalso is_pid(UPeerPid) andalso is_atom(VPeerNode) andalso is_pid(VPeerPid)
-->
+gen_reg_name(P2P) when is_pid(P2P) ->
+    #{upeer := UPeer, vpeer := VPeer} = erldist_filter_test_p2p:peers(P2P),
     ?SUCHTHAT(
         RegName,
         gen_reg_name(),
         ?SHIM:rpc(UPeer, erlang, whereis, [RegName]) =:= undefined andalso
             ?SHIM:rpc(VPeer, erlang, whereis, [RegName]) =:= undefined
     );
-gen_reg_name(US, VS) when ?is_symbol(US) orelse ?is_symbol(VS) ->
-    {call, ?MODULE, gen_reg_name, [US, VS]}.
-
--spec gen_upeer_node() -> proper_types:type().
-gen_upeer_node() ->
-    ?LET(
-        {Uniq, OsPid},
-        {pos_integer(), pos_integer()},
-        begin
-            erlang:list_to_atom(lists:concat(["upeer-", Uniq, "-", OsPid, "@127.0.0.1"]))
-        end
-    ).
-
--spec gen_vpeer_node() -> proper_types:type().
-gen_vpeer_node() ->
-    ?LET(
-        {Uniq, OsPid},
-        {pos_integer(), pos_integer()},
-        begin
-            erlang:list_to_atom(lists:concat(["vpeer-", Uniq, "-", OsPid, "@127.0.0.1"]))
-        end
-    ).
-
--spec gen_vpeer_node(UPeer) -> VPeerNode when
-    UPeer :: erldist_filter_peer_spbt_model:upeer() | proper_statem:symbolic_var() | proper_statem:symbolic_call(),
-    VPeerNode :: node() | proper_statem:symbolic_call().
-gen_vpeer_node({UPeerNode, _UPeerPid}) when is_atom(UPeerNode) ->
-    [<<"upeer">>, Uniq, OsPid, Host = <<"127.0.0.1">>] = binary:split(
-        erlang:atom_to_binary(UPeerNode, unicode), [<<"-">>, <<"@">>], [global, trim_all]
-    ),
-    erlang:binary_to_atom(<<"vpeer-", Uniq/binary, "-", OsPid/binary, "@", Host/binary>>, unicode);
-gen_vpeer_node(S) when ?is_symbol(S) ->
-    {call, ?MODULE, gen_vpeer_node, [S]}.
+gen_reg_name(P2P) when ?is_symbol(P2P) ->
+    {call, ?MODULE, gen_reg_name, [P2P]}.

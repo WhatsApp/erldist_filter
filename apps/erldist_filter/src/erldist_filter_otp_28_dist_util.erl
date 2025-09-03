@@ -844,11 +844,11 @@ recv_name_new(HSData,
             ?shutdown({name, Data})
     end.
 
--spec is_node_name(NodeName) -> boolean() when NodeName :: iodata().
+-spec is_node_name(NodeName) -> boolean() when NodeName :: string().
 is_node_name(NodeName) ->
     is_name_ok(NodeName, 0).
 
--spec is_name_ok(NodeOrHost, Flags) -> boolean() when NodeOrHost :: iodata(), Flags :: non_neg_integer().
+-spec is_name_ok(NodeOrHost, Flags) -> boolean() when NodeOrHost :: string(), Flags :: non_neg_integer().
 is_name_ok(NodeOrHost, Flags) ->
     case {string:split(NodeOrHost, "@", all), name_type(Flags)} of
         {[Name,Host], static} ->

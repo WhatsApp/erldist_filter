@@ -1,0 +1,169 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "edf_channel_inspect.h"
+
+int
+edf_channel_inspect_atom_cache(ErlNifEnv *env, edf_atom_cache_t *cache, ERL_NIF_TERM *termp)
+{
+    ERL_NIF_TERM ordlist;
+    int i;
+
+    if (cache == NULL) {
+        *termp = ATOM(undefined);
+        return 1;
+    }
+
+    ordlist = enif_make_list(env, 0);
+    for (i = ERTS_ATOM_CACHE_SIZE - 1; i >= 0; i -= 1) {
+        if (cache->entries[i] != THE_NON_VALUE) {
+            ERL_NIF_TERM entry;
+            entry = enif_make_tuple2(env, enif_make_int(env, i), cache->entries[i]);
+            ordlist = enif_make_list_cell(env, entry, ordlist);
+        }
+    }
+
+    *termp = ordlist;
+
+    return 1;
+}
+
+int
+edf_channel_inspect_entry(ErlNifEnv *env, edf_channel_t *channel, ERL_NIF_TERM *termp)
+{
+#define RET_MAP_SIZE (4)
+
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+
+    keys[k++] = ATOM(connection_id);
+    vals[v++] = enif_make_uint(env, (unsigned int)channel->connection_id);
+    keys[k++] = ATOM(creation);
+    vals[v++] = enif_make_uint(env, (unsigned int)channel->creation);
+    keys[k++] = ATOM(dflags);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)channel->dflags);
+    keys[k++] = ATOM(sysname);
+    vals[v++] = channel->sysname;
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, termp)) {
+        *termp = EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+        return 0;
+    }
+
+    return 1;
+
+#undef RET_MAP_SIZE
+}
+
+int
+edf_channel_inspect_rx(ErlNifEnv *env, edf_channel_t *channel, ERL_NIF_TERM *termp)
+{
+#define RET_MAP_SIZE (6)
+
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+
+    keys[k++] = ATOM(atom_cache);
+    if (!edf_channel_inspect_atom_cache(env, channel->rx.cache, &vals[v])) {
+        *termp = vals[v];
+        return 0;
+    }
+    v += 1;
+    keys[k++] = ATOM(ioq_size);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)ioq_size(&channel->rx.ioq));
+    keys[k++] = ATOM(packet_size);
+    vals[v++] = enif_make_uint(env, (unsigned int)channel->rx.packet_size);
+    keys[k++] = ATOM(stats);
+    if (!edf_channel_inspect_stats(env, &channel->rx.stats, &vals[v])) {
+        *termp = vals[v];
+        return 0;
+    }
+    v += 1;
+    keys[k++] = ATOM(vec_capacity);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)vec_capacity(&channel->rx.vec));
+    keys[k++] = ATOM(vec_len);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)vec_len(&channel->rx.vec));
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, termp)) {
+        *termp = EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+        return 0;
+    }
+
+    return 1;
+
+#undef RET_MAP_SIZE
+}
+
+static int edf_channel_inspect_stats_dop(ErlNifEnv *env, edf_channel_stats_dop_t *dop, ERL_NIF_TERM *termp);
+
+int
+edf_channel_inspect_stats(ErlNifEnv *env, edf_channel_stats_t *stats, ERL_NIF_TERM *termp)
+{
+    /* clang-format off */ //-
+#define RET_MAP_SIZE ({{ ctx.channel.stats_list | length }})
+    /* clang-format on */ //-
+
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+
+    /* clang-format off */ //-
+{% for stat in ctx.channel.stats_list %}
+{% if stat.c_kind == "uint64_t" %}
+    keys[k++] = ATOM({{ stat.key }});
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)stats->{{ stat.key }});
+{% else %}
+    keys[k++] = ATOM({{ stat.key }});
+    if (!edf_channel_inspect_stats_dop(env, &stats->{{ stat.key }}, &vals[v++])) {
+        return vals[v - 1];
+    }
+{% endif %}
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, termp)) {
+        *termp = EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+        return 0;
+    }
+
+    return 1;
+
+#undef RET_MAP_SIZE
+}
+
+int
+edf_channel_inspect_stats_dop(ErlNifEnv *env, edf_channel_stats_dop_t *dop, ERL_NIF_TERM *termp)
+{
+#define RET_MAP_SIZE (3)
+
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+
+    keys[k++] = ATOM(seen);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)dop->seen);
+    keys[k++] = ATOM(emit);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)dop->emit);
+    keys[k++] = ATOM(drop);
+    vals[v++] = enif_make_uint64(env, (ErlNifUInt64)dop->drop);
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, termp)) {
+        *termp = EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+        return 0;
+    }
+
+    return 1;
+
+#undef RET_MAP_SIZE
+}

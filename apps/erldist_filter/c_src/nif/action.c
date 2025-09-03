@@ -7,7 +7,7 @@
  */
 
 #include "action.h"
-#include "edf_common.h"
+#include "erldist_filter_nif.h"
 #include "logger/edf_logger.h"
 
 static void action_data_emit_destroy(action_data_emit_t *data);

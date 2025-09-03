@@ -8,7 +8,7 @@
 
 #include "edf_world_impl.h"
 #include "../channel/edf_channel_inspect.h"
-#include "../core/simd.h"
+#include "../core/xnif_simd.h"
 
 static int edf_world_make_stat_group_channel(ErlNifEnv *env, edf_world_stat_group_channel_t *stats, ERL_NIF_TERM *termp);
 static int edf_world_make_stat_group_memory(ErlNifEnv *env, edf_world_stat_group_memory_t *stats, ERL_NIF_TERM *termp);
@@ -35,16 +35,16 @@ erldist_filter_nif_world_stats_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TER
     (void)memset((void *)acc, 0, sizeof(edf_world_stats_t));
 
     slots = 0;
-    (void)core_rwlock_read_lock(&edf_world_table->rwlock);
+    (void)xnif_rwlock_read_lock(&edf_world_table->rwlock);
     root = (void *)&edf_world_table->_link;
     slot = (void *)root->_link.next;
     while (slot != root) {
-        (void)core_simd_add_vec_u64((uint64_t *)acc, (const uint64_t *)&slot->stats,
+        (void)xnif_simd_add_vec_u64((uint64_t *)acc, (const uint64_t *)&slot->stats,
                                     (sizeof(edf_world_stats_t) / sizeof(uint64_t)));
         slots += 1;
         slot = (void *)slot->_link.next;
     }
-    (void)core_rwlock_read_unlock(&edf_world_table->rwlock);
+    (void)xnif_rwlock_read_unlock(&edf_world_table->rwlock);
     keys[k++] = ATOM(channel);
     if (!edf_world_make_stat_group_channel(env, &acc->channel, &vals[v++])) {
         return vals[v - 1];

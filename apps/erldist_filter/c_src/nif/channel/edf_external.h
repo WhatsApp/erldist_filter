@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
 #include "edf_atom_cache.h"
 #include "../udist/udist.h"
 #include "../vec.h"
@@ -31,6 +31,12 @@ typedef struct edf_logger_event_s edf_logger_event_t;
 // Don't include "vterm_env.h", just reference the type here.
 typedef struct vterm_env_s vterm_env_t;
 
+enum edf_external_mode_t {
+    EDF_EXTERNAL_MODE_PASS_THROUGH = 0,
+    EDF_EXTERNAL_MODE_NORMAL,
+    EDF_EXTERNAL_MODE_FRAGMENT,
+};
+
 typedef struct edf_fragment_s edf_fragment_t;
 typedef enum edf_external_mode_t edf_external_mode_t;
 typedef struct edf_external_sequence_s edf_external_sequence_t;
@@ -42,12 +48,6 @@ struct edf_fragment_s {
     uint64_t fragment_id;
     vec_t vec;
     size_t skip;
-};
-
-enum edf_external_mode_t {
-    EDF_EXTERNAL_MODE_PASS_THROUGH = 0,
-    EDF_EXTERNAL_MODE_NORMAL,
-    EDF_EXTERNAL_MODE_FRAGMENT,
 };
 
 struct edf_external_sequence_s {

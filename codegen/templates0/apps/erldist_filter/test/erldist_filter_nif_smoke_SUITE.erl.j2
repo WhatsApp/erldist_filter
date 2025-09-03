@@ -1,0 +1,171 @@
+%%% % @format
+%%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%-----------------------------------------------------------------------------
+-module(erldist_filter_nif_smoke_SUITE).
+-moduledoc """
+A test suite designed to load the `erldist_filter_nif' and perform some smoke tests.
+""".
+-moduledoc #{author => ["Andrew Bennett <potatosaladx@meta.com>"]}.
+-moduledoc #{created => "2022-12-16", modified => "2025-08-13"}.
+-moduledoc #{copyright => "Meta Platforms, Inc. and affiliates."}.
+-compile(warn_missing_spec_all).
+-oncall("whatsapp_clr").
+
+-include_lib("stdlib/include/assert.hrl").
+
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
+
+-behaviour(ct_suite).
+
+%% ct_suite callbacks
+-export([
+    all/0,
+    groups/0,
+    init_per_suite/1,
+    end_per_suite/1,
+    init_per_group/2,
+    end_per_group/2,
+    init_per_testcase/2,
+    end_per_testcase/2
+]).
+
+%% Test Cases
+-export([
+    test_altact_sig_flags/0,
+    test_altact_sig_flags/1,
+    test_distribution_flags/0,
+    test_distribution_flags/1,
+    test_spawn_flags/0,
+    test_spawn_flags/1
+]).
+
+%% Types
+-type ct_testcase_result() ::
+    term()
+    | {skip, Reason :: term()}
+    | {fail, Reason :: term()}
+    | {comment, Comment :: string()}
+    | {save_config, SaveConfig :: ct_suite:ct_config()}
+    | {skip_and_save, Reason :: term(), SaveConfig :: ct_suite:ct_config()}.
+
+%%%=============================================================================
+%%% ct callbacks
+%%%=============================================================================
+
+-spec all() -> [TestDef :: ct_suite:ct_test_def()] | {skip, Reason :: term()}.
+all() ->
+    [
+        {group, smoke}
+    ].
+
+-spec groups() -> [GroupDef :: ct_suite:ct_group_def()].
+groups() ->
+    [
+        {smoke, [parallel], [
+            test_altact_sig_flags,
+            test_distribution_flags,
+            test_spawn_flags
+        ]}
+    ].
+
+-spec init_per_suite(Config :: ct_suite:ct_config()) ->
+    NewConfig ::
+        ct_suite:ct_config()
+        | {skip, Reason :: term()}
+        | {skip_and_save, Reason :: term(), SaveConfig :: ct_suite:ct_config()}.
+init_per_suite(Config) ->
+    Config.
+
+-spec end_per_suite(Config :: ct_suite:ct_config()) ->
+    term()
+    | {save_config, SaveConfig :: ct_suite:ct_config()}.
+end_per_suite(_Config) ->
+    ok.
+
+-spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+    NewConfig ::
+        ct_suite:ct_config()
+        | {skip, Reason :: term()}.
+init_per_group(_Group, Config) ->
+    Config.
+
+-spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+    term()
+    | {return_group_result, Status :: ct_suite:ct_status()}.
+end_per_group(_Group, _Config) ->
+    ok.
+
+-spec init_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+    NewConfig ::
+        ct_suite:ct_config()
+        | {fail, Reason :: term()}
+        | {skip, Reason :: term()}.
+init_per_testcase(_TestCase, Config) ->
+    Config.
+
+-spec end_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+    term()
+    | {fail, Reason :: term()}
+    | {save_config, SaveConfig :: ct_suite:ct_config()}.
+end_per_testcase(_TestCase, _Config) ->
+    ok.
+
+%%%=============================================================================
+%%% Test Cases
+%%%=============================================================================
+
+-spec test_altact_sig_flags() -> [ct_suite:ct_info()].
+test_altact_sig_flags() ->
+    [
+        {doc, "Loads the `erldist_filter_nif' and verifies that `altact_sig_flags/0' returns a map."},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec test_altact_sig_flags(Config :: ct_suite:ct_config()) -> ct_testcase_result().
+test_altact_sig_flags(_Config) ->
+    Expected = #{
+        ~J{ set expected_joiner = joiner(",") }.
+        ~J{ for flag in ctx.dist.altact_sig_flags_list }.
+        ~J< expected_joiner() >.~J< ctx.erlang_atom(flag.key) >. => ?~J< flag.key >.
+        ~J{ endfor }.
+    },
+    ?assertEqual(Expected, erldist_filter_nif:altact_sig_flags()).
+
+-spec test_distribution_flags() -> [ct_suite:ct_info()].
+test_distribution_flags() ->
+    [
+        {doc, "Loads the `erldist_filter_nif' and verifies that `distribution_flags/0' returns a map."},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec test_distribution_flags(Config :: ct_suite:ct_config()) -> ct_testcase_result().
+test_distribution_flags(_Config) ->
+    Expected = #{
+        ~J{ set expected_joiner = joiner(",") }.
+        ~J{ for flag in ctx.dist.flags_list }.
+        ~J< expected_joiner() >.~J< ctx.erlang_atom(flag.key) >. => ?~J< flag.key >.
+        ~J{ endfor }.
+    },
+    ?assertEqual(Expected, erldist_filter_nif:distribution_flags()).
+
+-spec test_spawn_flags() -> [ct_suite:ct_info()].
+test_spawn_flags() ->
+    [
+        {doc, "Loads the `erldist_filter_nif' and verifies that `spawn_flags/0' returns a map."},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec test_spawn_flags(Config :: ct_suite:ct_config()) -> ct_testcase_result().
+test_spawn_flags(_Config) ->
+    Expected = #{
+        ~J{ set expected_joiner = joiner(",") }.
+        ~J{ for flag in ctx.dist.spawn_flags_list }.
+        ~J< expected_joiner() >.~J< ctx.erlang_atom(flag.key) >. => ?~J< flag.key >.
+        ~J{ endfor }.
+    },
+    ?assertEqual(Expected, erldist_filter_nif:spawn_flags()).

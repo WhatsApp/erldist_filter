@@ -67,13 +67,13 @@ int
 ipc_queue_create(ipc_queue_t *queue, size_t capacity, char *mutex_name, ipc_queue_message_dtor_t message_dtor)
 {
     (void)linklist_init_anchor(&queue->_link);
-    (void)core_mutex_create(&queue->mutex, mutex_name);
+    (void)xnif_mutex_create(&queue->mutex, mutex_name);
     queue->message_dtor = message_dtor;
     queue->async.flag = (atomic_flag)ATOMIC_FLAG_INIT;
     queue->async.readfd = -1;
     queue->async.writefd = -1;
     if (ipc__async_create(&queue->async.readfd, &queue->async.writefd) != 0) {
-        (void)core_mutex_destroy(&queue->mutex);
+        (void)xnif_mutex_destroy(&queue->mutex);
         (void)linklist_unlink(&queue->_link);
         return 0;
     }
@@ -96,7 +96,7 @@ ipc_queue_destroy(ipc_queue_t *queue)
         (void)ipc__close(queue->async.writefd);
         queue->async.writefd = -1;
     }
-    (void)core_mutex_destroy(&queue->mutex);
+    (void)xnif_mutex_destroy(&queue->mutex);
     (void)linklist_unlink(&queue->_link);
     return;
 }
@@ -106,7 +106,7 @@ ipc_queue_clone_reader(ipc_queue_t *queue, int *readerp)
 {
     int err;
     int newfd;
-    (void)core_mutex_lock(&queue->mutex);
+    (void)xnif_mutex_lock(&queue->mutex);
     newfd = dup(queue->async.readfd);
     if ((err = ipc__cloexec(newfd, 1)) != 0) {
         goto fail;
@@ -114,13 +114,13 @@ ipc_queue_clone_reader(ipc_queue_t *queue, int *readerp)
     if ((err = ipc__nonblock(newfd, 1)) != 0) {
         goto fail;
     }
-    (void)core_mutex_unlock(&queue->mutex);
+    (void)xnif_mutex_unlock(&queue->mutex);
     *readerp = newfd;
     return 1;
 
 fail:
     (void)ipc__close(newfd);
-    (void)core_mutex_unlock(&queue->mutex);
+    (void)xnif_mutex_unlock(&queue->mutex);
     return 0;
 }
 
@@ -151,14 +151,14 @@ ipc_queue_recv(ipc_queue_t *queue, ipc_batch_t *batch)
     }
 
     (void)atomic_flag_clear_explicit(&queue->async.flag, memory_order_relaxed);
-    (void)core_mutex_lock(&queue->mutex);
+    (void)xnif_mutex_lock(&queue->mutex);
     (void)linklist_insert_list(&batch->_link, &queue->_link);
     batch->message_dtor = queue->message_dtor;
     batch->size = queue->size;
     batch->drop = queue->drop;
     queue->size = 0;
     queue->drop = 0;
-    (void)core_mutex_unlock(&queue->mutex);
+    (void)xnif_mutex_unlock(&queue->mutex);
     return 1;
 }
 
@@ -169,7 +169,7 @@ ipc_queue_send_multi(ipc_queue_t *queue, int messagec, ipc_message_t *messagev[]
     linklist_t drop = {.next = NULL, .prev = NULL};
     int has_drop = 0;
     // assert(!linklist_is_linked(&message->_link));
-    (void)core_mutex_lock(&queue->mutex);
+    (void)xnif_mutex_lock(&queue->mutex);
     for (i = 0; i < messagec; i++) {
         (void)linklist_insert(&queue->_link, &messagev[i]->_link);
         queue->size += 1;
@@ -189,7 +189,7 @@ ipc_queue_send_multi(ipc_queue_t *queue, int messagec, ipc_message_t *messagev[]
             queue->drop += 1;
         }
     }
-    (void)core_mutex_unlock(&queue->mutex);
+    (void)xnif_mutex_unlock(&queue->mutex);
     if (atomic_flag_test_and_set_explicit(&queue->async.flag, memory_order_relaxed) == false) {
         (void)ipc__async_send(queue->async.readfd, queue->async.writefd);
     }
@@ -212,10 +212,10 @@ int
 ipc_queue_set_capacity(ipc_queue_t *queue, size_t new_capacity, size_t *old_capacity)
 {
     size_t capacity;
-    (void)core_mutex_lock(&queue->mutex);
+    (void)xnif_mutex_lock(&queue->mutex);
     capacity = queue->capacity;
     queue->capacity = new_capacity;
-    (void)core_mutex_unlock(&queue->mutex);
+    (void)xnif_mutex_unlock(&queue->mutex);
     if (old_capacity != NULL) {
         *old_capacity = capacity;
     }

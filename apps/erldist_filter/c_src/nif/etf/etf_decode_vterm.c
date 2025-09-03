@@ -1070,7 +1070,7 @@ etf_decode_atom_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
     vec_reader_t vr[1];
     uint8_t tag;
     size_t n;
-    ErtsAtomEncoding encoding;
+    ErlNifCharEncoding encoding;
 
 #define RAW_BYTES() (void *)(vec_reader_raw_bytes(vr))
 
@@ -1125,10 +1125,13 @@ etf_decode_atom_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
                 MAX_ATOM_CHARACTERS);
             return 0;
         }
-        encoding = ERTS_ATOM_ENC_LATIN1;
+        encoding = ERL_NIF_LATIN1;
         name = RAW_BYTES();
         SKIP(n);
-        *atomp = erts_atom_put(name, (signed int)len, encoding, 0);
+        if (!edf_atom_text_put(name, (size_t)len, encoding, atomp)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to edf_atom_text_put() failed: THE_NON_VALUE returned\n");
+            return 0;
+        }
         break;
     }
     case SMALL_ATOM_EXT: {
@@ -1142,10 +1145,13 @@ etf_decode_atom_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
                 n, MAX_ATOM_CHARACTERS);
             return 0;
         }
-        encoding = ERTS_ATOM_ENC_LATIN1;
+        encoding = ERL_NIF_LATIN1;
         name = RAW_BYTES();
         SKIP(n);
-        *atomp = erts_atom_put(name, (signed int)len, encoding, 0);
+        if (!edf_atom_text_put(name, (size_t)len, encoding, atomp)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to edf_atom_text_put() failed: THE_NON_VALUE returned\n");
+            return 0;
+        }
         break;
     }
     case ATOM_UTF8_EXT: {
@@ -1159,10 +1165,13 @@ etf_decode_atom_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
                 MAX_ATOM_SZ_LIMIT);
             return 0;
         }
-        encoding = ERTS_ATOM_ENC_UTF8;
+        encoding = ERL_NIF_UTF8;
         name = RAW_BYTES();
         SKIP(n);
-        *atomp = erts_atom_put(name, (signed int)len, encoding, 0);
+        if (!edf_atom_text_put(name, (size_t)len, encoding, atomp)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to edf_atom_text_put() failed: THE_NON_VALUE returned\n");
+            return 0;
+        }
         break;
     }
     case SMALL_ATOM_UTF8_EXT: {
@@ -1177,10 +1186,13 @@ etf_decode_atom_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
                 MAX_ATOM_SZ_LIMIT);
             return 0;
         }
-        encoding = ERTS_ATOM_ENC_UTF8;
+        encoding = ERL_NIF_UTF8;
         name = RAW_BYTES();
         SKIP(n);
-        *atomp = erts_atom_put(name, (signed int)len, encoding, 0);
+        if (!edf_atom_text_put(name, (size_t)len, encoding, atomp)) {
+            *err_termp = EXCP_ERROR(caller_env, "Call to edf_atom_text_put() failed: THE_NON_VALUE returned\n");
+            return 0;
+        }
         break;
     }
     case ATOM_CACHE_REF: {

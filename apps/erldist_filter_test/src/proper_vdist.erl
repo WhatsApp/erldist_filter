@@ -31,13 +31,17 @@
     vterm_reference/0
 ]).
 
+%% Public API
 -export([
+    process_name/0,
+    vdist_altact_sig_flags/0,
     vdist_any_header/0,
     vdist_distribution_flags/0,
     vdist_any_dop_with_payload/0,
     vdist_any_dop_without_payload/0,
     vdist_dop_alias_send/0,
     vdist_dop_alias_send_tt/0,
+    vdist_dop_altact_sig_send/0,
     vdist_dop_demonitor_p/0,
     vdist_dop_exit/0,
     vdist_dop_exit_tt/0,
@@ -74,6 +78,34 @@
     vdist_pass_through_header/0,
     vdist_payload/2
 ]).
+
+%%%=============================================================================
+%%% Public API functions
+%%%=============================================================================
+
+-spec process_name() -> proper_types:type().
+process_name() ->
+    ?SUCHTHAT(
+        Name,
+        vterm_atom(),
+        begin
+            not lists:member(Name, [net_kernel, rex]) andalso not erldist_filter_nif:otp_name_is_blocked(Name)
+        end
+    ).
+
+-spec vdist_altact_sig_flags() -> proper_types:type().
+vdist_altact_sig_flags() ->
+    ?LET(
+        {Prio, Token, Alias, Name, Exit},
+        {
+            oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_PRIO]),
+            oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_TOKEN]),
+            oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS]),
+            oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_NAME]),
+            oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_EXIT])
+        },
+        (Prio bor Token bor Alias bor Name bor Exit)
+    ).
 
 -spec vdist_any_header() -> proper_types:type().
 vdist_any_header() ->
@@ -154,11 +186,43 @@ vdist_dop_alias_send_tt() ->
         end
     ).
 
+-spec vdist_dop_altact_sig_send() -> proper_types:type().
+vdist_dop_altact_sig_send() ->
+    ?LET(
+        {Flags, SenderPid, ToPid, ToName, ToAlias, Token},
+        {vdist_altact_sig_flags(), vterm_pid(), vterm_pid(), process_name(), vterm_reference(), vterm()},
+        begin
+            HasExit = (Flags band ?ERTS_DOP_ALTACT_SIG_FLG_EXIT) =:= ?ERTS_DOP_ALTACT_SIG_FLG_EXIT,
+            HasAlias = (Flags band ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS) =:= ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS,
+            HasName = (Flags band ?ERTS_DOP_ALTACT_SIG_FLG_NAME) =:= ?ERTS_DOP_ALTACT_SIG_FLG_NAME,
+            HasToken = (Flags band ?ERTS_DOP_ALTACT_SIG_FLG_TOKEN) =:= ?ERTS_DOP_ALTACT_SIG_FLG_TOKEN,
+            To =
+                case Flags of
+                    _ when HasExit =:= true andalso HasAlias =:= true ->
+                        ToAlias;
+                    _ when HasExit =:= true ->
+                        ToPid;
+                    _ when HasAlias =:= true ->
+                        ToAlias;
+                    _ when HasName =:= true ->
+                        ToName;
+                    _ ->
+                        ToPid
+                end,
+            case Flags of
+                _ when HasToken =:= true ->
+                    vdist_dop_altact_sig_send:new(Flags, SenderPid, To, Token);
+                _ ->
+                    vdist_dop_altact_sig_send:new(Flags, SenderPid, To)
+            end
+        end
+    ).
+
 -spec vdist_dop_demonitor_p() -> proper_types:type().
 vdist_dop_demonitor_p() ->
     ?LET(
         {FromPid, ToProc, Ref},
-        {vterm_pid(), oneof([vterm_pid(), vterm_atom()]), vterm_reference()},
+        {vterm_pid(), oneof([vterm_pid(), process_name()]), vterm_reference()},
         vdist_dop_demonitor_p:new(FromPid, ToProc, Ref)
     ).
 
@@ -214,7 +278,7 @@ vdist_dop_link() ->
 vdist_dop_monitor_p() ->
     ?LET(
         {FromPid, ToProc, Ref},
-        {vterm_pid(), oneof([vterm_pid(), vterm_atom()]), vterm_reference()},
+        {vterm_pid(), oneof([vterm_pid(), process_name()]), vterm_reference()},
         vdist_dop_monitor_p:new(FromPid, ToProc, Ref)
     ).
 
@@ -222,7 +286,7 @@ vdist_dop_monitor_p() ->
 vdist_dop_monitor_p_exit() ->
     ?LET(
         {FromProc, ToPid, Ref, Reason},
-        {oneof([vterm_pid(), vterm_atom()]), vterm_pid(), vterm_reference(), vterm()},
+        {oneof([vterm_pid(), process_name()]), vterm_pid(), vterm_reference(), vterm()},
         vdist_dop_monitor_p_exit:new(FromProc, ToPid, Ref, Reason)
     ).
 
@@ -270,7 +334,7 @@ vdist_dop_payload_exit2_tt() ->
 vdist_dop_payload_monitor_p_exit() ->
     ?LET(
         {FromProc, ToPid, Ref},
-        {oneof([vterm_pid(), vterm_atom()]), vterm_pid(), vterm_reference()},
+        {oneof([vterm_pid(), process_name()]), vterm_pid(), vterm_reference()},
         vdist_dop_payload_monitor_p_exit:new(FromProc, ToPid, Ref)
     ).
 
@@ -278,7 +342,7 @@ vdist_dop_payload_monitor_p_exit() ->
 vdist_dop_reg_send() ->
     ?LET(
         {FromPid, ToName},
-        {vterm_pid(), vterm_atom()},
+        {vterm_pid(), process_name()},
         begin
             Unused = vterm_small_atom_utf8_ext:new(0, <<>>),
             vdist_dop_reg_send:new(FromPid, Unused, ToName)
@@ -289,7 +353,7 @@ vdist_dop_reg_send() ->
 vdist_dop_reg_send_tt() ->
     ?LET(
         {FromPid, ToName, TraceToken},
-        {vterm_pid(), vterm_atom(), vterm()},
+        {vterm_pid(), process_name(), vterm()},
         begin
             Unused = vterm_small_atom_utf8_ext:new(0, <<>>),
             vdist_dop_reg_send_tt:new(FromPid, Unused, ToName, TraceToken)

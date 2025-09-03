@@ -12,7 +12,7 @@
 #include "edf_channel_recv.h"
 
 #include "../config/edf_config.h"
-#include "../core/simd.h"
+#include "../core/xnif_simd.h"
 #include "../erts/dist.h"
 #include "../uterm/uterm.h"
 
@@ -161,18 +161,18 @@ erldist_filter_nif_channel_list_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
 
     list = enif_make_list(env, 0);
     root = (void *)edf_channel_resource_table;
-    (void)core_mutex_lock(&edf_channel_resource_table->mutex);
+    (void)xnif_mutex_lock(&edf_channel_resource_table->mutex);
     node = (void *)(root->_link.prev);
     while (root != node) {
         temp = (void *)(node->_link.prev);
-        (void)core_rwlock_read_lock(&node->rwlock);
+        (void)xnif_rwlock_read_lock(&node->rwlock);
         if (node->inner != NULL) {
             list = enif_make_list_cell(env, enif_make_resource(env, (void *)node), list);
         }
-        (void)core_rwlock_read_unlock(&node->rwlock);
+        (void)xnif_rwlock_read_unlock(&node->rwlock);
         node = temp;
     }
-    (void)core_mutex_unlock(&edf_channel_resource_table->mutex);
+    (void)xnif_mutex_unlock(&edf_channel_resource_table->mutex);
 
     return list;
 }
@@ -198,18 +198,18 @@ erldist_filter_nif_channel_list_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
 
     list = enif_make_list(env, 0);
     root = (void *)edf_channel_resource_table;
-    (void)core_mutex_lock(&edf_channel_resource_table->mutex);
+    (void)xnif_mutex_lock(&edf_channel_resource_table->mutex);
     node = (void *)(root->_link.prev);
     while (root != node) {
         temp = (void *)(node->_link.prev);
-        (void)core_rwlock_read_lock(&node->rwlock);
+        (void)xnif_rwlock_read_lock(&node->rwlock);
         if (node->inner != NULL && node->inner->sysname == sysname) {
             list = enif_make_list_cell(env, enif_make_resource(env, (void *)node), list);
         }
-        (void)core_rwlock_read_unlock(&node->rwlock);
+        (void)xnif_rwlock_read_unlock(&node->rwlock);
         node = temp;
     }
-    (void)core_mutex_unlock(&edf_channel_resource_table->mutex);
+    (void)xnif_mutex_unlock(&edf_channel_resource_table->mutex);
 
     return list;
 }
@@ -338,6 +338,16 @@ channel_recv_2_fast(ErlNifEnv *env, edf_channel_t *channel, ERL_NIF_TERM input_t
         packet_length = input_binary->size;
     }
 
+    // This was a "tick" message where the packet is sized 0.
+    // Consume the packet header and start waiting for the next packet.
+    if (packet_length == 0) {
+        CHANNEL_RX_STATS_COUNT(channel, fastpath, 1);
+        CHANNEL_RX_STATS_COUNT(channel, packet_count, 1);
+        CHANNEL_RX_STATS_COUNT(channel, dist_tick_count, 1);
+        *out_termp = enif_make_list(env, 0);
+        return 1;
+    }
+
     if ((channel->dflags & (DFLAG_DIST_HDR_ATOM_CACHE | DFLAG_FRAGMENTS)) == 0) {
         // If none of these distribution flags are set, then we fallback to "pass-through" mode.
         // We expect a PASS_THROUGH byte to be present.
@@ -426,7 +436,7 @@ try_decode_fast: {
         return 0;
     }
     if (udist_control_is_send_to_name(up) &&
-        (up->control.data.send_to == ATOM(net_kernel) || up->control.data.send_to == ATOM(rex))) {
+        (up->control.data.send.to == ATOM(net_kernel) || up->control.data.send.to == ATOM(rex))) {
         goto try_decode_slow;
     }
     if (up->info.payload && udist_control_is_send(up)) {
@@ -524,13 +534,13 @@ erldist_filter_nif_channel_set_controlling_process_2(ErlNifEnv *env, int argc, c
         return EXCP_BADARG(env, "NewOwnerPid is no longer alive");
     }
 
-    if (edf_mpid_demonitor_process(env, (void *)resource, &channel->owner) != 0) {
+    if (xnif_demonitor_process(env, (void *)resource, &channel->owner) != 0) {
         // OwnerPid is about to exit, consider the channel closed.
         (void)edf_channel_resource_release(&resource, &channel, flags);
         return enif_make_tuple2(env, ATOM(error), ATOM(closed));
     }
 
-    retval = edf_mpid_monitor_process(env, (void *)resource, &new_owner_pid, &channel->owner);
+    retval = xnif_monitor_process(env, (void *)resource, &new_owner_pid, &channel->owner);
     if (retval < 0) {
         (void)edf_channel_resource_release(&resource, &channel, flags);
         return EXCP_ERROR(env, "Call to enif_monitor_process() failed: no `down' callback provided");
@@ -580,9 +590,9 @@ erldist_filter_nif_channel_set_tracing_process_2(ErlNifEnv *env, int argc, const
         return EXCP_BADARG(env, "NewTracePid is no longer alive");
     }
 
-    (void)edf_mpid_demonitor_process(env, (void *)resource, &channel->trace);
+    (void)xnif_demonitor_process(env, (void *)resource, &channel->trace);
 
-    retval = edf_mpid_monitor_process(env, (void *)resource, &new_trace_pid, &channel->owner);
+    retval = xnif_monitor_process(env, (void *)resource, &new_trace_pid, &channel->owner);
     if (retval < 0) {
         (void)edf_channel_resource_release(&resource, &channel, flags);
         return EXCP_ERROR(env, "Call to enif_monitor_process() failed: no `down' callback provided");

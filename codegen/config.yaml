@@ -1,0 +1,745 @@
+# yaml-language-server: $schema=./schema.json
+
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# Copyright (c) WhatsApp LLC
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE.md file in the root directory of this source tree.
+
+---
+channel:
+  stats:
+    - key: packet_count
+    - key: emit_count
+    - key: drop_count
+    - key: dist_header_count
+    - key: dist_frag_header_count
+    - key: dist_frag_cont_count
+    - key: dist_pass_through_count
+    - key: dist_tick_count
+    - key: atom_cache_read_count
+    - key: atom_cache_write_count
+    - key: atom_cache_overwrite_count
+    - key: rewrite_fragment_header_count
+    - key: rollback_atom_cache_count
+    - key: compact_external_count
+    - key: compact_fragment_count
+    - key: control_has_export_ext
+    - key: control_has_new_fun_ext
+    - key: payload_has_export_ext
+    - key: payload_has_new_fun_ext
+    - key: fastpath
+    - key: slowpath
+  stats_dop:
+    - key: dop_link
+    - key: dop_send
+    - key: dop_exit
+    - key: dop_unlink
+    - key: dop_reg_send
+    - key: dop_group_leader
+    - key: dop_exit2
+    - key: dop_send_tt
+    - key: dop_exit_tt
+    - key: dop_reg_send_tt
+    - key: dop_exit2_tt
+    - key: dop_monitor_p
+    - key: dop_demonitor_p
+    - key: dop_monitor_p_exit
+    - key: dop_send_sender
+    - key: dop_send_sender_tt
+    - key: dop_payload_exit
+    - key: dop_payload_exit_tt
+    - key: dop_payload_exit2
+    - key: dop_payload_exit2_tt
+    - key: dop_payload_monitor_p_exit
+    - key: dop_spawn_request
+    - key: dop_spawn_request_tt
+    - key: dop_spawn_reply
+    - key: dop_spawn_reply_tt
+    - key: dop_alias_send
+    - key: dop_alias_send_tt
+    - key: dop_unlink_id
+    - key: dop_unlink_id_ack
+    - key: dop_altact_sig_send
+config:
+  fields:
+    - key: compact_fragments
+      kind: boolean
+    - key: deep_packet_inspection
+      kind: boolean
+    - key: logging
+      kind: boolean
+    - key: otp_name_blocklist
+      kind: boolean
+    - key: redirect_dist_operations
+      kind: boolean
+    - key: untrusted
+      kind: boolean
+dist:
+  flags:
+    - key: DFLAG_PUBLISHED
+      value: 0x01
+    - key: DFLAG_ATOM_CACHE
+      value: 0x02
+    - key: DFLAG_EXTENDED_REFERENCES
+      value: 0x04
+    - key: DFLAG_DIST_MONITOR
+      value: 0x08
+    - key: DFLAG_FUN_TAGS
+      value: 0x10
+    - key: DFLAG_DIST_MONITOR_NAME
+      value: 0x20
+    - key: DFLAG_HIDDEN_ATOM_CACHE
+      value: 0x40
+    - key: DFLAG_NEW_FUN_TAGS
+      value: 0x80
+    - key: DFLAG_EXTENDED_PIDS_PORTS
+      value: 0x100
+    - key: DFLAG_EXPORT_PTR_TAG
+      value: 0x200
+    - key: DFLAG_BIT_BINARIES
+      value: 0x400
+    - key: DFLAG_NEW_FLOATS
+      value: 0x800
+    - key: DFLAG_UNICODE_IO
+      value: 0x1000
+    - key: DFLAG_DIST_HDR_ATOM_CACHE
+      value: 0x2000
+    - key: DFLAG_SMALL_ATOM_TAGS
+      value: 0x4000
+    - key: DFLAG_ETS_COMPRESSED
+      value: 0x8000
+      internal: true
+    - key: DFLAG_UTF8_ATOMS
+      value: 0x10000
+    - key: DFLAG_MAP_TAG
+      value: 0x20000
+    - key: DFLAG_BIG_CREATION
+      value: 0x40000
+    - key: DFLAG_SEND_SENDER
+      value: 0x80000
+    - key: DFLAG_BIG_SEQTRACE_LABELS
+      value: 0x100000
+    - key: DFLAG_PENDING_CONNECT
+      value: 0x200000
+      internal: true
+    - key: DFLAG_EXIT_PAYLOAD
+      value: 0x400000
+    - key: DFLAG_FRAGMENTS
+      value: 0x800000
+    - key: DFLAG_HANDSHAKE_23
+      value: 0x1000000
+    - key: DFLAG_UNLINK_ID
+      value: 0x2000000
+    - key: DFLAG_MANDATORY_25_DIGEST
+      value: 0x4000000
+    - key: DFLAG_RESERVED
+      value: 0xf8000000
+    - key: DFLAG_SPAWN
+      value: 0x100000000
+      comment: |
+        As the old handshake only support 32 flag bits, we reserve the remaining
+        bits in the lower 32 for changes in the handshake protocol or potentially
+        new capabilities that we also want to backport to OTP-22 or older.
+    - key: DFLAG_NAME_ME
+      value: 0x200000000
+    - key: DFLAG_V4_NC
+      value: 0x400000000
+    - key: DFLAG_ALIAS
+      value: 0x800000000
+    - key: DFLAG_LOCAL_EXT
+      value: 0x1000000000
+      internal: true
+    - key: DFLAG_ALTACT_SIG
+      value: 0x2000000000
+  extra_flags:
+    - key: DFLAG_DETERMINISTIC
+      values:
+        - DFLAG_ATOM_CACHE
+      comment: >
+        In term_to_binary/2, we will use DFLAG_ATOM_CACHE to mean
+        DFLAG_DETERMINISTIC.
+    - key: DFLAG_DIST_MANDATORY_25
+      values:
+        - DFLAG_EXTENDED_REFERENCES
+        - DFLAG_FUN_TAGS
+        - DFLAG_EXTENDED_PIDS_PORTS
+        - DFLAG_UTF8_ATOMS
+        - DFLAG_NEW_FUN_TAGS
+        - DFLAG_BIG_CREATION
+        - DFLAG_NEW_FLOATS
+        - DFLAG_MAP_TAG
+        - DFLAG_EXPORT_PTR_TAG
+        - DFLAG_BIT_BINARIES
+        - DFLAG_HANDSHAKE_23
+      comment: >
+        Mandatory flags for distribution in OTP 25.
+    - key: DFLAG_DIST_MANDATORY_26
+      values:
+        - DFLAG_V4_NC
+        - DFLAG_UNLINK_ID
+      comment: >
+        New mandatory flags for distribution in OTP 26.
+    - key: DFLAG_DIST_MANDATORY
+      values:
+        - DFLAG_DIST_MANDATORY_25
+        - DFLAG_DIST_MANDATORY_26
+      comment: >
+        Mandatory flags for distribution.
+    - key: DFLAG_DIST_HOPEFULLY
+      values:
+        - DFLAG_DIST_MONITOR
+        - DFLAG_DIST_MONITOR_NAME
+        - DFLAG_SPAWN
+        - DFLAG_ALTACT_SIG
+        - DFLAG_ALIAS
+      comment: >
+        Additional optimistic flags when encoding toward pending connection.
+        If remote node (erl_interface) does not support these then we may need
+        to transcode messages enqueued before connection setup was finished.
+    - key: DFLAG_DIST_DEFAULT
+      values:
+        - DFLAG_DIST_MANDATORY
+        - DFLAG_DIST_HOPEFULLY
+        - DFLAG_UNICODE_IO
+        - DFLAG_DIST_HDR_ATOM_CACHE
+        - DFLAG_SMALL_ATOM_TAGS
+        - DFLAG_SEND_SENDER
+        - DFLAG_BIG_SEQTRACE_LABELS
+        - DFLAG_EXIT_PAYLOAD
+        - DFLAG_FRAGMENTS
+        - DFLAG_SPAWN
+        - DFLAG_ALIAS
+        - DFLAG_MANDATORY_25_DIGEST
+      comment: >
+        Our preferred set of flags. Used for connection setup handshake.
+    - key: DFLAG_DIST_ADDABLE
+      values:
+        - DFLAG_DIST_DEFAULT
+      comment: >
+        Flags addable by local distr implementations.
+    - key: DFLAG_DIST_REJECTABLE
+      values:
+        - DFLAG_DIST_HDR_ATOM_CACHE
+        - DFLAG_HIDDEN_ATOM_CACHE
+        - DFLAG_FRAGMENTS
+        - DFLAG_ATOM_CACHE
+      comment: >
+        Flags rejectable by local distr implementation.
+    - key: DFLAG_DIST_STRICT_ORDER
+      values:
+        - DFLAG_DIST_HDR_ATOM_CACHE
+      comment: >
+        Flags for all features needing strict order delivery.
+    - key: TERM_TO_BINARY_DFLAGS
+      values:
+        - DFLAG_NEW_FLOATS
+        - DFLAG_UTF8_ATOMS
+      comment: >
+        All flags that should be enabled when term_to_binary/1 is used.
+  operations:
+    - key: DOP_UNKNOWN
+      value: 0
+      comment: >
+        This is the default value, and should never be used.
+    - key: DOP_LINK
+      value: 1
+    - key: DOP_SEND
+      value: 2
+    - key: DOP_EXIT
+      value: 3
+    - key: DOP_UNLINK
+      value: 4
+    - key: DOP_REG_SEND
+      value: 6
+      comment: >
+        Ancient DOP_NODE_LINK (5) was here, can be reused
+    - key: DOP_GROUP_LEADER
+      value: 7
+    - key: DOP_EXIT2
+      value: 8
+    - key: DOP_SEND_TT
+      value: 12
+    - key: DOP_EXIT_TT
+      value: 13
+    - key: DOP_REG_SEND_TT
+      value: 16
+    - key: DOP_EXIT2_TT
+      value: 18
+    - key: DOP_MONITOR_P
+      value: 19
+    - key: DOP_DEMONITOR_P
+      value: 20
+    - key: DOP_MONITOR_P_EXIT
+      value: 21
+    - key: DOP_SEND_SENDER
+      value: 22
+    - key: DOP_SEND_SENDER_TT
+      value: 23
+    - key: DOP_PAYLOAD_EXIT
+      value: 24
+      comment: >
+        These are used when DFLAG_EXIT_PAYLOAD is detected
+    - key: DOP_PAYLOAD_EXIT_TT
+      value: 25
+    - key: DOP_PAYLOAD_EXIT2
+      value: 26
+    - key: DOP_PAYLOAD_EXIT2_TT
+      value: 27
+    - key: DOP_PAYLOAD_MONITOR_P_EXIT
+      value: 28
+    - key: DOP_SPAWN_REQUEST
+      value: 29
+    - key: DOP_SPAWN_REQUEST_TT
+      value: 30
+    - key: DOP_SPAWN_REPLY
+      value: 31
+    - key: DOP_SPAWN_REPLY_TT
+      value: 32
+    - key: DOP_ALIAS_SEND
+      value: 33
+    - key: DOP_ALIAS_SEND_TT
+      value: 34
+    - key: DOP_UNLINK_ID
+      value: 35
+    - key: DOP_UNLINK_ID_ACK
+      value: 36
+    - key: DOP_ALTACT_SIG_SEND
+      value: 37
+  spawn_flags:
+    - key: ERTS_DIST_SPAWN_FLAG_LINK
+      value: 0x01
+    - key: ERTS_DIST_SPAWN_FLAG_MONITOR
+      value: 0x02
+  altact_sig_flags:
+    - key: ERTS_DOP_ALTACT_SIG_FLG_PRIO
+      value: 0x01
+    - key: ERTS_DOP_ALTACT_SIG_FLG_TOKEN
+      value: 0x02
+    - key: ERTS_DOP_ALTACT_SIG_FLG_ALIAS
+      value: 0x04
+    - key: ERTS_DOP_ALTACT_SIG_FLG_NAME
+      value: 0x08
+    - key: ERTS_DOP_ALTACT_SIG_FLG_EXIT
+      value: 0x10
+dpi:
+  otp_name_blocklist:
+    - alarm_handler
+    - application_controller
+    - appmon_info
+    - asn1_driver_owner
+    - auth
+    - beam_lib__crypto_key_server
+    - boot_server
+    - code_server
+    - compl_pid
+    - cpu_sup
+    - crashdump_viewer
+    - ct_config_server
+    - ct_default_gl
+    - ct_event
+    - ct_hooks_lock
+    - ct_logs
+    - ct_master
+    - ct_master_event
+    - ct_master_logs
+    - ct_util_server
+    - cth_log_redirect
+    - dbg
+    - dbg_iserver
+    - dbg_wx_winman
+    - dets_server
+    - dets_sup
+    - diameter_config
+    - diameter_config_sup
+    - diameter_dist
+    - diameter_etcp_sup
+    - diameter_event_logger
+    - diameter_misc_sup
+    - diameter_peer
+    - diameter_peer_fsm_sup
+    - diameter_reg
+    - diameter_sctp_sup
+    - diameter_service_sup
+    - diameter_stats
+    - diameter_sup
+    - diameter_sync
+    - diameter_tcp_sup
+    - diameter_transport_sup
+    - disk_log_server
+    - disk_log_sup
+    - disksup
+    - dist_ac
+    - drv_complete
+    - dtls_connection_sup
+    - dtls_connection_sup_dist
+    - dtls_listener_sup
+    - dtls_server_session_cache_sup
+    - dtls_server_sup
+    - dtls_sup
+    - eprof
+    - erl_compile_server
+    - erl_epmd
+    - erl_prim_loader
+    - erl_signal_server
+    - error_logger
+    - erts_code_purger
+    - file_server
+    - file_server_2
+    - ftp_sup
+    - global
+    - global_group
+    - global_group_check
+    - global_name_server
+    - group
+    - httpc_handler_sup
+    - httpc_manager
+    - httpc_profile_sup
+    - httpc_sup
+    - httpd_acceptor_sup
+    - httpd_sup
+    - httpd_tester
+    - inet_db
+    - inet_gethost_native
+    - inet_gethost_native_sup
+    - inets_sup
+    - init
+    - init__boot__on_load_handler
+    - kernel_refc
+    - kernel_safe_sup
+    - kernel_sup
+    - lcnt
+    - logger
+    - logger_handler_watcher
+    - logger_proxy
+    - logger_server
+    - logger_simple_h
+    - logger_std_h_default
+    - logger_sup
+    - megaco_misc_sup
+    - megaco_monitor
+    - megaco_sup
+    - megaco_trans_sup
+    - memsup
+    - mnesia_checkpoint_sup
+    - mnesia_controller
+    - mnesia_dumper_load_regulator
+    - mnesia_event
+    - mnesia_ext_sup
+    - mnesia_fallback
+    - mnesia_kernel_sup
+    - mnesia_late_loader
+    - mnesia_locker
+    - mnesia_monitor
+    - mnesia_recover
+    - mnesia_rpc
+    - mnesia_snmp_sup
+    - mnesia_subscr
+    - mnesia_sup
+    - mnesia_tm
+    - net_sup
+    - nteventlog
+    - odbc_sup
+    - os_mon_sup
+    - os_mon_sysinfo
+    - os_sup_server
+    - peer_supervision
+    - rb_server
+    - release_handler
+    - runtime_tools_sup
+    - sasl_safe_sup
+    - sasl_sup
+    - shell
+    - socket_registry
+    - snmp_app_sup
+    - snmp_ex2_manager
+    - snmp_test_manager
+    - snmp_test_mgr
+    - snmpa_agent
+    - snmpa_local_db
+    - snmpa_misc_sup
+    - snmpa_supervisor
+    - snmpa_symbolic_store
+    - snmpa_target_cache
+    - snmpm_config
+    - snmpm_misc_sup
+    - snmpm_server
+    - snmpm_server_sup
+    - snmpm_supervisor
+    - ssh_dbg
+    - ssh_lsocket_sup
+    - ssh_sup
+    - ssl_admin_sup
+    - ssl_connection_sup
+    - ssl_dist_admin_sup
+    - ssl_dist_connection_sup
+    - ssl_dist_sup
+    - ssl_listen_tracker_sup
+    - ssl_listen_tracker_sup_dist
+    - ssl_manager
+    - ssl_manager_dist
+    - ssl_pem_cache
+    - ssl_pem_cache_dist
+    - ssl_server_session_cache_sup
+    - ssl_sup
+    - ssl_trace
+    - ssl_unknown_listener
+    - ssl_upgrade_server_session_cache_sup
+    - ssl_upgrade_server_session_cache_sup_dist
+    - standard_error
+    - standard_error_sup
+    - standard_error_writer
+    - system_information
+    - test_server_ctrl
+    - test_server_io
+    - test_server_sup
+    - tftp_sup
+    - timer_server
+    - tls_client_ticket_store
+    - tls_connection_sup
+    - tls_dist_connection_sup
+    - tls_dist_server_sup
+    - tls_dist_sup
+    - tls_server_session_ticket_sup
+    - tls_server_session_ticket_sup_dist
+    - tls_server_sup
+    - tls_sup
+    - tprof
+    - user
+    - user_drv
+    - user_drv_reader
+    - user_drv_writer
+    - wxe_master
+test:
+  config:
+    dpi:
+      - key: dpi_exit_test
+        packets:
+          - call: dop_exit_noop(0, 0, 0)
+            drop: true
+          - call: dop_exit_noop(1, 0, 0)
+          - call: dop_exit_tt_noop(2, 0, 0, Token)
+          - call: dop_payload_exit_noop(3, 0, 0)
+            payload: NestedPayload
+          - call: dop_payload_exit_tt_noop(4, 0, 0, Token)
+            payload: NestedPayload
+      - key: dpi_exit2_test
+        packets:
+          - call: dop_exit2_noop(0, 0, 0)
+            drop: true
+          - call: dop_exit2_noop(1, 0, 0)
+          - call: dop_exit2_tt_noop(2, 0, 0, Token)
+          - call: dop_payload_exit2_noop(3, 0, 0)
+            payload: NestedPayload
+          - call: dop_payload_exit2_tt_noop(4, 0, 0, Token)
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(5, 0, 0, [exit], none)
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(6, 0, 0, [alias, exit], none)
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(7, 0, 0, [token, exit], {some, Token})
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(8, 0, 0, [token, alias, exit], {some, Token})
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(9, 0, 0, [prio, exit], none)
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(10, 0, 0, [prio, alias, exit], none)
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(11, 0, 0, [prio, token, exit], {some, Token})
+            payload: NestedPayload
+          - call: dop_altact_sig_send_noop(12, 0, 0, [prio, token, alias, exit], {some, Token})
+            payload: NestedPayload
+      - key: dpi_group_leader_test
+        setup: >
+          _ = Token,
+          _ = NestedPayload,
+        packets:
+          - call: dop_group_leader_noop(0, 0, 0)
+            drop: true
+          - call: dop_group_leader_noop(1, 0, 0)
+      - key: dpi_link_test
+        setup: >
+          _ = Token,
+          _ = NestedPayload,
+        packets:
+          - call: dop_link_noop(0, 0, 0)
+            drop: true
+          - call: dop_link_noop(1, 0, 0)
+      - key: dpi_monitor_related_test
+        setup: >
+          _ = Token,
+        packets:
+          - call: dop_monitor_p_noop(0, 0, 0)
+            drop: true
+            log: false
+          - call: dop_monitor_p_noop(1, 0, 0)
+            log: false
+          - call: dop_demonitor_p_noop(2, 0, 0)
+            log: false
+          - call: dop_monitor_p_exit_noop(3, 0, 0)
+            log: false
+          - call: dop_payload_monitor_p_exit_noop(4, 0, 0)
+            payload: NestedPayload
+            log: false
+      - key: dpi_send_to_alias_test
+        setup: >
+          PayloadSendSystemCall = {system, [], NestedPayload},
+          PayloadSendGenCall = {'$gen_call', [], NestedPayload},
+        packets:
+          - call: dop_alias_send_noop(0, 0, 0)
+            payload: PayloadSendSystemCall
+          - call: dop_alias_send_noop(1, 0, 0)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_alias_send_tt_noop(2, 0, 0, Token)
+            payload: PayloadSendSystemCall
+          - call: dop_alias_send_tt_noop(3, 0, 0, Token)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_alias_send_noop(4, 0, 0)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(5, 0, 0, [alias], none)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(6, 0, 0, [token, alias], {some, Token})
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(7, 0, 0, [prio, alias], none)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(8, 0, 0, [prio, token, alias], {some, Token})
+            payload: PayloadSendSystemCall
+      - key: dpi_send_to_name_test
+        setup: >
+          PayloadSendSystemCall = {system, [], NestedPayload},
+          PayloadSendGenCall = {'$gen_call', [], NestedPayload},
+          PayloadSendGenCallIsAuth = {'$gen_call', [], {is_auth, []}},
+          PayloadSendFeaturesRequest = {[], features_request},
+          PayloadSendFeaturesReply = {features_reply, [], []},
+          AtomNetKernel = vterm_small_atom_utf8_ext:new(10, <<"net_kernel">>),
+          AtomRex = vterm_small_atom_utf8_ext:new(3, <<"rex">>),
+          AtomTimerServer = vterm_small_atom_utf8_ext:new(12, <<"timer_server">>),
+        packets:
+          - call: dop_reg_send_noop(0, 0, 0, AtomNetKernel)
+            drop: true
+            payload: PayloadSendGenCall
+          - call: dop_reg_send_noop(1, 0, 0, AtomNetKernel)
+            payload: PayloadSendGenCall
+          - call: dop_reg_send_noop(2, 0, 0, AtomNetKernel)
+            payload: PayloadSendGenCallIsAuth
+            log: false
+          - call: dop_reg_send_tt_noop(3, 0, 0, AtomNetKernel, Token)
+            payload: PayloadSendGenCall
+          - call: dop_reg_send_tt_noop(4, 0, 0, AtomNetKernel, Token)
+            payload: PayloadSendSystemCall
+          - call: dop_reg_send_noop(5, 0, 0, AtomRex)
+            payload: PayloadSendFeaturesRequest
+            log: false
+          - call: dop_reg_send_noop(6, 0, 0, AtomRex)
+            payload: PayloadSendFeaturesReply
+            log: false
+          - call: dop_reg_send_tt_noop(7, 0, 0, AtomRex, Token)
+            payload: PayloadSendGenCall
+          - call: dop_reg_send_tt_noop(8, 0, 0, AtomRex, Token)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(9, 0, 0, [name], AtomTimerServer, none)
+            payload: PayloadSendGenCall
+          - call: dop_altact_sig_send_noop(10, 0, 0, [token, name], AtomTimerServer, {some, Token})
+            payload: PayloadSendGenCall
+          - call: dop_altact_sig_send_noop(11, 0, 0, [prio, name], AtomTimerServer, none)
+            payload: PayloadSendGenCall
+          - call: dop_altact_sig_send_noop(12, 0, 0, [prio, token, name], AtomTimerServer, {some, Token})
+            payload: PayloadSendGenCall
+      - key: dpi_send_to_pid_test
+        setup: >
+          PayloadSendSystemCall = {system, [], NestedPayload},
+          PayloadSendExit = {'EXIT', [], []},
+          PayloadSendGenCast = {'$gen_cast', {try_again_restart, []}},
+          PayloadSendGenCall = {'$gen_call', [], NestedPayload},
+          PayloadSendGenCallStartChild = {'$gen_call', [], {start_child, []}},
+          PayloadSendIoRequest = {io_request, [], [], {put_chars, unicode, remote, rce, []}},
+          PayloadSendIoReply = {io_reply, [], []},
+        packets:
+          - call: dop_send_noop(0, 0, 0)
+            drop: true
+            payload: PayloadSendSystemCall
+          - call: dop_send_noop(1, 0, 0)
+            payload: PayloadSendSystemCall
+          - call: dop_send_noop(2, 0, 0)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_send_tt_noop(3, 0, 0, Token)
+            payload: PayloadSendExit
+          - call: dop_send_tt_noop(4, 0, 0, Token)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_send_sender_noop(5, 0, 0)
+            payload: PayloadSendGenCast
+          - call: dop_send_sender_noop(6, 0, 0)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_send_sender_tt_noop(7, 0, 0, Token)
+            payload: PayloadSendGenCallStartChild
+          - call: dop_send_sender_tt_noop(8, 0, 0, Token)
+            payload: PayloadSendGenCall
+            log: false
+          - call: dop_send_sender_noop(9, 0, 0)
+            payload: PayloadSendIoRequest
+          - call: dop_send_sender_tt_noop(10, 0, 0, Token)
+            payload: PayloadSendIoReply
+          - call: dop_altact_sig_send_noop(11, 0, 0, [], none)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(12, 0, 0, [token], {some, Token})
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(13, 0, 0, [prio], none)
+            payload: PayloadSendSystemCall
+          - call: dop_altact_sig_send_noop(14, 0, 0, [prio, token], {some, Token})
+            payload: PayloadSendSystemCall
+      - key: dpi_spawn_reply_test
+        setup: >
+          _ = NestedPayload,
+        packets:
+          - call: dop_spawn_reply_noop(0, 0, 0)
+            log: false
+          - call: dop_spawn_reply_tt_noop(1, 0, 0, Token)
+            log: false
+      - key: dpi_spawn_request_test
+        packets:
+          - call: dop_spawn_request_noop(0, 0, 0)
+            drop: true
+            payload: NestedPayload
+          - call: dop_spawn_request_noop(1, 0, 0)
+            payload: NestedPayload
+          - call: dop_spawn_request_tt_noop(1, 0, 0, Token)
+            payload: NestedPayload
+      - key: dpi_unlink_test
+        setup: >
+          _ = Token,
+          _ = NestedPayload,
+        packets:
+          - call: dop_unlink_noop(0, 0, 0)
+            log: false
+          - call: dop_unlink_id_noop(1, 0, 0)
+            log: false
+          - call: dop_unlink_id_ack_noop(2, 0, 0)
+            log: false
+    headers:
+      - key: fragment
+        label: fragment
+        mode: fragment
+        fragment_size: 0x7F
+      - key: normal
+        label: normal
+        mode: normal
+      - key: pass_through
+        label: pass-through
+        mode: pass_through
+    traffic:
+      - key: exit
+      - key: exit2
+      - key: group_leader
+      - key: link
+      - key: monitor_related
+      - key: send_to_alias
+      - key: send_to_name
+      - key: send_to_pid
+      - key: spawn_reply
+      - key: spawn_request
+      - key: unlink

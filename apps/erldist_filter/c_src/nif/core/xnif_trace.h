@@ -20,7 +20,7 @@ extern "C" {
 #include <stdio.h>
 #include <string.h>
 
-#include <erl_nif.h>
+#include "../erl_nif_trampoline.h"
 
 // #define XNIF_TRACE_SUPPORTS_BACKTRACE 1
 
@@ -103,34 +103,6 @@ xnif_raise_exception_vformat(ErlNifEnv *env, const char *file, int line, ERL_NIF
     return enif_raise_exception(env, error_term);
 }
 
-#ifdef XNIF_TRACE_SUPPORTS_BACKTRACE
-static void xnif_trace_dump_backtrace(void);
-
-inline void
-xnif_trace_dump_backtrace(void)
-{
-#define XNIF_TRACE_CALLER_DEPTH (10)
-    void *frames[XNIF_TRACE_CALLER_DEPTH];
-    size_t size;
-    char **strings;
-    size_t i;
-
-    size = backtrace(frames, XNIF_TRACE_CALLER_DEPTH);
-    strings = backtrace_symbols(frames, size);
-    if (strings == NULL) {
-        return;
-    }
-    (void)enif_fprintf(stderr, "\tObtained %u stack frames...\n", size);
-    for (i = 0; i < size; i++) {
-        (void)enif_fprintf(stderr, "\t%s\n", strings[i]);
-    }
-    (void)fflush(stderr);
-    (void)free(strings);
-    return;
-#undef XNIF_TRACE_CALLER_DEPTH
-}
-#endif
-
 #ifdef XNIF_TRACE
 typedef struct xnif_debug_file_s xnif_debug_file_t;
 extern xnif_debug_file_t *xnif_debug_file;
@@ -148,6 +120,49 @@ xnif_trace_printf(const char *format, ...)
     va_end(arglist);
     return ret;
 }
+#endif
+
+#ifdef XNIF_TRACE_SUPPORTS_BACKTRACE
+static void xnif_trace_dump_backtrace(void);
+
+#ifdef XNIF_TRACE
+#define XNIF_BACKTRACE_F(...)                                                                                                      \
+    do {                                                                                                                           \
+        xnif_trace_printf(__VA_ARGS__);                                                                                            \
+    } while (0)
+#else
+#define XNIF_BACKTRACE_F(...)                                                                                                      \
+    do {                                                                                                                           \
+        enif_fprintf(stderr, __VA_ARGS___);                                                                                        \
+    } while (0)
+#endif
+
+inline void
+xnif_trace_dump_backtrace(void)
+{
+#define XNIF_TRACE_CALLER_DEPTH (10)
+    void *frames[XNIF_TRACE_CALLER_DEPTH];
+    size_t size;
+    char **strings;
+    size_t i;
+
+    size = backtrace(frames, XNIF_TRACE_CALLER_DEPTH);
+    strings = backtrace_symbols(frames, size);
+    if (strings == NULL) {
+        return;
+    }
+    XNIF_BACKTRACE_F("\tObtained %u stack frames...\n", size);
+    for (i = 0; i < size; i++) {
+        XNIF_BACKTRACE_F("\t%s\n", strings[i]);
+    }
+    (void)fflush(stderr);
+    (void)free(strings);
+    return;
+#undef XNIF_TRACE_CALLER_DEPTH
+}
+
+#undef XNIF_BACKTRACE_F
+
 #endif
 
 #ifdef __cplusplus

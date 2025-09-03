@@ -21,6 +21,12 @@ extern "C" {
 
 /* Type Definitions */
 
+enum avec_tag_t {
+    AVEC_TAG_FREE = 0,
+    AVEC_TAG_FIXED,
+    AVEC_TAG_OWNED,
+};
+
 typedef struct avec_s avec_t;
 typedef enum avec_tag_t avec_tag_t;
 typedef struct avec_data_fixed_s avec_data_fixed_t;
@@ -36,12 +42,6 @@ struct avec_data_owned_s {
     size_t cap;
     size_t len;
     action_t *actions;
-};
-
-enum avec_tag_t {
-    AVEC_TAG_FREE = 0,
-    AVEC_TAG_FIXED,
-    AVEC_TAG_OWNED,
 };
 
 struct avec_s {

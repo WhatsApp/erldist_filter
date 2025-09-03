@@ -10,7 +10,7 @@
 
 #include "etf_decode.h"
 
-#include "../core/unreachable.h"
+#include "../../primitive/unreachable.h"
 #include "../channel/edf_channel.h"
 
 static const uint8_t c_tuple4_reg_send_header[] = {
@@ -332,7 +332,7 @@ etf_redirect_dop_resolve_atom(ErlNifEnv *caller_env, edf_external_t *ext, ERL_NI
             return 0;
         }
         return 1;
-    } else if (edf_atom_text_get_name(atom, ERTS_ATOM_ENC_UTF8, &c_name, &len)) {
+    } else if (edf_atom_text_get_name(atom, ERL_NIF_UTF8, &c_name, &len)) {
         if (len > 255) {
             if (!vec_writer_write_u8(vw, ATOM_UTF8_EXT)) {
                 CLEANUP_UTF8();
@@ -413,7 +413,7 @@ etf_redirect_dop_resolve_atom_length(ErlNifEnv *caller_env, edf_external_t *ext,
     if (edf_atom_translation_table_get_entry(&ext->attab, atom, &internal_index)) {
         *atom_lengthp = 1 + 1;
         return 1;
-    } else if (edf_atom_text_get_length(atom, ERTS_ATOM_ENC_UTF8, &atom_length)) {
+    } else if (edf_atom_text_get_length(atom, ERL_NIF_UTF8, &atom_length)) {
         if (atom_length > 255) {
             *atom_lengthp = 1 + 2 + atom_length;
         } else {

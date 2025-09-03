@@ -1,0 +1,78 @@
+%%% % @format
+%%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%-----------------------------------------------------------------------------
+-module(erldist_filter_nif_types).
+-moduledoc """
+""".
+-moduledoc #{author => ["Andrew Bennett <potatosaladx@meta.com>"]}.
+-moduledoc #{created => "2025-08-13", modified => "2025-08-13"}.
+-moduledoc #{copyright => "Meta Platforms, Inc. and affiliates."}.
+-compile(warn_missing_spec_all).
+-oncall("whatsapp_clr").
+
+%% Types
+-type altact_sig_flags() :: #{
+    ~J{ set altact_sig_flags_joiner = joiner(",") }.
+    ~J{ for flag in ctx.dist.altact_sig_flags_list }.
+    ~J< altact_sig_flags_joiner() >.~J< ctx.erlang_atom(flag.key) >. := flag()
+    ~J{ endfor }.
+}.
+-type channel_stats() :: #{
+    ~J{ set channel_stat_joiner = joiner(",") }.
+    ~J{ for stat in ctx.channel.stats_list }.
+    ~J< channel_stat_joiner() >.~J< ctx.erlang_atom(stat.key) >. := ~J< stat.erlang_kind >.
+    ~J{ endfor }.
+}.
+-type config_key() ::
+    ~J{ set config_key_joiner = joiner(" | ") }.
+    ~J{ for field in ctx.config.fields_list }.
+    ~J< config_key_joiner() >.~J< ctx.erlang_atom(field.key) >.
+    ~J{ endfor }.
+    .
+-type config_map() :: #{
+    ~J{ set config_map_joiner = joiner(",") }.
+    ~J{ for field in ctx.config.fields_list }.
+    ~J< config_map_joiner() >.~J< ctx.erlang_atom(field.key) >. := boolean()
+    ~J{ endfor }.
+}.
+-type config_map_set() :: #{
+    ~J{ set config_map_joiner = joiner(",") }.
+    ~J{ for field in ctx.config.fields_list }.
+    ~J< config_map_joiner() >.~J< ctx.erlang_atom(field.key) >. => boolean()
+    ~J{ endfor }.
+}.
+-type distribution_flags() :: #{
+    ~J{ set distribution_flags_joiner = joiner(",") }.
+    ~J{ for flag in ctx.dist.flags_list }.
+    ~J< distribution_flags_joiner() >.~J< ctx.erlang_atom(flag.key) >. := flag()
+    ~J{ endfor }.
+}.
+-type dop_stats() :: #{
+    seen := non_neg_integer(),
+    emit := non_neg_integer(),
+    drop := non_neg_integer()
+}.
+-type flag() :: 0..16#ffffffffffffffff.
+-type spawn_flags() :: #{
+    ~J{ set spawn_flags_joiner = joiner(",") }.
+    ~J{ for flag in ctx.dist.spawn_flags_list }.
+    ~J< spawn_flags_joiner() >.~J< ctx.erlang_atom(flag.key) >. := flag()
+    ~J{ endfor }.
+}.
+
+-export_type([
+    altact_sig_flags/0,
+    channel_stats/0,
+    config_key/0,
+    config_map/0,
+    config_map_set/0,
+    distribution_flags/0,
+    dop_stats/0,
+    flag/0,
+    spawn_flags/0
+]).

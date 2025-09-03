@@ -14,7 +14,8 @@ defmodule PeersTest do
   require EDF
 
   test "alias_send dist operations function correctly" do
-    {:ok, {upeer = {unode, _}, vpeer}} = @peers.setup(__MODULE__)
+    {:ok, p2p} = @peers.setup(__MODULE__)
+    %{upeer: upeer = {unode, _}, vpeer: vpeer} = :erldist_filter_test_p2p.peers(p2p)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
@@ -91,7 +92,7 @@ defmodule PeersTest do
       )
     )
 
-    :ok = @peers.teardown({upeer, vpeer})
+    :ok = @peers.teardown(p2p)
   end
 
   def vnode_alias_send_process_init(uparent, ualias) do
@@ -114,7 +115,8 @@ defmodule PeersTest do
   end
 
   test "reg_send dist operations function correctly" do
-    {:ok, {upeer = {unode, _}, vpeer}} = @peers.setup(__MODULE__)
+    {:ok, p2p} = @peers.setup(__MODULE__)
+    %{upeer: upeer = {unode, _}, vpeer: vpeer} = :erldist_filter_test_p2p.peers(p2p)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
@@ -194,7 +196,7 @@ defmodule PeersTest do
       )
     )
 
-    :ok = @peers.teardown({upeer, vpeer})
+    :ok = @peers.teardown(p2p)
   end
 
   def vnode_registered_process_init(uparent, reg_name) do
@@ -217,7 +219,8 @@ defmodule PeersTest do
   end
 
   test "send_sender dist operations function correctly" do
-    {:ok, {upeer = {unode, _}, vpeer}} = @peers.setup(__MODULE__)
+    {:ok, p2p} = @peers.setup(__MODULE__)
+    %{upeer: upeer = {unode, _}, vpeer: vpeer} = :erldist_filter_test_p2p.peers(p2p)
 
     assert([] === @peers.logger_export(upeer))
     assert([] === @peers.logger_export(vpeer))
@@ -294,7 +297,7 @@ defmodule PeersTest do
       )
     )
 
-    :ok = @peers.teardown({upeer, vpeer})
+    :ok = @peers.teardown(p2p)
   end
 
   def vnode_send_sender_process_init(uparent, upid) do

@@ -1,7 +1,9 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2015-2021. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright Ericsson AB 1996-2025. All Rights Reserved.
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * Copyright (c) WhatsApp LLC
  *
@@ -20,6 +22,11 @@
  * %CopyrightEnd%
  */
 
+/* Since there are 255 different External tag values to choose from
+   There is no reason to not be extravagant.
+   Hence, the different tags for large/small tuple e.t.c
+*/
+
 #ifndef EDF_ERTS_EXTERNAL_H
 #define EDF_ERTS_EXTERNAL_H
 
@@ -30,7 +37,7 @@ extern "C" {
 #include <stdint.h>
 
 /// See
-/// [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/OTP-25.2.3/erts/emulator/beam/external.h#L31-L82)
+/// [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/external.h#L33-L74)
 /// in the Erlang/OTP source code.
 
 #define SMALL_INTEGER_EXT 'a'
@@ -62,6 +69,7 @@ extern "C" {
 #define ATOM_UTF8_EXT 'v'
 #define SMALL_ATOM_UTF8_EXT 'w'
 #define V4_PORT_EXT 'x'
+#define LOCAL_EXT 'y'
 
 #define DIST_HEADER 'D'
 #define DIST_FRAG_HEADER 'E'
@@ -71,7 +79,8 @@ extern "C" {
 // #define ATOM_INTERNAL_REF2 'I'
 // #define ATOM_INTERNAL_REF3 'K'
 // #define BINARY_INTERNAL_REF 'J'
-// #define BIT_BINARY_INTERNAL_REF 'L'
+// #define BITSTRING_INTERNAL_REF 'L'
+// #define MAGIC_REF_INTERNAL_REF 'N'
 #define COMPRESSED 'P'
 
 #define VERSION_MAGIC 131

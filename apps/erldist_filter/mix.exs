@@ -9,6 +9,7 @@ defmodule ErldistFilter.MixProject do
 
   def project() do
     {app, desc} = load_app()
+
     [
       app: app,
       version: to_string(Keyword.fetch!(desc, :vsn)),
@@ -42,22 +43,25 @@ defmodule ErldistFilter.MixProject do
 
   defp package() do
     {_app, desc} = load_app()
+
     [
       build_tools: ["mix", "rebar3"],
       description: to_string(Keyword.fetch!(desc, :description)),
-      exclude_patterns: Enum.map(Keyword.fetch!(desc, :exclude_patterns), fn pattern ->
-        Regex.compile!(to_string(pattern))
-      end),
+      exclude_patterns:
+        Enum.map(Keyword.fetch!(desc, :exclude_patterns), fn pattern ->
+          Regex.compile!(to_string(pattern))
+        end),
       files: Enum.map(Keyword.fetch!(desc, :files), &to_string/1),
       licenses: Enum.map(Keyword.fetch!(desc, :licenses), &to_string/1),
-      links: Enum.into(Keyword.fetch!(desc, :links), Map.new(), fn {key, value} ->
-        {to_string(key), to_string(value)}
-      end)
+      links:
+        Enum.into(Keyword.fetch!(desc, :links), Map.new(), fn {key, value} ->
+          {to_string(key), to_string(value)}
+        end)
     ]
   end
 
   defp load_app() do
-    {:ok, [{:application, name, desc}]} = :file.consult('src/erldist_filter.app.src')
+    {:ok, [{:application, name, desc}]} = :file.consult(~c"src/erldist_filter.app.src")
     {name, desc}
   end
 end

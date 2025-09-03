@@ -31,11 +31,10 @@
 
 -spec prop_serial_statem(ct_suite:ct_config()) -> proper:test().
 prop_serial_statem(Config) ->
-    UPeer = test_server:lookup_config(upeer, Config),
-    VPeer = test_server:lookup_config(vpeer, Config),
+    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
     ?FORALL(
         Commands,
-        commands(?STATEM, ?MODEL:initial_state(#{upeer => UPeer, vpeer => VPeer})),
+        commands(?STATEM, ?MODEL:initial_state(#{p2p => P2P})),
         begin
             RunResult = {_History, _State, _Result} = run_commands(?STATEM, Commands),
             erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)
@@ -44,11 +43,10 @@ prop_serial_statem(Config) ->
 
 -spec prop_parallel_statem(ct_suite:ct_config()) -> proper:test().
 prop_parallel_statem(Config) ->
-    UPeer = test_server:lookup_config(upeer, Config),
-    VPeer = test_server:lookup_config(vpeer, Config),
+    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
     ?FORALL(
         Commands,
-        parallel_commands(?STATEM, ?MODEL:initial_state(#{upeer => UPeer, vpeer => VPeer})),
+        parallel_commands(?STATEM, ?MODEL:initial_state(#{p2p => P2P})),
         begin
             RunResult = {_History, _State, _Result} = run_parallel_commands(?STATEM, Commands),
             erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)

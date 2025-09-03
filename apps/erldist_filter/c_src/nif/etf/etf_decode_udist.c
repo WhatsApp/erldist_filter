@@ -188,9 +188,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_PID_TERM(&up->control.data.send_to);
+            SKIP_PID_TERM(&up->control.data.send.to);
         } else {
-            READ_PID_TERM(&up->control.data.send_to);
+            READ_PID_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
@@ -232,7 +232,7 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = -1;
         up->info.payload = true;
         SKIP_TERMS(2);
-        READ_ATOM_TERM(&up->control.data.send_to);
+        READ_ATOM_TERM(&up->control.data.send.to);
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_NAME;
         break;
     case DOP_GROUP_LEADER:
@@ -274,9 +274,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_PID_TERM(&up->control.data.send_to);
+            SKIP_PID_TERM(&up->control.data.send.to);
         } else {
-            READ_PID_TERM(&up->control.data.send_to);
+            READ_PID_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
@@ -305,7 +305,7 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = 4;
         up->info.payload = true;
         SKIP_TERMS(2);
-        READ_ATOM_TERM(&up->control.data.send_to);
+        READ_ATOM_TERM(&up->control.data.send.to);
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_NAME;
         break;
     case DOP_EXIT2_TT:
@@ -374,9 +374,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_PID_TERM(&up->control.data.send_to);
+            SKIP_PID_TERM(&up->control.data.send.to);
         } else {
-            READ_PID_TERM(&up->control.data.send_to);
+            READ_PID_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
@@ -394,9 +394,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_PID_TERM(&up->control.data.send_to);
+            SKIP_PID_TERM(&up->control.data.send.to);
         } else {
-            READ_PID_TERM(&up->control.data.send_to);
+            READ_PID_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
         break;
@@ -557,9 +557,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_REFERENCE_TERM(&up->control.data.send_to);
+            SKIP_REFERENCE_TERM(&up->control.data.send.to);
         } else {
-            READ_REFERENCE_TERM(&up->control.data.send_to);
+            READ_REFERENCE_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_ALIAS;
         break;
@@ -577,9 +577,9 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.payload = true;
         SKIP_TERMS(1);
         if (skip_slow_terms) {
-            SKIP_REFERENCE_TERM(&up->control.data.send_to);
+            SKIP_REFERENCE_TERM(&up->control.data.send.to);
         } else {
-            READ_REFERENCE_TERM(&up->control.data.send_to);
+            READ_REFERENCE_TERM(&up->control.data.send.to);
         }
         up->control.tag = UDIST_CONTROL_TAG_SEND_TO_ALIAS;
         break;
@@ -609,6 +609,58 @@ etf_decode_udist_control(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_exte
         up->info.token_offset = -1;
         up->info.payload = false;
         up->control.tag = UDIST_CONTROL_TAG_UNLINK;
+        break;
+    case DOP_ALTACT_SIG_SEND:
+        if (arity != 4 && arity != 5) {
+            *err_termp = EXCP_ERROR_F(
+                caller_env,
+                "Call to etf_decode_udist_control() failed: expected tuple arity=%u to be either 4 or 5 for DOP_ALTACT_SIG_SEND\n",
+                arity);
+            return 0;
+        }
+        up->info.dop = DOP_ALTACT_SIG_SEND;
+        up->info.arity = arity;
+        if (arity == 5) {
+            up->info.token_offset = 4;
+        } else {
+            up->info.token_offset = -1;
+        }
+        up->info.payload = true;
+        READ_FIXED_INTEGER(&tag, &up->control.data.send.flags);
+        SKIP_TERMS(1);
+        if ((up->control.data.send.flags & ERTS_DOP_ALTACT_SIG_FLG_EXIT) == ERTS_DOP_ALTACT_SIG_FLG_EXIT) {
+            up->control.tag = UDIST_CONTROL_TAG_EXIT2;
+            if ((up->control.data.send.flags & ERTS_DOP_ALTACT_SIG_FLG_ALIAS) == ERTS_DOP_ALTACT_SIG_FLG_ALIAS) {
+                if (skip_slow_terms) {
+                    SKIP_REFERENCE_TERM(&up->control.data.send.to);
+                } else {
+                    READ_REFERENCE_TERM(&up->control.data.send.to);
+                }
+            } else {
+                if (skip_slow_terms) {
+                    SKIP_PID_TERM(&up->control.data.send.to);
+                } else {
+                    READ_PID_TERM(&up->control.data.send.to);
+                }
+            }
+        } else if ((up->control.data.send.flags & ERTS_DOP_ALTACT_SIG_FLG_NAME) == ERTS_DOP_ALTACT_SIG_FLG_NAME) {
+            up->control.tag = UDIST_CONTROL_TAG_SEND_TO_NAME;
+            READ_ATOM_TERM(&up->control.data.send.to);
+        } else if ((up->control.data.send.flags & ERTS_DOP_ALTACT_SIG_FLG_ALIAS) == ERTS_DOP_ALTACT_SIG_FLG_ALIAS) {
+            up->control.tag = UDIST_CONTROL_TAG_SEND_TO_ALIAS;
+            if (skip_slow_terms) {
+                SKIP_REFERENCE_TERM(&up->control.data.send.to);
+            } else {
+                READ_REFERENCE_TERM(&up->control.data.send.to);
+            }
+        } else {
+            up->control.tag = UDIST_CONTROL_TAG_SEND_TO_PID;
+            if (skip_slow_terms) {
+                SKIP_PID_TERM(&up->control.data.send.to);
+            } else {
+                READ_PID_TERM(&up->control.data.send.to);
+            }
+        }
         break;
     default:
         *err_termp = EXCP_ERROR_F(caller_env, "Call to etf_decode_udist_control() failed: dop_code=%u is unrecognized\n", dop_code);

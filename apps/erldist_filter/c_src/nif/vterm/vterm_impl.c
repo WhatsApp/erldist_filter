@@ -12,12 +12,6 @@
 
 #include "../etf/etf_decode.h"
 
-typedef struct edf_btt_trap_s edf_btt_trap_t;
-typedef struct edf_btt_trap_init_s edf_btt_trap_init_t;
-typedef enum edf_btt_trap_state_t edf_btt_trap_state_t;
-
-typedef void (*edf_btt_done_t)(ErlNifEnv *caller_env, edf_btt_trap_t *trap, void *arg, edf_trap_result_t *result);
-
 enum edf_btt_trap_state_t {
     EDF_BTT_TRAP_STATE_INIT = 0,
     EDF_BTT_TRAP_STATE_DECODE_LENGTH,
@@ -25,6 +19,12 @@ enum edf_btt_trap_state_t {
     EDF_BTT_TRAP_STATE_DECODE,
     EDF_BTT_TRAP_STATE_DONE,
 };
+
+typedef struct edf_btt_trap_s edf_btt_trap_t;
+typedef struct edf_btt_trap_init_s edf_btt_trap_init_t;
+typedef enum edf_btt_trap_state_t edf_btt_trap_state_t;
+
+typedef void (*edf_btt_done_t)(ErlNifEnv *caller_env, edf_btt_trap_t *trap, void *arg, edf_trap_result_t *result);
 
 struct edf_btt_trap_s {
     edf_trap_t super;

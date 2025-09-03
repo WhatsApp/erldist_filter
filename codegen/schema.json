@@ -1,0 +1,511 @@
+{
+  "$defs": {
+    "Channel": {
+      "additionalProperties": false,
+      "properties": {
+        "stats": {
+          "items": {
+            "$ref": "#/$defs/ChannelStat"
+          },
+          "title": "Stats",
+          "type": "array"
+        },
+        "stats_dop": {
+          "items": {
+            "$ref": "#/$defs/ChannelStatDop"
+          },
+          "title": "Stats Dop",
+          "type": "array"
+        }
+      },
+      "title": "Channel",
+      "type": "object"
+    },
+    "ChannelStat": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "ChannelStat",
+      "type": "object"
+    },
+    "ChannelStatDop": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "ChannelStatDop",
+      "type": "object"
+    },
+    "Config": {
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/ConfigField"
+          },
+          "title": "Fields",
+          "type": "array"
+        }
+      },
+      "title": "Config",
+      "type": "object"
+    },
+    "ConfigField": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ConfigFieldKind"
+        }
+      },
+      "required": [
+        "key",
+        "kind"
+      ],
+      "title": "ConfigField",
+      "type": "object"
+    },
+    "ConfigFieldKind": {
+      "enum": [
+        "boolean"
+      ],
+      "title": "ConfigFieldKind",
+      "type": "string"
+    },
+    "Dist": {
+      "additionalProperties": false,
+      "properties": {
+        "flags": {
+          "items": {
+            "$ref": "#/$defs/DistFlag"
+          },
+          "title": "Flags",
+          "type": "array"
+        },
+        "extra_flags": {
+          "items": {
+            "$ref": "#/$defs/DistExtraFlag"
+          },
+          "title": "Extra Flags",
+          "type": "array"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/DistOperation"
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "spawn_flags": {
+          "items": {
+            "$ref": "#/$defs/DistSpawnFlag"
+          },
+          "title": "Spawn Flags",
+          "type": "array"
+        },
+        "altact_sig_flags": {
+          "items": {
+            "$ref": "#/$defs/DistAltactSigFlag"
+          },
+          "title": "Altact Sig Flags",
+          "type": "array"
+        }
+      },
+      "title": "Dist",
+      "type": "object"
+    },
+    "DistAltactSigFlag": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "title": "DistAltactSigFlag",
+      "type": "object"
+    },
+    "DistExtraFlag": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Values",
+          "type": "array"
+        },
+        "internal": {
+          "default": false,
+          "title": "Internal",
+          "type": "boolean"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "DistExtraFlag",
+      "type": "object"
+    },
+    "DistFlag": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "internal": {
+          "default": false,
+          "title": "Internal",
+          "type": "boolean"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "title": "DistFlag",
+      "type": "object"
+    },
+    "DistOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "title": "DistOperation",
+      "type": "object"
+    },
+    "DistSpawnFlag": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "comment": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Comment"
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "title": "DistSpawnFlag",
+      "type": "object"
+    },
+    "Dpi": {
+      "additionalProperties": false,
+      "properties": {
+        "otp_name_blocklist": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Otp Name Blocklist",
+          "type": "array"
+        }
+      },
+      "title": "Dpi",
+      "type": "object"
+    },
+    "Test": {
+      "additionalProperties": false,
+      "properties": {
+        "config": {
+          "$ref": "#/$defs/TestConfig"
+        }
+      },
+      "required": [
+        "config"
+      ],
+      "title": "Test",
+      "type": "object"
+    },
+    "TestConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "dpi": {
+          "items": {
+            "$ref": "#/$defs/TestConfigDpi"
+          },
+          "title": "Dpi",
+          "type": "array"
+        },
+        "headers": {
+          "items": {
+            "$ref": "#/$defs/TestConfigHeader"
+          },
+          "title": "Headers",
+          "type": "array"
+        },
+        "traffic": {
+          "items": {
+            "$ref": "#/$defs/TestConfigTraffic"
+          },
+          "title": "Traffic",
+          "type": "array"
+        }
+      },
+      "title": "TestConfig",
+      "type": "object"
+    },
+    "TestConfigDpi": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "setup": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Setup"
+        },
+        "packets": {
+          "items": {
+            "$ref": "#/$defs/TestConfigDpiPacket"
+          },
+          "title": "Packets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "TestConfigDpi",
+      "type": "object"
+    },
+    "TestConfigDpiPacket": {
+      "additionalProperties": false,
+      "properties": {
+        "call": {
+          "title": "Call",
+          "type": "string"
+        },
+        "drop": {
+          "default": false,
+          "title": "Drop",
+          "type": "boolean"
+        },
+        "payload": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Payload"
+        },
+        "log": {
+          "default": true,
+          "title": "Log",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "call"
+      ],
+      "title": "TestConfigDpiPacket",
+      "type": "object"
+    },
+    "TestConfigHeader": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "mode": {
+          "$ref": "#/$defs/TestConfigHeaderMode"
+        },
+        "fragment_size": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fragment Size"
+        }
+      },
+      "required": [
+        "key",
+        "label",
+        "mode"
+      ],
+      "title": "TestConfigHeader",
+      "type": "object"
+    },
+    "TestConfigHeaderMode": {
+      "enum": [
+        "fragment",
+        "normal",
+        "pass_through"
+      ],
+      "title": "TestConfigHeaderMode",
+      "type": "string"
+    },
+    "TestConfigTraffic": {
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        }
+      },
+      "required": [
+        "key"
+      ],
+      "title": "TestConfigTraffic",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "channel": {
+      "$ref": "#/$defs/Channel"
+    },
+    "config": {
+      "$ref": "#/$defs/Config"
+    },
+    "dist": {
+      "$ref": "#/$defs/Dist"
+    },
+    "dpi": {
+      "$ref": "#/$defs/Dpi"
+    },
+    "test": {
+      "$ref": "#/$defs/Test"
+    }
+  },
+  "required": [
+    "channel",
+    "config",
+    "dist",
+    "dpi",
+    "test"
+  ],
+  "title": "Root",
+  "type": "object"
+}

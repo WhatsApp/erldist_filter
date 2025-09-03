@@ -5,56 +5,61 @@
 %%%
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
-%%%
-%%% Created :  22 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
 -module(erldist_filter_peer_spbt_shim).
--author("potatosaladx@meta.com").
--oncall("whatsapp_clr").
+-moduledoc """
+""".
+-moduledoc #{author => ["Andrew Bennett <potatosaladx@meta.com>"]}.
+-moduledoc #{created => "2022-09-22", modified => "2025-08-29"}.
+-moduledoc #{copyright => "Meta Platforms, Inc. and affiliates."}.
 -compile(warn_missing_spec_all).
+-oncall("whatsapp_clr").
 
 %% Shim API
 -export([
     noop/0,
-    start_upeer/1,
-    start_vpeer/1,
-    start_random_suffix_upeer_and_vpeer_from_label/1,
-    ping/2,
-    alias_send/3,
-    reg_send/4,
-    send_sender/3
+    open_p2p/1,
+    ping/1,
+    alias_priority_send/2,
+    alias_send/2,
+    exit2_priority_signal/2,
+    exit2_signal/2,
+    reg_send/3,
+    send_sender/2
 ]).
 %% UPeer API
 -export([
     upeer_ping/1,
+    upeer_alias_priority_send/2,
     upeer_alias_send/2,
+    upeer_exit2_priority_signal/2,
+    upeer_exit2_signal/2,
     upeer_reg_send/3,
     upeer_send_sender/2
 ]).
 %% UNode/VNode Internal API
 -export([
+    vnode_aliased_priority_process_init/2,
     vnode_aliased_process_init/2,
+    vnode_exit2_priority_process_init/1,
+    vnode_exit2_process_init/1,
     vnode_registered_process_init/2,
     vnode_send_sender_process_init/2
 ]).
 %% Internal functions
 -export([
     rpc/4,
-    rpc/5,
-    wait_until_net_kernel_started/1
+    rpc/5
 ]).
 
 %% Types
--type upeer() :: erldist_filter_peer_spbt_model:upeer().
--type vpeer() :: erldist_filter_peer_spbt_model:vpeer().
+-type p2p() :: pid().
 
 -export_type([
-    upeer/0,
-    vpeer/0
+    p2p/0
 ]).
 
 %% Macros
--define(SUP, erldist_filter_peer_spbt_sup).
 -define(RPC_DEFAULT_TIMEOUT, timer:minutes(1)).
 
 %%%=============================================================================
@@ -65,87 +70,44 @@
 noop() ->
     ok.
 
--spec start_upeer(UPeerNode) -> {ok, {UPeerNode, UPeerPid}} when UPeerNode :: node(), UPeerPid :: pid().
-start_upeer(UPeerNode) ->
-    start_peer(UPeerNode, ?MODULE, ?FUNCTION_NAME).
+-spec open_p2p(Label) -> {ok, P2P} when Label :: erldist_filter_test_p2p:label(), P2P :: p2p().
+open_p2p(Label) ->
+    P2P = erldist_filter_test_p2p:open(Label),
+    {ok, P2P}.
 
--spec start_vpeer(VPeerNode) -> {ok, {VPeerNode, VPeerPid}} when VPeerNode :: node(), VPeerPid :: pid().
-start_vpeer(VPeerNode) ->
-    start_peer(VPeerNode, ?MODULE, ?FUNCTION_NAME).
-
--spec start_random_suffix_upeer_and_vpeer_from_label(Label) -> {ok, {UPeer, VPeer}} when
-    Label :: string(),
-    UPeer :: upeer(),
-    VPeer :: vpeer().
-start_random_suffix_upeer_and_vpeer_from_label(Label) when is_list(Label) ->
-    Suffix = io_lib:format("~s-~4..0B", [os:getpid(), rand:uniform(9999)]),
-    UName = list_to_atom(lists:flatten(io_lib:format("upeer-~s-~s@127.0.0.1", [Label, Suffix]))),
-    VName = list_to_atom(lists:flatten(io_lib:format("vpeer-~s-~s@127.0.0.1", [Label, Suffix]))),
-    {ok, UPeer} = start_upeer(UName),
-    {ok, VPeer} = start_vpeer(VName),
-    true = rpc(UPeer, net_kernel, connect_node, [VName]),
-    true = rpc(VPeer, net_kernel, connect_node, [UName]),
-    {ok, {UPeer, VPeer}}.
-
--spec start_peer(PeerNode, Module, FunctionName) -> {ok, Peer} when
-    PeerNode :: node(),
-    Module :: module(),
-    FunctionName :: atom(),
-    Peer :: {PeerNode, PeerPid},
-    PeerPid :: pid().
-start_peer(PeerNode, _Module, _FunctionName) ->
-    [PeerName, PeerHost] = string:lexemes(atom_to_list(PeerNode), "@"),
-    PeerOptions = #{
-        connection => 0,
-        name => PeerName,
-        host => PeerHost,
-        args => flatten_peer_args([
-            {"-setcookie", "connect_cookie"},
-            {"-connect_all", "false"},
-            {"-kernel", "dist_auto_connect", "never"},
-            {"-kernel", "start_distribution", "false"},
-            {"-proto_dist", "erldist_filter_inet_tcp"}
-        ])
-    },
-    ChildSpec = #{
-        id => PeerNode,
-        start => {peer, start_link, [PeerOptions]},
-        restart => permanent,
-        shutdown => 5000,
-        type => worker,
-        modules => [peer]
-    },
-    case ?SUP:start_child(ChildSpec) of
-        {ok, PeerPid, _ActualPeerNode} when is_pid(PeerPid) ->
-            Peer = {PeerNode, PeerPid},
-            _ = rpc(Peer, code, add_pathsa, [code:get_path()]),
-            _ = rpc(Peer, net_kernel, start, [PeerNode, #{name_domain => longnames}]),
-            _ = rpc(Peer, ?MODULE, wait_until_net_kernel_started, [PeerNode]),
-            {ok, Peer}
-    end.
-
--spec flatten_peer_args(Args) -> Args when Args :: [dynamic()].
-flatten_peer_args([T | Rest]) when is_tuple(T) ->
-    tuple_to_list(T) ++ flatten_peer_args(Rest);
-% flatten_peer_args([L | Rest]) when is_list(L) ->
-%     [L | flatten_peer_args(Rest)];
-flatten_peer_args([]) ->
-    [].
-
--spec ping(U, V) -> pong | pang when U :: upeer(), V :: vpeer().
-ping(U, _V = {VPeerNode, _VPeerPid}) ->
+-spec ping(P2P) -> pong | pang when P2P :: p2p().
+ping(P2P) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
     rpc(U, ?MODULE, upeer_ping, [VPeerNode]).
 
--spec alias_send(U, V, Term) -> pong when U :: upeer(), V :: vpeer(), Term :: term().
-alias_send(U, _V = {VPeerNode, _VPeerPid}, Term) ->
+-spec alias_priority_send(P2P, Term) -> pong when P2P :: p2p(), Term :: term().
+alias_priority_send(P2P, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
+    rpc(U, ?MODULE, upeer_alias_priority_send, [VPeerNode, Term]).
+
+-spec alias_send(P2P, Term) -> pong when P2P :: p2p(), Term :: term().
+alias_send(P2P, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
     rpc(U, ?MODULE, upeer_alias_send, [VPeerNode, Term]).
 
--spec reg_send(U, V, RegName, Term) -> pong when U :: upeer(), V :: vpeer(), RegName :: atom(), Term :: term().
-reg_send(U, _V = {VPeerNode, _VPeerPid}, RegName, Term) ->
+-spec exit2_priority_signal(P2P, Term) -> pong when P2P :: p2p(), Term :: term().
+exit2_priority_signal(P2P, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
+    rpc(U, ?MODULE, upeer_exit2_priority_signal, [VPeerNode, Term]).
+
+-spec exit2_signal(P2P, Term) -> pong when P2P :: p2p(), Term :: term().
+exit2_signal(P2P, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
+    rpc(U, ?MODULE, upeer_exit2_signal, [VPeerNode, Term]).
+
+-spec reg_send(P2P, RegName, Term) -> pong when P2P :: p2p(), RegName :: atom(), Term :: term().
+reg_send(P2P, RegName, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
     rpc(U, ?MODULE, upeer_reg_send, [VPeerNode, RegName, Term]).
 
--spec send_sender(U, V, Term) -> pong when U :: upeer(), V :: vpeer(), Term :: term().
-send_sender(U, _V = {VPeerNode, _VPeerPid}, Term) ->
+-spec send_sender(P2P, Term) -> pong when P2P :: p2p(), Term :: term().
+send_sender(P2P, Term) ->
+    #{upeer := U, vpeer := {VPeerNode, _VPeerPid}} = erldist_filter_test_p2p:peers(P2P),
     rpc(U, ?MODULE, upeer_send_sender, [VPeerNode, Term]).
 
 %%%=============================================================================
@@ -155,6 +117,26 @@ send_sender(U, _V = {VPeerNode, _VPeerPid}, Term) ->
 -spec upeer_ping(node()) -> pong | pang.
 upeer_ping(VPeerNode) ->
     net_adm:ping(VPeerNode).
+
+-spec upeer_alias_priority_send(node(), term()) -> pong.
+upeer_alias_priority_send(VNode, Term) ->
+    upeer_gen_spawn(fun() ->
+        UAlias = erlang:alias([priority]),
+        {_ReqId, VAlias} = unode_start_aliased_priority_process(VNode, UAlias),
+        UNode = node(),
+        _ = erlang:send(VAlias, {UAlias, UNode, {ping, Term}}, [priority]),
+        ok =
+            receive
+                {VAlias, VNode, {pong, Term}} -> ok
+            end,
+        VAlias ! {UAlias, UNode, stop},
+        ok =
+            receive
+                {VAlias, VNode, stopped} -> ok
+            end,
+        true = erlang:unalias(UAlias),
+        pong
+    end).
 
 -spec upeer_alias_send(node(), term()) -> pong.
 upeer_alias_send(VNode, Term) ->
@@ -173,6 +155,30 @@ upeer_alias_send(VNode, Term) ->
                 {VAlias, VNode, stopped} -> ok
             end,
         true = erlang:unalias(UAlias),
+        pong
+    end).
+
+-spec upeer_exit2_priority_signal(node(), term()) -> pong.
+upeer_exit2_priority_signal(VNode, Term) ->
+    upeer_gen_spawn(fun() ->
+        {VPid, VMon, VAlias} = unode_start_exit2_priority_process(VNode),
+        true = erlang:exit(VAlias, {ping, Term}, [priority]),
+        ok =
+            receive
+                {'DOWN', VMon, process, VPid, {ping, Term}} -> ok
+            end,
+        pong
+    end).
+
+-spec upeer_exit2_signal(node(), term()) -> pong.
+upeer_exit2_signal(VNode, Term) ->
+    upeer_gen_spawn(fun() ->
+        {VPid, VMon} = unode_start_exit2_process(VNode),
+        true = erlang:exit(VPid, {ping, Term}),
+        ok =
+            receive
+                {'DOWN', VMon, process, VPid, {ping, Term}} -> ok
+            end,
         pong
     end).
 
@@ -219,7 +225,25 @@ upeer_send_sender(VNode, Term) ->
 %%% UNode/VNode Internal API functions
 %%%=============================================================================
 
--spec unode_start_aliased_process(VNode, UAlias) -> {ReqId, VAlias} | no_return() when
+-spec unode_start_aliased_priority_process(VNode, UAlias) -> {ReqId, VAlias} when
+    VNode :: node(),
+    UAlias :: reference(),
+    ReqId :: reference(),
+    VAlias :: reference().
+unode_start_aliased_priority_process(VNode, UAlias) ->
+    UParent = self(),
+    ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_aliased_priority_process_init, [UParent, UAlias], [{reply, yes}]),
+    receive
+        {spawn_reply, ReqId, ok, VPid} ->
+            receive
+                {UParent, VPid, VAlias} ->
+                    {ReqId, VAlias}
+            end;
+        {spawn_reply, ReqId, error, Reason} ->
+            erlang:error(Reason)
+    end.
+
+-spec unode_start_aliased_process(VNode, UAlias) -> {ReqId, VAlias} when
     VNode :: node(),
     UAlias :: reference(),
     ReqId :: reference(),
@@ -235,6 +259,60 @@ unode_start_aliased_process(VNode, UAlias) ->
             end;
         {spawn_reply, ReqId, error, Reason} ->
             erlang:error(Reason)
+    end.
+
+-spec unode_start_exit2_priority_process(VNode) -> {VPid, VMon, VAlias} when
+    VNode :: node(),
+    VPid :: pid(),
+    VMon :: reference(),
+    VAlias :: reference().
+unode_start_exit2_priority_process(VNode) ->
+    UParent = self(),
+    ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_exit2_priority_process_init, [UParent], [monitor, {reply, yes}]),
+    receive
+        {spawn_reply, ReqId, ok, VPid} ->
+            VMon = ReqId,
+            receive
+                {UParent, VPid, VAlias} ->
+                    {VPid, VMon, VAlias}
+            end;
+        {spawn_reply, ReqId, error, Reason} ->
+            erlang:error(Reason)
+    end.
+
+-spec unode_start_exit2_process(VNode) -> {VPid, VMon} when
+    VNode :: node(),
+    VPid :: pid(),
+    VMon :: reference().
+unode_start_exit2_process(VNode) ->
+    UParent = self(),
+    ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_exit2_process_init, [UParent], [monitor, {reply, yes}]),
+    receive
+        {spawn_reply, ReqId, ok, VPid} ->
+            VMon = ReqId,
+            {VPid, VMon};
+        {spawn_reply, ReqId, error, Reason} ->
+            erlang:error(Reason)
+    end.
+
+-spec vnode_aliased_priority_process_init(UParent :: pid(), UAlias :: reference()) -> no_return().
+vnode_aliased_priority_process_init(UParent, UAlias) ->
+    VAlias = erlang:alias([priority]),
+    UParent ! {UParent, self(), VAlias},
+    vnode_aliased_priority_process_loop(VAlias, UAlias).
+
+-spec vnode_aliased_priority_process_loop(VAlias, UAlias) -> no_return() when
+    VAlias :: reference(),
+    UAlias :: reference().
+vnode_aliased_priority_process_loop(VAlias, UAlias) ->
+    receive
+        {UAlias, UNode, {ping, Term}} when UNode =/= node() ->
+            _ = erlang:send(UAlias, {VAlias, node(), {pong, Term}}, [priority]),
+            vnode_aliased_process_loop(VAlias, UAlias);
+        {UAlias, UNode, stop} when UNode =/= node() ->
+            true = erlang:unalias(VAlias),
+            UAlias ! {VAlias, node(), stopped},
+            exit(normal)
     end.
 
 -spec vnode_aliased_process_init(UParent :: pid(), UAlias :: reference()) -> no_return().
@@ -257,7 +335,31 @@ vnode_aliased_process_loop(VAlias, UAlias) ->
             exit(normal)
     end.
 
--spec unode_start_registered_process(VNode, RegName) -> ReqId | no_return() when
+-spec vnode_exit2_priority_process_init(UParent) -> no_return() when UParent :: pid().
+vnode_exit2_priority_process_init(UParent) ->
+    VAlias = erlang:alias([priority]),
+    UParent ! {UParent, self(), VAlias},
+    vnode_exit2_priority_process_loop(UParent).
+
+-spec vnode_exit2_priority_process_loop(UParent) -> no_return() when UParent :: pid().
+vnode_exit2_priority_process_loop(UParent) ->
+    receive
+        _ ->
+            vnode_exit2_priority_process_loop(UParent)
+    end.
+
+-spec vnode_exit2_process_init(UParent) -> no_return() when UParent :: pid().
+vnode_exit2_process_init(UParent) ->
+    vnode_exit2_process_loop(UParent).
+
+-spec vnode_exit2_process_loop(UParent) -> no_return() when UParent :: pid().
+vnode_exit2_process_loop(UParent) ->
+    receive
+        _ ->
+            vnode_exit2_process_loop(UParent)
+    end.
+
+-spec unode_start_registered_process(VNode, RegName) -> ReqId when
     VNode :: node(),
     RegName :: atom(),
     ReqId :: reference().
@@ -292,7 +394,7 @@ vnode_registered_process_loop(RegName) ->
             exit(normal)
     end.
 
--spec unode_start_send_sender_process(VNode, UPid) -> {ReqId, VPid} | no_return() when
+-spec unode_start_send_sender_process(VNode, UPid) -> {ReqId, VPid} when
     VNode :: node(),
     UPid :: pid(),
     ReqId :: reference(),
@@ -333,9 +435,9 @@ vnode_send_sender_process_loop(VPid, UPid) ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
--doc hidden.
+-doc false.
 -spec rpc(Peer, Module, FunctionName, Arguments) -> Result when
-    Peer :: upeer() | vpeer(),
+    Peer :: erldist_filter_test_p2p:peer(),
     Module :: module(),
     FunctionName :: atom(),
     Arguments :: nil() | [dynamic()],
@@ -343,9 +445,9 @@ vnode_send_sender_process_loop(VPid, UPid) ->
 rpc(Peer = {_PeerNode, _PeerPid}, Module, FunctionName, Arguments) ->
     rpc(Peer, Module, FunctionName, Arguments, ?RPC_DEFAULT_TIMEOUT).
 
--doc hidden.
+-doc false.
 -spec rpc(Peer, Module, FunctionName, Arguments, Timeout) -> Result when
-    Peer :: upeer() | vpeer(),
+    Peer :: erldist_filter_test_p2p:peer(),
     Module :: module(),
     FunctionName :: atom(),
     Arguments :: nil() | [dynamic()],
@@ -354,7 +456,8 @@ rpc(Peer = {_PeerNode, _PeerPid}, Module, FunctionName, Arguments) ->
 rpc(_Peer = {_PeerNode, PeerPid}, Module, FunctionName, Arguments, Timeout) ->
     peer:call(PeerPid, Module, FunctionName, Arguments, Timeout).
 
--spec upeer_gen_spawn(Fun) -> Reply | no_return() when Fun :: fun(() -> Reply), Reply :: dynamic().
+-doc false.
+-spec upeer_gen_spawn(Fun) -> Reply when Fun :: fun(() -> Reply), Reply :: dynamic().
 upeer_gen_spawn(Fun) ->
     UParent = self(),
     {UPid, UMon} = spawn_opt(
@@ -373,18 +476,4 @@ upeer_gen_spawn(Fun) ->
     receive
         {UMon, UPid, Reply} -> Reply;
         {'DOWN', UMon, process, UPid, Reason} -> exit(Reason)
-    end.
-
--spec wait_until_net_kernel_started(node()) -> ok.
-wait_until_net_kernel_started(Node) ->
-    case net_kernel:get_state() of
-        #{started := no} ->
-            _ = net_kernel:start(Node, #{name_domain => longnames}),
-            ok =
-                receive
-                after 100 -> ok
-                end,
-            wait_until_net_kernel_started(Node);
-        #{started := Started, name := Node} when Started =/= no ->
-            ok
     end.

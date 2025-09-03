@@ -110,18 +110,18 @@ erldist_filter_nif_logger_list_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
 
     list = enif_make_list(env, 0);
     root = (void *)edf_logger_resource_table;
-    (void)core_mutex_lock(&edf_logger_resource_table->mutex);
+    (void)xnif_mutex_lock(&edf_logger_resource_table->mutex);
     node = (void *)(root->_link.prev);
     while (root != node) {
         temp = (void *)(node->_link.prev);
-        (void)core_rwlock_read_lock(&node->rwlock);
+        (void)xnif_rwlock_read_lock(&node->rwlock);
         if (node->inner != NULL) {
             list = enif_make_list_cell(env, enif_make_resource(env, (void *)node), list);
         }
-        (void)core_rwlock_read_unlock(&node->rwlock);
+        (void)xnif_rwlock_read_unlock(&node->rwlock);
         node = temp;
     }
-    (void)core_mutex_unlock(&edf_logger_resource_table->mutex);
+    (void)xnif_mutex_unlock(&edf_logger_resource_table->mutex);
 
     return list;
 }
@@ -219,13 +219,13 @@ erldist_filter_nif_logger_set_controlling_process_2(ErlNifEnv *env, int argc, co
         return EXCP_BADARG(env, "NewOwnerPid is no longer alive");
     }
 
-    if (edf_mpid_demonitor_process(env, (void *)resource, &logger->owner) != 0) {
+    if (xnif_demonitor_process(env, (void *)resource, &logger->owner) != 0) {
         // OwnerPid is about to exit, consider the logger closed.
         (void)edf_logger_resource_release(&resource, &logger, flags);
         return enif_make_tuple2(env, ATOM(error), ATOM(closed));
     }
 
-    retval = edf_mpid_monitor_process(env, (void *)resource, &new_owner_pid, &logger->owner);
+    retval = xnif_monitor_process(env, (void *)resource, &new_owner_pid, &logger->owner);
     if (retval < 0) {
         (void)edf_logger_resource_release(&resource, &logger, flags);
         return EXCP_ERROR(env, "Call to enif_monitor_process() failed: no `down' callback provided");

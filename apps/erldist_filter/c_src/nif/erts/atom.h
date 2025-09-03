@@ -1,7 +1,9 @@
 /*
  * %CopyrightBegin%
  *
- * Copyright Ericsson AB 2015-2021. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright Ericsson AB 1996-2025. All Rights Reserved.
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * Copyright (c) WhatsApp LLC
  *
@@ -29,23 +31,15 @@ extern "C" {
 
 #include <stdint.h>
 
-#include <erl_nif.h>
+#include "../erl_nif_trampoline.h"
 
 /// See
-/// [erts/emulator/beam/atom.h](https://github.com/erlang/otp/blob/OTP-25.2.3/erts/emulator/beam/atom.h)
+/// [erts/emulator/beam/atom.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/atom.h)
 /// in the Erlang/OTP source code.
 
 #define MAX_ATOM_CHARACTERS 255
 #define MAX_ATOM_SZ_FROM_LATIN1 (2 * MAX_ATOM_CHARACTERS)
 #define MAX_ATOM_SZ_LIMIT (4 * MAX_ATOM_CHARACTERS) /* theoretical byte limit */
-
-typedef enum {
-    ERTS_ATOM_ENC_7BIT_ASCII,
-    ERTS_ATOM_ENC_LATIN1,
-    ERTS_ATOM_ENC_UTF8,
-} ErtsAtomEncoding;
-
-extern ERL_NIF_TERM erts_atom_put(const uint8_t *name, signed int len, ErtsAtomEncoding enc, int trunc);
 
 #ifdef __cplusplus
 }

@@ -15,9 +15,9 @@ extern "C" {
 
 #include <stdatomic.h>
 
-#include "linklist.h"
-#include "mutex.h"
+#include "../../primitive/linklist.h"
 
+#include "xnif_mutex.h"
 #include "xnif_trace.h"
 
 /* Type Definitions */
@@ -40,7 +40,7 @@ struct ipc_message_s {
 
 struct ipc_queue_s {
     linklist_t _link;
-    core_mutex_t mutex;
+    xnif_mutex_t mutex;
     ipc_queue_message_dtor_t message_dtor;
     struct {
         atomic_flag flag;

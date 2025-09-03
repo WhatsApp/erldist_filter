@@ -13,12 +13,12 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
+#include "../../primitive/linklist.h"
 #include "../core/ipc.h"
-#include "../core/linklist.h"
-#include "../core/mutex.h"
-#include "../core/rwlock.h"
-#include "../edf_mpid.h"
+#include "../core/xnif_monitor.h"
+#include "../core/xnif_mutex.h"
+#include "../core/xnif_rwlock.h"
 #include "../vec.h"
 
 /* Macro Definitions */
@@ -55,7 +55,7 @@ struct edf_logger_queue_s {
 
 struct edf_logger_s {
     edf_logger_resource_t *resource;
-    edf_mpid_t owner;
+    xnif_monitor_t owner;
     struct {
         bool active;
         int fd;
@@ -69,14 +69,14 @@ struct edf_logger_s {
 
 struct edf_logger_resource_s {
     linklist_t _link;
-    core_rwlock_t rwlock;
+    xnif_rwlock_t rwlock;
     edf_logger_t *inner;
     int closefd;
 };
 
 struct edf_logger_resource_table_s {
     linklist_t _link;
-    core_mutex_t mutex;
+    xnif_mutex_t mutex;
 };
 
 /* Global Declarations */
@@ -146,9 +146,9 @@ edf_logger_resource_acquire_direct(ErlNifEnv *env, edf_logger_resource_t *resour
     }
 
     if ((flags & EDF_LOGGER_RESOURCE_FLAG_WRITE_LOCK) != 0) {
-        (void)core_rwlock_write_lock(&resource->rwlock);
+        (void)xnif_rwlock_write_lock(&resource->rwlock);
     } else {
-        (void)core_rwlock_read_lock(&resource->rwlock);
+        (void)xnif_rwlock_read_lock(&resource->rwlock);
     }
 
     logger = resource->inner;
@@ -181,9 +181,9 @@ edf_logger_resource_release(edf_logger_resource_t **resourcep, edf_logger_t **lo
     *resourcep = NULL;
     *loggerp = NULL;
     if ((flags & EDF_LOGGER_RESOURCE_FLAG_WRITE_LOCK) != 0) {
-        (void)core_rwlock_write_unlock(&resource->rwlock);
+        (void)xnif_rwlock_write_unlock(&resource->rwlock);
     } else {
-        (void)core_rwlock_read_unlock(&resource->rwlock);
+        (void)xnif_rwlock_read_unlock(&resource->rwlock);
     }
 }
 #endif

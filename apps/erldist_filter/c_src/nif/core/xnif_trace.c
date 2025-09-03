@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #include "xnif_trace.h"
-#include "spinlock.h"
+#include "../../primitive/spinlock.h"
 
 ERL_NIF_TERM
 xnif_make_string_printf(ErlNifEnv *env, const char *format, ...)
@@ -89,7 +89,8 @@ xnif_trace_vprintf(const char *format, va_list ap)
         xnif_debug_file->stream = fopen(filename, "w");
     }
 #endif
-    res += enif_fprintf(xnif_debug_file->stream, "[%u.%p] ", getpid(), (void *)enif_thread_self());
+    res += enif_fprintf(xnif_debug_file->stream, "[%u.%p:%llu] ", getpid(), (void *)enif_thread_self(),
+                        (uint64_t)enif_monotonic_time(ERL_NIF_NSEC));
     res += enif_vfprintf(xnif_debug_file->stream, format, ap);
     (void)fflush(xnif_debug_file->stream);
     (void)spinlock_unlock(&xnif_debug_file->mtx);

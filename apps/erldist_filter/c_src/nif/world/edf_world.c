@@ -7,7 +7,7 @@
  */
 
 #include "edf_world.h"
-#include "../core/unreachable.h"
+#include "../../primitive/unreachable.h"
 
 static atomic_flag edf_world_initialized = ATOMIC_FLAG_INIT;
 static edf_world_table_t edf_world_table_internal = {._link = {.next = NULL, .prev = NULL}};
@@ -26,7 +26,7 @@ edf_world_load(ErlNifEnv *env)
             if (retval != 0) {
                 return retval;
             }
-            (void)core_rwlock_create(&edf_world_table->rwlock, "erldist_filter.world_table_rwlock");
+            (void)xnif_rwlock_create(&edf_world_table->rwlock, "erldist_filter.world_table_rwlock");
             (void)linklist_init_anchor(&edf_world_table->_link);
         }
     }
@@ -57,9 +57,9 @@ edf_world_get_slow(void)
         slot->_link.prev = NULL;
         slot->_link.next = NULL;
         (void)edf_world_stats_init_empty(&slot->stats);
-        (void)core_rwlock_write_lock(&edf_world_table->rwlock);
+        (void)xnif_rwlock_write_lock(&edf_world_table->rwlock);
         (void)linklist_insert(&edf_world_table->_link, &slot->_link);
-        (void)core_rwlock_write_unlock(&edf_world_table->rwlock);
+        (void)xnif_rwlock_write_unlock(&edf_world_table->rwlock);
         (void)enif_tsd_set(edf_world_table->key, (void *)slot);
         return slot;
     }

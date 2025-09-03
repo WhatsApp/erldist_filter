@@ -16,6 +16,7 @@
 -include_lib("erldist_filter_test/include/proper_erldist_filter_test.hrl").
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 
+%% Public API
 -export([
     mostly/2,
     i32/0,
@@ -95,6 +96,10 @@
 -export_type([
     options/0
 ]).
+
+%%%=============================================================================
+%%% Public API functions
+%%%=============================================================================
 
 -spec mostly(U :: proper_types:type(), T :: proper_types:type()) -> proper_types:type().
 mostly(U, T) ->

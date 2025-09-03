@@ -24,9 +24,6 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct edf_external_recv_trap_s edf_external_recv_trap_t;
-typedef enum edf_external_recv_trap_state_t edf_external_recv_trap_state_t;
-
 enum edf_external_recv_trap_state_t {
     EDF_EXTERNAL_RECV_TRAP_STATE_NONE = 0,
     EDF_EXTERNAL_RECV_TRAP_STATE_INIT,
@@ -44,6 +41,9 @@ enum edf_external_recv_trap_state_t {
     EDF_EXTERNAL_RECV_TRAP_STATE_DROP,
     EDF_EXTERNAL_RECV_TRAP_STATE_DONE,
 };
+
+typedef struct edf_external_recv_trap_s edf_external_recv_trap_t;
+typedef enum edf_external_recv_trap_state_t edf_external_recv_trap_state_t;
 
 struct edf_external_recv_trap_s {
     edf_trap_t super;

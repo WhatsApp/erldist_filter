@@ -2,8 +2,10 @@
 
 /*
  * %CopyrightBegin%
+ *
+ * SPDX-License-Identifier: Apache-2.0
  * 
- * Copyright Ericsson AB 2015-2021. All Rights Reserved.
+ * Copyright Ericsson AB 2015-2025. All Rights Reserved.
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * Copyright (c) WhatsApp LLC
  * 
@@ -366,6 +368,18 @@
  *         Should only be used for debugging.
  */
 
+/* ERTS_UNDEF can be used to silence false warnings about
+ * "variable may be used uninitialized" while keeping the variable
+ * marked as undefined by valgrind.
+ */
+#ifndef ERTS_UNDEF
+#  ifdef VALGRIND
+#    define ERTS_UNDEF(V,I)
+#  else
+#    define ERTS_UNDEF(V,I) V = I
+#  endif
+#endif
+ 
 #ifdef ERTS_RBT_CMP_KEYS
 
 #  undef ERTS_RBT_IS_LT
@@ -1391,6 +1405,7 @@ ERTS_RBT_FUNC__(foreach_unordered__)(ERTS_RBT_T **root,
 	while (1) {
 #ifdef ERTS_RBT_DEBUG
 	    int cdir;
+            ERTS_UNDEF(cdir,0);
 #endif
 	    if (yielding && reds <= 0) {
 		ystate->x = x;

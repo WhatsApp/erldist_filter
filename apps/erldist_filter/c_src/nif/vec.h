@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "core/portable_endian.h"
+#include "../primitive/portable_endian.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -22,14 +22,24 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <erl_nif.h>
+#include "erl_nif_trampoline.h"
 
 #include "ioq.h"
-#include "slice.h"
+#include "../primitive/slice.h"
 
 #include "core/xnif_trace.h"
 
 /* Type Definitions */
+
+enum vec_tag_t {
+    VEC_TAG_FREE = 0,
+    VEC_TAG_NULL,
+    VEC_TAG_OWN_BIN,
+    VEC_TAG_OWN_MEM,
+    VEC_TAG_REF_BIN,
+    VEC_TAG_REF_IOQ,
+    VEC_TAG_SLICE,
+};
 
 typedef struct vec_s vec_t;
 typedef enum vec_tag_t vec_tag_t;
@@ -65,16 +75,6 @@ struct vec_data_ref_ioq_s {
     ErlNifEnv *env;
     ioq_t *ioq;
     ErlNifBinary bin;
-};
-
-enum vec_tag_t {
-    VEC_TAG_FREE = 0,
-    VEC_TAG_NULL,
-    VEC_TAG_OWN_BIN,
-    VEC_TAG_OWN_MEM,
-    VEC_TAG_REF_BIN,
-    VEC_TAG_REF_IOQ,
-    VEC_TAG_SLICE,
 };
 
 struct vec_s {

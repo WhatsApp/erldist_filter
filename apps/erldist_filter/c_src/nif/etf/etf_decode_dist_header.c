@@ -233,7 +233,7 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
                     } else {
                         /* new cached atom */
                         const uint8_t *atom_text = NULL;
-                        ErtsAtomEncoding atom_encoding;
+                        ErlNifCharEncoding atom_encoding;
                         if (trap->long_atoms) {
                             uint16_t long_atom_length;
                             READ_U16(&long_atom_length);
@@ -257,15 +257,13 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
                         SKIP(atom_length);
                         trap->skip += atom_length;
                         if (!(dflags & DFLAG_UTF8_ATOMS)) {
-                            atom_encoding = ERTS_ATOM_ENC_LATIN1;
-                            // atom_term = erts_atom_put((void *)atom_text, (signed int)atom_length, ERTS_ATOM_ENC_LATIN1, 0);
+                            atom_encoding = ERL_NIF_LATIN1;
                         } else {
-                            atom_encoding = ERTS_ATOM_ENC_UTF8;
-                            // atom_term = erts_atom_put((void *)atom_text, (signed int)atom_length, ERTS_ATOM_ENC_UTF8, 0);
+                            atom_encoding = ERL_NIF_UTF8;
                         }
-                        if (!edf_atom_text_put_and_keep(atom_text, (signed int)atom_length, atom_encoding, &atom_term)) {
+                        if (!edf_atom_text_put(atom_text, atom_length, atom_encoding, &atom_term)) {
                             err_term = EXCP_ERROR_F(caller_env,
-                                                    "Call to edf_atom_text_put_and_keep() failed: Dist Header new atom cache entry "
+                                                    "Call to edf_atom_text_put() failed: Dist Header new atom cache entry "
                                                     "cache_index=%u with atom_length=%u unable to create atom\n",
                                                     cache_index, atom_length);
                             (void)vec_reader_destroy(vr);
@@ -287,7 +285,6 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
                         // }
                         // cache->entries[cache_index] = atom_term;
                         if (!edf_atom_cache_maybe_overwrite(cache, cache_index, atom_term)) {
-                            (void)edf_atom_text_release(atom_term);
                             err_term =
                                 EXCP_ERROR_F(caller_env,
                                              "Call to edf_atom_cache_maybe_overwrite() failed: Dist Header new atom cache entry "
@@ -474,7 +471,7 @@ etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_a
             } else {
                 /* new cached atom */
                 const uint8_t *atom_text = NULL;
-                ErtsAtomEncoding atom_encoding;
+                ErlNifCharEncoding atom_encoding;
                 if (long_atoms) {
                     uint16_t long_atom_length;
                     READ_U16(&long_atom_length);
@@ -494,13 +491,13 @@ etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_a
                 atom_text = RAW_BYTES();
                 SKIP(atom_length);
                 if (!(dflags & DFLAG_UTF8_ATOMS)) {
-                    atom_encoding = ERTS_ATOM_ENC_LATIN1;
+                    atom_encoding = ERL_NIF_LATIN1;
                 } else {
-                    atom_encoding = ERTS_ATOM_ENC_UTF8;
+                    atom_encoding = ERL_NIF_UTF8;
                 }
-                if (!edf_atom_text_put_and_keep(atom_text, (signed int)atom_length, atom_encoding, &atom_term)) {
+                if (!edf_atom_text_put(atom_text, atom_length, atom_encoding, &atom_term)) {
                     *err_termp = EXCP_ERROR_F(caller_env,
-                                              "Call to edf_atom_text_put_and_keep() failed: Dist Header new atom cache entry "
+                                              "Call to edf_atom_text_put() failed: Dist Header new atom cache entry "
                                               "cache_index=%u with atom_length=%u unable to create atom\n",
                                               cache_index, atom_length);
                     return 0;
@@ -510,7 +507,6 @@ etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_a
                     CHANNEL_RX_STATS_COUNT(channel, atom_cache_overwrite_count, 1);
                 }
                 if (!edf_atom_cache_maybe_overwrite(cache, cache_index, atom_term)) {
-                    (void)edf_atom_text_release(atom_term);
                     *err_termp = EXCP_ERROR_F(caller_env,
                                               "Call to edf_atom_cache_maybe_overwrite() failed: Dist Header new atom cache entry "
                                               "cache_index=%u with atom_length=%u unable to create atom\n",

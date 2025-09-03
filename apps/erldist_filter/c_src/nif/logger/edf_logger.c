@@ -13,8 +13,6 @@
 #include "edf_logger.h"
 #include "../erts/external.h"
 
-#include "../core/xnif_trace.h"
-
 /* Global Variables */
 
 ErlNifResourceType *edf_logger_resource_type = NULL;
@@ -57,7 +55,7 @@ edf_logger_load(ErlNifEnv *env)
     }
 
     if (!linklist_is_linked(&edf_logger_resource_table->_link)) {
-        (void)core_mutex_create(&edf_logger_resource_table->mutex, "erldist_filter.logger_resource_table_mutex");
+        (void)xnif_mutex_create(&edf_logger_resource_table->mutex, "erldist_filter.logger_resource_table_mutex");
         (void)linklist_init_anchor(&edf_logger_resource_table->_link);
     }
 
@@ -97,9 +95,9 @@ edf_logger_resource_open(ErlNifEnv *env, edf_logger_resource_t **resourcep, edf_
 
     resource->_link.next = NULL;
     resource->_link.prev = NULL;
-    if (!core_rwlock_create(&resource->rwlock, "erldist_filter.logger_resource_rwlock")) {
+    if (!xnif_rwlock_create(&resource->rwlock, "erldist_filter.logger_resource_rwlock")) {
         (void)enif_release_resource((void *)resource);
-        return EXCP_ERROR(env, "Call to core_rwlock_create() failed: Can't allocate core_rwlock_t");
+        return EXCP_ERROR(env, "Call to xnif_rwlock_create() failed: Can't allocate xnif_rwlock_t");
     }
     resource->inner = NULL;
     resource->closefd = -1;
@@ -112,9 +110,9 @@ edf_logger_resource_open(ErlNifEnv *env, edf_logger_resource_t **resourcep, edf_
     resource->inner = logger;
 
     out_term = enif_make_resource(env, (void *)resource);
-    (void)core_mutex_lock(&edf_logger_resource_table->mutex);
+    (void)xnif_mutex_lock(&edf_logger_resource_table->mutex);
     (void)linklist_insert(&edf_logger_resource_table->_link, &resource->_link);
-    (void)core_mutex_unlock(&edf_logger_resource_table->mutex);
+    (void)xnif_mutex_unlock(&edf_logger_resource_table->mutex);
     // Don't release the resource here, so a reference is kept on the root table.
     // (void)enif_release_resource((void *)resource);
 
@@ -134,7 +132,7 @@ edf_logger_resource_type_dtor(ErlNifEnv *env, void *obj)
     edf_logger_resource_t *resource = (void *)obj;
     edf_logger_t *logger = NULL;
     XNIF_TRACE_F("[logger] dtor callback\n");
-    (void)core_rwlock_write_lock(&(resource->rwlock));
+    (void)xnif_rwlock_write_lock(&(resource->rwlock));
     logger = resource->inner;
     if (logger != NULL) {
         resource->inner = NULL;
@@ -142,13 +140,13 @@ edf_logger_resource_type_dtor(ErlNifEnv *env, void *obj)
         (void)edf_logger_destroy(env, resource, logger);
         logger = NULL;
     }
-    (void)core_mutex_lock(&edf_logger_resource_table->mutex);
+    (void)xnif_mutex_lock(&edf_logger_resource_table->mutex);
     if (linklist_is_linked(&resource->_link)) {
         (void)linklist_unlink(&resource->_link);
     }
-    (void)core_mutex_unlock(&edf_logger_resource_table->mutex);
-    (void)core_rwlock_write_unlock(&(resource->rwlock));
-    (void)core_rwlock_destroy(&(resource->rwlock));
+    (void)xnif_mutex_unlock(&edf_logger_resource_table->mutex);
+    (void)xnif_rwlock_write_unlock(&(resource->rwlock));
+    (void)xnif_rwlock_destroy(&(resource->rwlock));
     return;
 }
 
@@ -159,7 +157,7 @@ edf_logger_resource_type_stop(ErlNifEnv *env, void *obj, ErlNifEvent event, int 
     edf_logger_t *logger = NULL;
     XNIF_TRACE_F("[logger] stop callback\n");
     if (!is_direct_call) {
-        (void)core_rwlock_write_lock(&(resource->rwlock));
+        (void)xnif_rwlock_write_lock(&(resource->rwlock));
     }
     if (resource->closefd != -1) {
         (void)close(resource->closefd);
@@ -168,13 +166,13 @@ edf_logger_resource_type_stop(ErlNifEnv *env, void *obj, ErlNifEvent event, int 
     logger = resource->inner;
     if (logger == NULL) {
         if (!is_direct_call) {
-            (void)core_rwlock_write_unlock(&(resource->rwlock));
+            (void)xnif_rwlock_write_unlock(&(resource->rwlock));
         }
         return;
     }
     (void)edf_logger_destroy(env, resource, logger);
     if (!is_direct_call) {
-        (void)core_rwlock_write_unlock(&(resource->rwlock));
+        (void)xnif_rwlock_write_unlock(&(resource->rwlock));
     }
     return;
 }
@@ -185,24 +183,24 @@ edf_logger_resource_type_down(ErlNifEnv *env, void *obj, ErlNifPid *pid, ErlNifM
     edf_logger_resource_t *resource = (void *)obj;
     edf_logger_t *logger = NULL;
     XNIF_TRACE_F("[logger] down callback\n");
-    (void)core_rwlock_write_lock(&(resource->rwlock));
+    (void)xnif_rwlock_write_lock(&(resource->rwlock));
     logger = resource->inner;
     if (logger == NULL) {
-        (void)core_rwlock_write_unlock(&(resource->rwlock));
+        (void)xnif_rwlock_write_unlock(&(resource->rwlock));
         return;
     }
-    if (enif_compare_monitors(&logger->owner.mon, mon) == 0) {
+    if (enif_compare_monitors(&logger->owner.monitor, mon) == 0) {
         // Owner is down, close logger.
-        (void)edf_mpid_set_undefined(&logger->owner);
+        (void)xnif_monitor_set_undefined(&logger->owner);
         resource->inner = NULL;
         logger->resource = NULL;
         (void)edf_logger_destroy(env, resource, logger);
-        (void)core_rwlock_write_unlock(&(resource->rwlock));
+        (void)xnif_rwlock_write_unlock(&(resource->rwlock));
         return;
     } else {
         // Old monitor down event, ignore.
     }
-    (void)core_rwlock_write_unlock(&(resource->rwlock));
+    (void)xnif_rwlock_write_unlock(&(resource->rwlock));
     return;
 }
 
@@ -217,14 +215,14 @@ edf_logger_create(ErlNifEnv *env, edf_logger_resource_t *resource, edf_logger_t 
         return 0;
     }
     logger->resource = resource;
-    (void)edf_mpid_set_undefined(&logger->owner);
+    (void)xnif_monitor_set_undefined(&logger->owner);
     logger->select.active = false;
     logger->select.fd = -1;
     logger->select.handle = THE_NON_VALUE;
     logger->stats.received = 0;
     logger->stats.dropped = 0;
 
-    retval = edf_mpid_monitor_self(env, (void *)resource, &logger->owner);
+    retval = xnif_monitor_self(env, (void *)resource, &logger->owner);
     if (retval < 0) {
         (void)edf_logger_destroy(env, (void *)resource, logger);
         *error_term = EXCP_ERROR(env, "Call to enif_monitor_process() failed: no `down' callback provided");
@@ -254,7 +252,7 @@ edf_logger_destroy(ErlNifEnv *env, edf_logger_resource_t *resource, edf_logger_t
         return;
     }
     logger->resource = NULL;
-    (void)edf_mpid_demonitor_process(env, (void *)resource, &logger->owner);
+    (void)xnif_demonitor_process(env, (void *)resource, &logger->owner);
     if (logger->select.fd != -1) {
         if (logger->select.active == true) {
             resource->closefd = logger->select.fd;
@@ -405,7 +403,7 @@ edf_logger_queue_destroy(edf_logger_queue_t *queue)
         }
     }
     (void)ipc_batch_dtor(batch);
-    (void)core_mutex_lock(&queue->super.mutex);
+    (void)xnif_mutex_lock(&queue->super.mutex);
     (void)ipc_queue_destroy(&queue->super);
     return;
 }

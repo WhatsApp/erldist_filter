@@ -19,14 +19,14 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct etf_decode_dist_header_trap_s etf_decode_dist_header_trap_t;
-typedef enum etf_decode_dist_header_trap_state_t etf_decode_dist_header_trap_state_t;
-
 enum etf_decode_dist_header_trap_state_t {
     ETF_DECODE_DIST_HEADER_TRAP_STATE_INIT = 0,
     ETF_DECODE_DIST_HEADER_TRAP_STATE_READ_FLAGS,
     ETF_DECODE_DIST_HEADER_TRAP_STATE_DONE,
 };
+
+typedef struct etf_decode_dist_header_trap_s etf_decode_dist_header_trap_t;
+typedef enum etf_decode_dist_header_trap_state_t etf_decode_dist_header_trap_state_t;
 
 struct etf_decode_dist_header_trap_s {
     edf_trap_t super;

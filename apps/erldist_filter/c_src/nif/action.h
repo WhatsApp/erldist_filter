@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-#include "core/portable_endian.h"
+#include "../primitive/portable_endian.h"
 
 #include <errno.h>
 #include <inttypes.h>
@@ -22,7 +22,7 @@ extern "C" {
 #include <stdlib.h>
 #include <string.h>
 
-#include <erl_nif.h>
+#include "erl_nif_trampoline.h"
 
 #include "core/xnif_trace.h"
 #include "vec.h"
@@ -38,6 +38,12 @@ extern "C" {
 // Don't include "edf_logger.h", just reference the type here.
 typedef struct edf_logger_event_s edf_logger_event_t;
 
+enum action_tag_t {
+    ACTION_TAG_FREE = 0,
+    ACTION_TAG_EMIT,
+    ACTION_TAG_LOG,
+};
+
 typedef struct action_s action_t;
 typedef enum action_tag_t action_tag_t;
 typedef struct action_data_emit_s action_data_emit_t;
@@ -50,12 +56,6 @@ struct action_data_emit_s {
 struct action_data_log_s {
     uint64_t fragment_count;
     edf_logger_event_t *event;
-};
-
-enum action_tag_t {
-    ACTION_TAG_FREE = 0,
-    ACTION_TAG_EMIT,
-    ACTION_TAG_LOG,
 };
 
 struct action_s {

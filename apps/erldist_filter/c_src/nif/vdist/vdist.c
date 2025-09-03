@@ -560,6 +560,31 @@ vdist_dop_from_vterm(vterm_env_t *vtenv, vdist_dop_t *dop, vterm_t *vtp)
         dop->data.unlink_id_ack.to_pid = tuple_elements[3];
         break;
     }
+    case DOP_ALTACT_SIG_SEND: {
+        if (tuple_arity != 4 && tuple_arity != 5) {
+            return 0;
+        }
+        dop->tag = VDIST_DOP_TAG_ALTACT_SIG_SEND;
+        if (!vterm_is_fixed_integer(vtenv, &tuple_elements[1])) {
+            return 0;
+        }
+        dop->data.altact_sig_send.flags = tuple_elements[1];
+        if (!vterm_is_pid(vtenv, &tuple_elements[2])) {
+            return 0;
+        }
+        dop->data.altact_sig_send.sender_pid = tuple_elements[2];
+        if (!vterm_is_pid(vtenv, &tuple_elements[3]) && !vterm_is_atom(vtenv, &tuple_elements[3]) &&
+            !vterm_is_reference(vtenv, &tuple_elements[3])) {
+            return 0;
+        }
+        dop->data.altact_sig_send.to = tuple_elements[3];
+        if (tuple_arity == 5) {
+            dop->data.altact_sig_send.token = tuple_elements[4];
+        } else {
+            dop->data.altact_sig_send.token = NULL;
+        }
+        break;
+    }
     default:
         return 0;
     }
@@ -907,6 +932,23 @@ vdist_dop_debug_dump(ErlNifEnv *env, vterm_env_t *vtenv, vdist_dop_t *dop, ERL_N
         *term = enif_make_tuple4(env, ATOM(vdist_dop_unlink_id_ack), id_term, from_pid_term, to_pid_term);
         break;
     }
+    case VDIST_DOP_TAG_ALTACT_SIG_SEND: {
+        ERL_NIF_TERM flags_term;
+        ERL_NIF_TERM sender_pid_term;
+        ERL_NIF_TERM to_term;
+        ERL_NIF_TERM token_term;
+        DUMP_VTERM(flags_term, &dop->data.altact_sig_send.flags);
+        DUMP_VTERM(sender_pid_term, &dop->data.altact_sig_send.sender_pid);
+        DUMP_VTERM(to_term, &dop->data.altact_sig_send.to);
+        if (dop->data.altact_sig_send.token != NULL) {
+            DUMP_VTERM(token_term, &dop->data.altact_sig_send.token);
+            token_term = enif_make_tuple2(env, ATOM(some), token_term);
+        } else {
+            token_term = ATOM(none);
+        }
+        *term = enif_make_tuple5(env, ATOM(vdist_dop_altact_sig_send), flags_term, sender_pid_term, to_term, token_term);
+        break;
+    }
     default:
         goto error;
     }
@@ -1012,6 +1054,9 @@ vdist_dop_get_name(const vdist_dop_t *dop, const char **name)
         return 1;
     case VDIST_DOP_TAG_UNLINK_ID_ACK:
         *name = "UNLINK_ID_ACK";
+        return 1;
+    case VDIST_DOP_TAG_ALTACT_SIG_SEND:
+        *name = "ALTACT_SIG_SEND";
         return 1;
     default:
         return 0;

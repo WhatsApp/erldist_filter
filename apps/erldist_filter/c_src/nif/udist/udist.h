@@ -13,10 +13,10 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
+#include "../erldist_filter_nif.h"
 
 #include "../erts/dist.h"
-#include "../slice.h"
+#include "../../primitive/slice.h"
 
 /* Macro Definitions */
 
@@ -35,18 +35,6 @@ typedef struct edf_channel_stats_s edf_channel_stats_t;
 // Don't include "edf_channel.h", just reference the type here.
 typedef struct edf_channel_stats_dop_s edf_channel_stats_dop_t;
 
-typedef struct udist_s udist_t;
-typedef struct udist_info_s udist_info_t;
-typedef struct udist_control_s udist_control_t;
-typedef enum udist_control_tag_t udist_control_tag_t;
-
-struct udist_info_s {
-    enum dop dop;
-    uint32_t arity;
-    int token_offset;
-    bool payload;
-};
-
 enum udist_control_tag_t {
     UDIST_CONTROL_TAG_NONE = 0,
     UDIST_CONTROL_TAG_EXIT,
@@ -62,10 +50,25 @@ enum udist_control_tag_t {
     UDIST_CONTROL_TAG_UNLINK,
 };
 
+typedef struct udist_s udist_t;
+typedef struct udist_info_s udist_info_t;
+typedef struct udist_control_s udist_control_t;
+typedef enum udist_control_tag_t udist_control_tag_t;
+
+struct udist_info_s {
+    enum dop dop;
+    uint32_t arity;
+    int token_offset;
+    bool payload;
+};
+
 struct udist_control_s {
     udist_control_tag_t tag;
     union {
-        ERL_NIF_TERM send_to;
+        struct {
+            int32_t flags;
+            ERL_NIF_TERM to;
+        } send;
         struct {
             ERL_NIF_TERM module;
             ERL_NIF_TERM function;

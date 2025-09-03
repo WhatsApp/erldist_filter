@@ -1,0 +1,106 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "edf_erts_dist_impl.h"
+
+#include <stdbool.h>
+#include <unistd.h>
+
+#include "../erts/dist.h"
+
+/* NIF Function Definitions */
+
+ERL_NIF_TERM
+erldist_filter_nif_altact_sig_flags_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    /* clang-format off */ //-
+#define NUMBER_OF_ALTACT_SIG_FLAGS ({{ ctx.dist.altact_sig_flags_list | length }})
+    /* clang-format on */ //-
+    ERL_NIF_TERM keys[NUMBER_OF_ALTACT_SIG_FLAGS];
+    ERL_NIF_TERM vals[NUMBER_OF_ALTACT_SIG_FLAGS];
+    size_t k = 0;
+    size_t v = 0;
+    ERL_NIF_TERM out_term;
+
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+    /* clang-format off */ //-
+{% for flag in ctx.dist.altact_sig_flags_list %}
+    keys[k++] = ATOM({{ flag.key }});
+    vals[v++] = enif_make_uint64(env, {{ flag.key }});
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (!enif_make_map_from_arrays(env, keys, vals, NUMBER_OF_ALTACT_SIG_FLAGS, &out_term)) {
+        return EXCP_ERROR(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+    }
+
+#undef NUMBER_OF_ALTACT_SIG_FLAGS
+    return out_term;
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_distribution_flags_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    /* clang-format off */ //-
+#define NUMBER_OF_DISTRIBUTION_FLAGS ({{ ctx.dist.flags_list | length }})
+    /* clang-format on */ //-
+    ERL_NIF_TERM keys[NUMBER_OF_DISTRIBUTION_FLAGS];
+    ERL_NIF_TERM vals[NUMBER_OF_DISTRIBUTION_FLAGS];
+    size_t k = 0;
+    size_t v = 0;
+    ERL_NIF_TERM out_term;
+
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+    /* clang-format off */ //-
+{% for flag in ctx.dist.flags_list %}
+    keys[k++] = ATOM({{ flag.key }});
+    vals[v++] = enif_make_uint64(env, {{ flag.key }});
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (!enif_make_map_from_arrays(env, keys, vals, NUMBER_OF_DISTRIBUTION_FLAGS, &out_term)) {
+        return EXCP_ERROR(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+    }
+
+#undef NUMBER_OF_DISTRIBUTION_FLAGS
+    return out_term;
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_spawn_flags_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    /* clang-format off */ //-
+#define NUMBER_OF_SPAWN_FLAGS ({{ ctx.dist.spawn_flags_list | length }})
+    /* clang-format on */ //-
+    ERL_NIF_TERM keys[NUMBER_OF_SPAWN_FLAGS];
+    ERL_NIF_TERM vals[NUMBER_OF_SPAWN_FLAGS];
+    size_t k = 0;
+    size_t v = 0;
+    ERL_NIF_TERM out_term;
+
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+    /* clang-format off */ //-
+{% for flag in ctx.dist.spawn_flags_list %}
+    keys[k++] = ATOM({{ flag.key }});
+    vals[v++] = enif_make_uint64(env, {{ flag.key }});
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (!enif_make_map_from_arrays(env, keys, vals, NUMBER_OF_SPAWN_FLAGS, &out_term)) {
+        return EXCP_ERROR(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+    }
+
+#undef NUMBER_OF_SPAWN_FLAGS
+    return out_term;
+}

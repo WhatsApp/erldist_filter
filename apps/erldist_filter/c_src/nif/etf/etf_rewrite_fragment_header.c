@@ -71,7 +71,7 @@ etf_rewrite_fragment_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, 
 {
     etf_rewrite_fragment_header_trap_t *trap = (void *)arg;
     uint64_t dflags = trap->external->channel->dflags;
-    ErtsAtomEncoding atom_encoding = ((!(dflags & DFLAG_UTF8_ATOMS)) ? ERTS_ATOM_ENC_LATIN1 : ERTS_ATOM_ENC_UTF8);
+    ErlNifCharEncoding atom_encoding = ((!(dflags & DFLAG_UTF8_ATOMS)) ? ERL_NIF_LATIN1 : ERL_NIF_UTF8);
     edf_atom_cache_t *cache = trap->external->channel->rx.cache;
     edf_atom_translation_table_t *attab = &(trap->external->attab);
     edf_atom_translation_table_t *rollback = &(trap->external->rollback);
@@ -114,12 +114,6 @@ etf_rewrite_fragment_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, 
                     }
                     trap->external->flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_ROLLBACK;
                     conflict->atom = cache->entries[entry->cache_index];
-                    if (!edf_atom_text_keep(conflict->atom)) {
-                        err_term = EXCP_ERROR_F(
-                            caller_env, "Call to edf_atom_text_keep() failed: unable to add conflicting atom cache at index %d\n",
-                            entry->cache_index);
-                        return TRAP_ERR(err_term);
-                    }
                     conflict->cache_index = entry->cache_index;
                     conflict->new_entry = true;
                     conflict->conflict = entry;

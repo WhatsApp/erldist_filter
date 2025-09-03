@@ -19,15 +19,15 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct etf_rollback_atom_cache_trap_s etf_rollback_atom_cache_trap_t;
-typedef enum etf_rollback_atom_cache_trap_state_t etf_rollback_atom_cache_trap_state_t;
-
 enum etf_rollback_atom_cache_trap_state_t {
     ETF_ROLLBACK_ATOM_CACHE_TRAP_STATE_INIT = 0,
     ETF_ROLLBACK_ATOM_CACHE_TRAP_STATE_ALLOC,
     ETF_ROLLBACK_ATOM_CACHE_TRAP_STATE_ENCODE,
     ETF_ROLLBACK_ATOM_CACHE_TRAP_STATE_DONE,
 };
+
+typedef struct etf_rollback_atom_cache_trap_s etf_rollback_atom_cache_trap_t;
+typedef enum etf_rollback_atom_cache_trap_state_t etf_rollback_atom_cache_trap_state_t;
 
 struct etf_rollback_atom_cache_trap_s {
     edf_trap_t super;

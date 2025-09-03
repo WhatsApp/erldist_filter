@@ -8,7 +8,7 @@
 
 #include "vterm.h"
 #include "../etf/etf_decode_vterm.h"
-#include "../core/unreachable.h"
+#include "../../primitive/unreachable.h"
 
 static void vterm_decode_lazy_term_done_cb(ErlNifEnv *env, etf_decode_vterm_trap_t *trap, void *arg, edf_trap_result_t *result);
 

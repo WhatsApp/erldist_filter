@@ -72,7 +72,7 @@ etf_rollback_atom_cache_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void
                                               0,   0, 118, 0, 0,  118, 0, 9, 117, 110, 100, 101, 102, 105, 110, 101, 100, 106};
     etf_rollback_atom_cache_trap_t *trap = (void *)arg;
     uint64_t dflags = trap->external->channel->dflags;
-    ErtsAtomEncoding atom_encoding = ((!(dflags & DFLAG_UTF8_ATOMS)) ? ERTS_ATOM_ENC_LATIN1 : ERTS_ATOM_ENC_UTF8);
+    ErlNifCharEncoding atom_encoding = ((!(dflags & DFLAG_UTF8_ATOMS)) ? ERL_NIF_LATIN1 : ERL_NIF_UTF8);
     edf_atom_translation_table_t *rollback = &(trap->external->rollback);
     ERL_NIF_TERM err_term = THE_NON_VALUE;
 

@@ -14,17 +14,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.15.6
-            otp: 26.1.1
-            rebar3: 3.22.1
+          - elixir: 1.18.4
+            otp: 28.0.2
+            rebar3: 3.25.1
             lint: true
 
-          - elixir: 1.14.5
-            otp: 25.2.3
-            rebar3: 3.22.0
+          - elixir: 1.18.4
+            otp: 27.3
+            rebar3: 3.25.1
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v5
 
       - name: Setup Beam
         uses: erlef/setup-beam@v1
@@ -38,7 +38,7 @@ jobs:
           rebar3 ct
 
       - name: Retrieve Mix Dependencies Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: mix-cache
         with:
           path: deps
@@ -59,7 +59,7 @@ jobs:
         run: mix test --trace
 
       - name: Logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: ct-logs-${{ matrix.otp }}-${{ matrix.elixir }}

@@ -23,18 +23,18 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct etf_decode_term_length_trap_s etf_decode_term_length_trap_t;
-typedef enum etf_decode_term_length_trap_state_t etf_decode_term_length_trap_state_t;
-
-typedef void (*etf_decode_term_length_done_t)(ErlNifEnv *caller_env, etf_decode_term_length_trap_t *trap, void *arg,
-                                              edf_trap_result_t *result);
-
 enum etf_decode_term_length_trap_state_t {
     ETF_DECODE_TERM_LENGTH_TRAP_STATE_INIT = 0,
     ETF_DECODE_TERM_LENGTH_TRAP_STATE_VERSION_MAGIC,
     ETF_DECODE_TERM_LENGTH_TRAP_STATE_DECODE,
     ETF_DECODE_TERM_LENGTH_TRAP_STATE_DONE,
 };
+
+typedef struct etf_decode_term_length_trap_s etf_decode_term_length_trap_t;
+typedef enum etf_decode_term_length_trap_state_t etf_decode_term_length_trap_state_t;
+
+typedef void (*etf_decode_term_length_done_t)(ErlNifEnv *caller_env, etf_decode_term_length_trap_t *trap, void *arg,
+                                              edf_trap_result_t *result);
 
 struct etf_decode_term_length_trap_s {
     edf_trap_t super;

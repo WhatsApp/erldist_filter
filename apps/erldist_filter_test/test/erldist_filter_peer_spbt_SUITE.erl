@@ -35,7 +35,9 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
-%% ct callbacks
+-behaviour(ct_suite).
+
+%% ct_suite callbacks
 -export([
     all/0,
     groups/0,
@@ -55,19 +57,17 @@
     prop_parallel_statem/1
 ]).
 
-%% Macros
--define(SUP, erldist_filter_peer_spbt_sup).
--define(SHIM, erldist_filter_peer_spbt_shim).
-
 %%%=============================================================================
-%%% ct callbacks
+%%% ct_suite callbacks
 %%%=============================================================================
 
+-spec all() -> erldist_filter_test:all().
 all() ->
     [
         {group, stateful_property_based_tests}
     ].
 
+-spec groups() -> erldist_filter_test:groups().
 groups() ->
     [
         {stateful_property_based_tests, [shuffle], [
@@ -76,33 +76,39 @@ groups() ->
         ]}
     ].
 
+-spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
 init_per_suite(Config) ->
+    {ok, _} = application:ensure_all_started(erldist_filter_test),
     Config.
 
+-spec end_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_suite().
 end_per_suite(_Config) ->
     ok.
 
+-spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+    erldist_filter_test:init_per_group().
 init_per_group(_Group, Config) ->
-    {ok, _} = supervisor:start_child(kernel_sup, ?SUP:child_spec()),
     Config.
 
+-spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+    erldist_filter_test:end_per_group().
 end_per_group(_Group, _Config) ->
-    _ = catch supervisor:terminate_child(kernel_sup, ?SUP),
-    _ = catch supervisor:delete_child(kernel_sup, ?SUP),
     ok.
 
+-spec init_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+    erldist_filter_test:init_per_testcase().
 init_per_testcase(prop_serial_statem, Config) ->
-    {ok, {UPeer, VPeer}} = ?SHIM:start_random_suffix_upeer_and_vpeer_from_label("edf-serial-statem"),
-    [{upeer, UPeer}, {vpeer, VPeer} | Config];
+    P2P = erldist_filter_test_p2p:open(<<"edf-serial-statem">>),
+    [{p2p, P2P} | Config];
 init_per_testcase(prop_parallel_statem, Config) ->
-    {ok, {UPeer, VPeer}} = ?SHIM:start_random_suffix_upeer_and_vpeer_from_label("edf-parallel-statem"),
-    [{upeer, UPeer}, {vpeer, VPeer} | Config].
+    P2P = erldist_filter_test_p2p:open(<<"edf-parallel-statem">>),
+    [{p2p, P2P} | Config].
 
+-spec end_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+    erldist_filter_test:end_per_testcase().
 end_per_testcase(_TestCase, Config) ->
-    _UPeer = {UPeerNode, _UPeerPid} = test_server:lookup_config(upeer, Config),
-    _VPeer = {VPeerNode, _VPeerPid} = test_server:lookup_config(vpeer, Config),
-    ok = ?SUP:stop_child(VPeerNode),
-    ok = ?SUP:stop_child(UPeerNode),
+    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
+    ok = erldist_filter_test_p2p:close(P2P),
     ok.
 
 %%%=============================================================================
@@ -118,7 +124,7 @@ prop_serial_statem() ->
 prop_serial_statem(Config) ->
     erldist_filter_proper:quickcheck(erldist_filter_peer_spbt_prop:prop_serial_statem(Config), [
         verbose,
-        {max_shrinks, 100},
+        {max_shrinks, 1},
         {numtests, 100}
     ]).
 
@@ -135,7 +141,7 @@ prop_parallel_statem(Config) ->
         false ->
             erldist_filter_proper:quickcheck(erldist_filter_peer_spbt_prop:prop_parallel_statem(Config), [
                 verbose,
-                {max_shrinks, 100},
+                {max_shrinks, 1},
                 {numtests, 100}
             ])
     end.

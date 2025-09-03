@@ -5,24 +5,24 @@
 %%%
 %%% This source code is licensed under the MIT license found in the
 %%% LICENSE.md file in the root directory of this source tree.
-%%%
-%%% Created :  20 Sep 2022 by Andrew Bennett <potatosaladx@meta.com>
 %%%-----------------------------------------------------------------------------
 -module(erldist_filter_nif).
+-moduledoc """
+""".
+-moduledoc #{author => ["Andrew Bennett <potatosaladx@meta.com>"]}.
+-moduledoc #{created => "2022-09-20", modified => "2025-08-13"}.
+-moduledoc #{copyright => "Meta Platforms, Inc. and affiliates."}.
 -compile(warn_missing_spec_all).
--author("potatosaladx@meta.com").
 -oncall("whatsapp_clr").
 
 -on_load(init/0).
 
 %% NIF API
 -export([
+    altact_sig_flags/0,
     atom2cix/1,
-    atom_text_table_list/0,
-    atom_text_table_size/0,
-    atom_text_inspect/1,
-    atom_text_put_and_keep/2,
-    atom_text_release/1,
+    atom_text_get/2,
+    atom_text_put/2,
     channel_open/5,
     channel_close/1,
     channel_inspect/1,
@@ -33,6 +33,7 @@
     channel_set_tracing_process/2,
     config_get/0,
     config_get/1,
+    config_set/1,
     config_set/2,
     dist_ext_to_term/2,
     dist_ext_to_vdist/2,
@@ -50,19 +51,20 @@
     logger_recv/1,
     logger_set_capacity/1,
     logger_set_controlling_process/2,
+    otp_name_blocklist/0,
+    otp_name_is_blocked/1,
     router_info/0,
     router_name/1,
-    version_build_date/0,
+    spawn_flags/0,
+    version/0,
     world_stats_get/0
 ]).
 
 -nifs([
+    altact_sig_flags/0,
     atom2cix/1,
-    atom_text_table_list/0,
-    atom_text_table_size/0,
-    atom_text_inspect/1,
-    atom_text_put_and_keep/2,
-    atom_text_release/1,
+    atom_text_get/2,
+    atom_text_put/2,
     channel_open/5,
     channel_close/1,
     channel_inspect/1,
@@ -90,8 +92,12 @@
     logger_recv/1,
     logger_set_capacity/1,
     logger_set_controlling_process/2,
+    otp_name_blocklist/0,
+    otp_name_is_blocked/1,
     router_info/0,
     router_name/1,
+    spawn_flags/0,
+    version/0,
     world_stats_get/0
 ]).
 
@@ -101,69 +107,15 @@
 ]).
 
 %% Types
--type action() :: {emit, binary()} | {log, non_neg_integer(), {logger_time(), logger_event()}}.
+-type action() :: action_emit() | action_log().
+-type action_emit() :: {emit, binary()}.
+-type action_log() :: {log, non_neg_integer(), {logger_time(), logger_event()}}.
 -type channel() :: erlang:nif_resource().
 -type connection_id() :: 0..16#ffffffff.
 -type creation() :: 0..16#ffffffff.
 -type distribution_flags() :: 0..16#ffffffffffffffff.
 -type packet_size() :: 0 | 1 | 2 | 4 | 8.
 -type sysname() :: node().
--type dop_stats() :: #{
-    seen := non_neg_integer(),
-    emit := non_neg_integer(),
-    drop := non_neg_integer()
-}.
--type channel_stats() :: #{
-    packet_count := non_neg_integer(),
-    emit_count := non_neg_integer(),
-    drop_count := non_neg_integer(),
-    dist_header_count := non_neg_integer(),
-    dist_frag_header_count := non_neg_integer(),
-    dist_frag_cont_count := non_neg_integer(),
-    dist_pass_through_count := non_neg_integer(),
-    atom_cache_read_count := non_neg_integer(),
-    atom_cache_write_count := non_neg_integer(),
-    atom_cache_overwrite_count := non_neg_integer(),
-    rewrite_fragment_header_count := non_neg_integer(),
-    rollback_atom_cache_count := non_neg_integer(),
-    compact_external_count := non_neg_integer(),
-    compact_fragment_count := non_neg_integer(),
-    control_has_export_ext := non_neg_integer(),
-    control_has_new_fun_ext := non_neg_integer(),
-    payload_has_export_ext := non_neg_integer(),
-    payload_has_new_fun_ext := non_neg_integer(),
-    fastpath := non_neg_integer(),
-    slowpath := non_neg_integer(),
-    dop_link := dop_stats(),
-    dop_send := dop_stats(),
-    dop_exit := dop_stats(),
-    dop_unlink := dop_stats(),
-    dop_reg_send := dop_stats(),
-    dop_group_leader := dop_stats(),
-    dop_exit2 := dop_stats(),
-    dop_send_tt := dop_stats(),
-    dop_exit_tt := dop_stats(),
-    dop_reg_send_tt := dop_stats(),
-    dop_exit2_tt := dop_stats(),
-    dop_monitor_p := dop_stats(),
-    dop_demonitor_p := dop_stats(),
-    dop_monitor_p_exit := dop_stats(),
-    dop_send_sender := dop_stats(),
-    dop_send_sender_tt := dop_stats(),
-    dop_payload_exit := dop_stats(),
-    dop_payload_exit_tt := dop_stats(),
-    dop_payload_exit2 := dop_stats(),
-    dop_payload_exit2_tt := dop_stats(),
-    dop_payload_monitor_p_exit := dop_stats(),
-    dop_spawn_request := dop_stats(),
-    dop_spawn_request_tt := dop_stats(),
-    dop_spawn_reply := dop_stats(),
-    dop_spawn_reply_tt := dop_stats(),
-    dop_alias_send := dop_stats(),
-    dop_alias_send_tt := dop_stats(),
-    dop_unlink_id := dop_stats(),
-    dop_unlink_id_ack := dop_stats()
-}.
 -type channel_inspection() :: #{
     controlling_process := pid(),
     entry := #{
@@ -176,7 +128,7 @@
         atom_cache := [{0..2047, atom()}],
         ioq_size := non_neg_integer(),
         packet_size := non_neg_integer(),
-        stats := channel_stats(),
+        stats := erldist_filter_nif_types:channel_stats(),
         vec_capacity := non_neg_integer(),
         vec_len := non_neg_integer()
     },
@@ -195,7 +147,9 @@
 -type logger_select_handle() :: reference().
 -type logger_time() :: integer().
 -type world_stat_group_channel() :: #{
-    create := non_neg_integer(), destroy := non_neg_integer(), rx_stats := channel_stats()
+    create := non_neg_integer(),
+    destroy := non_neg_integer(),
+    rx_stats := erldist_filter_nif_types:channel_stats()
 }.
 -type world_stat_group_memory() :: #{
     vec_own_bin_create := non_neg_integer(),
@@ -224,18 +178,15 @@
     slots := non_neg_integer()
 }.
 
--type option() ::
-    compact_fragments | deep_packet_inspection | logging | redirect_dist_operations | untrusted.
-
 -export_type([
     action/0,
+    action_emit/0,
+    action_log/0,
     channel/0,
     channel_inspection/0,
-    channel_stats/0,
     connection_id/0,
     creation/0,
     distribution_flags/0,
-    dop_stats/0,
     logger/0,
     logger_event/0,
     logger_event_atoms/0,
@@ -256,29 +207,22 @@
 %%% NIF API functions
 %%%=============================================================================
 
+-spec altact_sig_flags() -> erldist_filter_nif_types:altact_sig_flags().
+altact_sig_flags() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
 -spec atom2cix(Atom) -> CacheIndex when Atom :: atom(), CacheIndex :: integer().
 atom2cix(_Atom) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec atom_text_table_list() -> [atom()].
-atom_text_table_list() ->
+-spec atom_text_get(Atom, AtomEncoding) -> error | AtomText when
+    Atom :: atom(), AtomEncoding :: latin1 | utf8, AtomText :: binary().
+atom_text_get(_Atom, _AtomEncoding) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec atom_text_table_size() -> non_neg_integer().
-atom_text_table_size() ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--spec atom_text_inspect(Atom) -> ok when Atom :: atom().
-atom_text_inspect(_Atom) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--spec atom_text_put_and_keep(AtomText, AtomEncoding) -> Atom when
+-spec atom_text_put(AtomText, AtomEncoding) -> Atom when
     AtomText :: binary(), AtomEncoding :: latin1 | utf8, Atom :: atom().
-atom_text_put_and_keep(_AtomText, _AtomEncoding) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
-
--spec atom_text_release(Atom) -> ok when Atom :: atom().
-atom_text_release(_Atom) ->
+atom_text_put(_AtomText, _AtomEncoding) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec channel_open(PacketSize, Sysname, Creation, ConnectionId, DistributionFlags) -> Channel when
@@ -321,23 +265,26 @@ channel_set_controlling_process(_Channel, _NewOwnerPid) ->
 channel_set_tracing_process(_Channel, _NewTracePid) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec config_get() ->
-    #{
-        compact_fragments := boolean(),
-        deep_packet_inspection := boolean(),
-        logging := boolean(),
-        redirect_dist_operations := boolean(),
-        untrusted := boolean()
-    }.
+-spec config_get() -> ConfigMap when
+    ConfigMap :: erldist_filter_nif_types:config_map().
 config_get() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec config_get(option()) -> boolean().
-config_get(_Key) ->
+-spec config_get(ConfigKey) -> ConfigVal when
+    ConfigKey :: erldist_filter_nif_types:config_key(),
+    ConfigVal :: boolean().
+config_get(_ConfigKey) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec config_set(option(), boolean()) -> ok.
-config_set(_Key, _Val) ->
+-spec config_set(ConfigMapSet) -> ok when
+    ConfigMapSet :: erldist_filter_nif_types:config_map_set().
+config_set(ConfigMapSet) when is_map(ConfigMapSet) ->
+    config_set_from_maps_iterator(maps:iterator(ConfigMapSet)).
+
+-spec config_set(ConfigKey, ConfigVal) -> ok when
+    ConfigKey :: erldist_filter_nif_types:config_key(),
+    ConfigVal :: boolean().
+config_set(_ConfigKey, _ConfigVal) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec dist_ext_to_term(AtomsTuple, InputBinary) -> Term when
@@ -375,7 +322,7 @@ dist_int_to_vterm(_AtomsTuple, _InputBinary) ->
 dist_int_to_vterm(_AtomsTuple, _InputBinary, _Limit) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec distribution_flags() -> #{atom() => distribution_flags()}.
+-spec distribution_flags() -> erldist_filter_nif_types:distribution_flags().
 distribution_flags() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
@@ -427,6 +374,14 @@ logger_set_capacity(_NewCapacity) ->
 logger_set_controlling_process(_Logger, _NewOwnerPid) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
+-spec otp_name_blocklist() -> BlockList when BlockList :: [atom()].
+otp_name_blocklist() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec otp_name_is_blocked(Name) -> IsBlocked when Name :: atom(), IsBlocked :: boolean().
+otp_name_is_blocked(_Name) ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
 -spec router_info() -> RouterInfo when RouterInfo :: router_info().
 router_info() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
@@ -437,10 +392,13 @@ router_info() ->
 router_name(_Sysname) ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
-% TODO: This should be embedded in the NIF at build-time; see T151767026
--spec version_build_date() -> non_neg_integer().
-version_build_date() ->
-    20230808.
+-spec spawn_flags() -> erldist_filter_nif_types:spawn_flags().
+spawn_flags() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-spec version() -> #{date := string(), time := string()}.
+version() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec world_stats_get() -> world_stats().
 world_stats_get() ->
@@ -450,7 +408,21 @@ world_stats_get() ->
 %%% Internal functions
 %%%-----------------------------------------------------------------------------
 
--doc hidden.
+-doc false.
+-spec config_set_from_maps_iterator(Iterator) -> ok when
+    Iterator :: maps:iterator(ConfigKey, ConfigVal),
+    ConfigKey :: erldist_filter_nif_types:config_key(),
+    ConfigVal :: boolean().
+config_set_from_maps_iterator(Iterator) ->
+    case maps:next(Iterator) of
+        none ->
+            ok;
+        {ConfigKey, ConfigVal, NextIterator} ->
+            ok = config_set(ConfigKey, ConfigVal),
+            config_set_from_maps_iterator(NextIterator)
+    end.
+
+-doc false.
 -spec init() -> ok | Error when
     Error :: {error, {Reason, Text :: string()}},
     Reason :: load_failed | bad_lib | load | reload | upgrade | old_code.

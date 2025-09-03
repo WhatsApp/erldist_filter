@@ -1,0 +1,149 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "edf_otp_name_blocklist.h"
+
+#include "../core/khashl.h"
+
+/* Type Definitions */
+
+typedef uintptr_t edf_otp_name_blocklist_hs_key_t;
+static khint_t edf_otp_name_blocklist_hs_key_hash_fn(edf_otp_name_blocklist_hs_key_t key);
+static bool edf_otp_name_blocklist_hs_key_hash_eq(edf_otp_name_blocklist_hs_key_t k1, edf_otp_name_blocklist_hs_key_t k2);
+
+KHASHL_SET_INIT(KH_LOCAL, edf_otp_name_blocklist_hs_t, edf_otp_name_blocklist_hs, edf_otp_name_blocklist_hs_key_t,
+                edf_otp_name_blocklist_hs_key_hash_fn, edf_otp_name_blocklist_hs_key_hash_eq)
+
+struct edf_otp_name_blocklist_s {
+    edf_otp_name_blocklist_hs_t *hs;
+};
+
+/* Global Variables */
+
+static atomic_flag edf_otp_name_blocklist_initialized = ATOMIC_FLAG_INIT;
+static edf_otp_name_blocklist_t edf_otp_name_blocklist_internal = {.hs = NULL};
+edf_otp_name_blocklist_t *edf_otp_name_blocklist = &edf_otp_name_blocklist_internal;
+
+/* Static Declarations */
+
+/* Function Definitions */
+
+int
+edf_otp_name_blocklist_load(ErlNifEnv *env)
+{
+#define BLOCK_NAME(atom)                                                                                                           \
+    do {                                                                                                                           \
+        (void)edf_otp_name_blocklist_hs_put(edf_otp_name_blocklist->hs, (edf_otp_name_blocklist_hs_key_t)(atom), &absent);         \
+        if (absent != 1) {                                                                                                         \
+            (void)enif_fprintf(stderr, "Failed to add %T to OTP name blocklist\n", atom);                                          \
+            goto destroy;                                                                                                          \
+        }                                                                                                                          \
+    } while (0)
+
+    int retval = 0;
+    int absent = -1;
+
+    if (!atomic_flag_test_and_set(&edf_otp_name_blocklist_initialized)) {
+        if (edf_otp_name_blocklist->hs == NULL) {
+            edf_otp_name_blocklist->hs = edf_otp_name_blocklist_hs_init();
+            if (edf_otp_name_blocklist->hs == NULL)
+                goto failure;
+            /* clang-format off */ //-
+{% for block in ctx.dpi.otp_name_blocklist %}
+            BLOCK_NAME(ATOM({{ block.key }}));
+{% endfor %}
+            /* clang-format on */ //-
+        }
+    }
+
+    return retval;
+
+destroy:
+    (void)edf_otp_name_blocklist_hs_destroy(edf_otp_name_blocklist->hs);
+    edf_otp_name_blocklist->hs = NULL;
+failure:
+    (void)atomic_flag_clear(&edf_otp_name_blocklist_initialized);
+    retval = -1;
+    return retval;
+
+#undef BLOCK_NAME
+}
+
+void
+edf_otp_name_blocklist_unload(ErlNifEnv *env)
+{
+    (void)env;
+    if (edf_otp_name_blocklist->hs != NULL) {
+        (void)edf_otp_name_blocklist_hs_destroy(edf_otp_name_blocklist->hs);
+        edf_otp_name_blocklist->hs = NULL;
+        (void)atomic_flag_clear(&edf_otp_name_blocklist_initialized);
+    }
+    return;
+}
+
+bool
+edf_otp_name_is_blocked(ERL_NIF_TERM name)
+{
+    return (edf_otp_name_blocklist_hs_get(edf_otp_name_blocklist->hs, (edf_otp_name_blocklist_hs_key_t)(name)) <
+            kh_end(edf_otp_name_blocklist->hs));
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_otp_name_blocklist_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    /* clang-format off */ //-
+#define NUMBER_OF_OTP_NAME_BLOCKLIST ({{ ctx.dpi.otp_name_blocklist | length }})
+    /* clang-format on */ //-
+
+    ERL_NIF_TERM out_term;
+    ERL_NIF_TERM atoms[NUMBER_OF_OTP_NAME_BLOCKLIST];
+    size_t i = 0;
+
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+
+    /* clang-format off */ //-
+{% for block in ctx.dpi.otp_name_blocklist %}
+    atoms[i++] = ATOM({{ block.key }});
+{% endfor %} /* clang-format on */ //-
+
+    out_term = enif_make_list_from_array(env, atoms, NUMBER_OF_OTP_NAME_BLOCKLIST);
+    return out_term;
+#undef NUMBER_OF_OTP_NAME_BLOCKLIST
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_otp_name_is_blocked_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    ERL_NIF_TERM name;
+
+    if (argc != 1) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+
+    name = argv[0];
+
+    if (edf_otp_name_is_blocked(name)) {
+        return ATOM(true);
+    } else {
+        return ATOM(false);
+    }
+}
+
+inline khint_t
+edf_otp_name_blocklist_hs_key_hash_fn(edf_otp_name_blocklist_hs_key_t key)
+{
+    return (khint_t)((key * 0x9e3779b97f4a7c15ULL) >> 32);
+}
+
+inline bool
+edf_otp_name_blocklist_hs_key_hash_eq(edf_otp_name_blocklist_hs_key_t k1, edf_otp_name_blocklist_hs_key_t k2)
+{
+    return (k1 == k2);
+}

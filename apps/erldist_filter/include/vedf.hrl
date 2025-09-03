@@ -29,6 +29,7 @@
     compact_fragments = false :: boolean(),
     deep_packet_inspection = false :: boolean(),
     logging = false :: boolean(),
+    otp_name_blocklist = false :: boolean(),
     redirect_dist_operations = false :: boolean(),
     sysname = undefined :: undefined | erldist_filter_nif:sysname(),
     untrusted = false :: boolean()

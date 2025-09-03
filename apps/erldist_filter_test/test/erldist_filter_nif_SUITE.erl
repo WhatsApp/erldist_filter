@@ -20,6 +20,8 @@
 
 -include_lib("stdlib/include/assert.hrl").
 
+-include_lib("erldist_filter/include/erldist_filter_erts_dist.hrl").
+
 %% ct callbacks
 -export([
     all/0,
@@ -340,6 +342,12 @@ make_large_tuple_test_vector(N) ->
     TV.
 
 %% @private
+-spec vdist_altact_sig_flags(Flags) -> FlagsVTerm when
+    Flags :: vdist_dop_altact_sig_send:flags(), FlagsVTerm :: vterm:fixed_integer_t().
+vdist_altact_sig_flags(Flags) ->
+    vdist_dop_altact_sig_send:flags_as_vterm(Flags).
+
+%% @private
 vdist_test_vectors() ->
     Unused = vterm_nil_ext:new(),
     NodeA = vterm_small_atom_utf8_ext:new(3, <<"a@a">>),
@@ -426,7 +434,28 @@ vdist_test_vectors() ->
         % DOP_UNLINK_ID
         vdist_dop_unlink_id:new(Id, PidA, PidB),
         % DOP_UNLINK_ID_ACK
-        vdist_dop_unlink_id_ack:new(Id, PidA, PidB)
+        vdist_dop_unlink_id_ack:new(Id, PidA, PidB),
+        % DOP_ALTACT_SIG_SEND
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([]), PidA, PidB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio]), PidA, PidB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([token]), PidA, PidB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, token]), PidA, PidB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([alias]), PidA, AliasB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, alias]), PidA, AliasB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([token, alias]), PidA, AliasB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, token, alias]), PidA, AliasB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([name]), PidA, NameB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, name]), PidA, NameB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([token, name]), PidA, NameB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, token, name]), PidA, NameB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([exit]), PidA, PidB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, exit]), PidA, PidB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([token, exit]), PidA, PidB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, token, exit]), PidA, PidB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([alias, exit]), PidA, AliasB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, alias, exit]), PidA, AliasB),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([token, alias, exit]), PidA, AliasB, TraceToken),
+        vdist_dop_altact_sig_send:new(vdist_altact_sig_flags([prio, token, alias, exit]), PidA, AliasB, TraceToken)
     ]).
 
 %% @private

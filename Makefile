@@ -149,7 +149,7 @@ distclean-erlfmt:
 format: $(ERLFMT)
 	$(verbose) $(MAKE) -C $(CURDIR)/apps/$(PROJECT)/c_src format
 	$(verbose) $(MAKE) erlfmt
-	$(verbose) mix format
+	$(verbose) mix format --migrate
 
 .PHONY: lint lint-dialyzer lint-eqwalizer lint-format lint-xref
 

@@ -109,7 +109,7 @@ defmodule EDF do
         nil ->
           inspect_fun = maybe_break_infinite_loop(opts.inspect_fun)
 
-          {%Inspect.Opts{
+          {%{
              opts
              | custom_options: Keyword.put(opts.custom_options, __MODULE__, inspect_fun),
                inspect_fun: &__MODULE__.inspect/2

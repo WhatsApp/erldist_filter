@@ -1,0 +1,116 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#define ERLDIST_FILTER_NIF_INTERNAL_API 1
+#include "edf_config_impl.h"
+
+static ERL_NIF_TERM edf_config_get_bool(ErlNifEnv *env, bool *val);
+static ERL_NIF_TERM edf_config_set_bool(ErlNifEnv *env, bool *val, ERL_NIF_TERM val_term);
+
+ERL_NIF_TERM
+erldist_filter_nif_config_get_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    /* clang-format off */ //-
+#define RET_MAP_SIZE ({{ ctx.config.fields_list | length }})
+    /* clang-format on */ //-
+
+    ERL_NIF_TERM out_term;
+    ERL_NIF_TERM keys[RET_MAP_SIZE];
+    ERL_NIF_TERM vals[RET_MAP_SIZE];
+    size_t k = 0;
+    size_t v = 0;
+
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+
+    /* clang-format off */ //-
+{% for field in ctx.config.fields_list %}
+    keys[k++] = ATOM({{ field.key }});
+    vals[v++] = edf_config_get_bool(env, &edf_config_global->{{ field.key }});
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, &out_term)) {
+        return EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
+    }
+
+    return out_term;
+
+#undef RET_MAP_SIZE
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_config_get_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    ERL_NIF_TERM key_term;
+    ERL_NIF_TERM val_term = THE_NON_VALUE;
+
+    if (argc != 1) {
+        return EXCP_BADARG(env, "argc must be 1");
+    }
+
+    key_term = argv[0];
+
+    /* clang-format off */ //-
+{% set field_joiner = joiner(" else ") %}
+{% for field in ctx.config.fields_list %}
+    {{ field_joiner() }} if (key_term == ATOM({{ field.key }})) {
+        val_term = edf_config_get_bool(env, &edf_config_global->{{ field.key }});
+    }
+{% endfor %}
+    /* clang-format on */ //-
+
+    if (val_term == THE_NON_VALUE) {
+        return EXCP_BADARG(env, "Key is invalid");
+    }
+
+    return val_term;
+}
+
+ERL_NIF_TERM
+erldist_filter_nif_config_set_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    ERL_NIF_TERM key_term;
+    ERL_NIF_TERM val_term;
+
+    if (argc != 2) {
+        return EXCP_BADARG(env, "argc must be 2");
+    }
+
+    key_term = argv[0];
+    val_term = argv[1];
+
+    /* clang-format off */ //-
+{% set field_joiner = joiner(" else ") %}
+{% for field in ctx.config.fields_list %}
+    {{ field_joiner() }} if (key_term == ATOM({{ field.key }})) {
+        return edf_config_set_bool(env, &edf_config_global->{{ field.key }}, val_term);
+    }
+{% endfor %}
+    /* clang-format on */ //-
+
+    return EXCP_BADARG(env, "Key is invalid");
+}
+
+ERL_NIF_TERM
+edf_config_get_bool(ErlNifEnv *env, bool *val)
+{
+    (void)env;
+    return (*val) ? ATOM(true) : ATOM(false);
+}
+
+ERL_NIF_TERM
+edf_config_set_bool(ErlNifEnv *env, bool *val, ERL_NIF_TERM val_term)
+{
+    if (!(val_term == ATOM(true) || val_term == ATOM(false))) {
+        return EXCP_BADARG(env, "Val must be a boolean");
+    }
+    *val = (val_term == ATOM(true)) ? true : false;
+    return ATOM(ok);
+}

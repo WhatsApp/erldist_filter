@@ -1,0 +1,72 @@
+%%% % @format
+%%% %CopyrightBegin%
+%%%
+%%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
+%%% %CopyrightEnd%
+%%%
+%% @oncall whatsapp_clr
+-ifndef(ERLDIST_FILTER_ERTS_DIST_HRL).
+
+-define(ERLDIST_FILTER_ERTS_DIST_HRL, 1).
+
+%%% See [erts/emulator/beam/dist.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/dist.h) in the
+%%% Erlang/OTP source code.
+
+~J{ for flag in ctx.dist.flags_list }.
+~J{ if flag.comment }.
+~J< ctx.erlang_comment(flag.comment) >.
+~J{ endif }.
+~J{ if flag.internal }.
+% internal
+~J{ endif }.
+~J{ if flag.is_literal }.
+-define(~J< flag.key >., ~J< ctx.erlang_hex(flag.value) >.).
+~J{ else }.
+-define(~J< flag.key >., (~J{ set dist_flag_macro_continue = joiner(" bor ") }.
+~J{ for value in flag.values_list }.
+    ~J< dist_flag_macro_continue() >.?~J< value.key >.
+~J{ endfor }.
+)).
+~J{ endif }.
+~J{ endfor }.
+
+%% opcodes used in distribution messages
+% enum dop {
+~J{ for operation in ctx.dist.operations_list }.
+~J{ if operation.comment }.
+~J< ctx.erlang_comment(operation.comment) >.
+~J{ endif }.
+-define(~J< operation.key ~J>., ~J< operation.value >.).
+~J{ endfor }.
+% };
+
+~J{ for flag in ctx.dist.spawn_flags_list }.
+~J{ if flag.comment }.
+~J< ctx.erlang_comment(flag.comment) >.
+~J{ endif }.
+-define(~J< flag.key >., ~J< ctx.erlang_hex(flag.value) >.).
+~J{ endfor }.
+
+~J{ for flag in ctx.dist.altact_sig_flags_list }.
+~J{ if flag.comment }.
+~J< ctx.erlang_comment(flag.comment) >.
+~J{ endif }.
+-define(~J< flag.key >., ~J< ctx.erlang_hex(flag.value) >.).
+~J{ endfor }.
+
+-endif.

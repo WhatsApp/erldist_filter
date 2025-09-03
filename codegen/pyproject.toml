@@ -1,0 +1,44 @@
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# Copyright (c) WhatsApp LLC
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE.md file in the root directory of this source tree.
+
+[project]
+name = "erlang-edf-codegen"
+version = "0.1.0"
+description = "Generate C and Erlang code from YAML configuration using Jinja2."
+authors = [
+    {name = "Andrew Bennett", email = "potatosaladx@meta.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "click (>=8.2.1,<9.0.0)",
+    "jinja2 (>=3.1.6,<4.0.0)",
+    "pyyaml (>=6.0.2,<7.0.0)",
+    "pydantic (>=2.11.7,<3.0.0)",
+    "jsonschema (>=4.25.0,<5.0.0)"
+]
+
+[project.scripts]
+erlang_edf_codegen = "erlang_edf_codegen.__main__:main"
+
+[build-system]
+requires = ["poetry-core>=2.1.3,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 132
+
+[tool.poetry]
+packages = [{include = "erlang_edf_codegen", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+pytest = "^8.4.1"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

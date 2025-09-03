@@ -81,11 +81,13 @@ vterm_encode_and_try_resolve(ErlNifEnv *env, vterm_env_t *vtenv, vterm_t *vtp, E
         return 0;
     }
     if (vterm_is_atom(vtenv, vtp)) {
-        ErtsAtomEncoding encoding = ERTS_ATOM_ENC_UTF8;
+        ErlNifCharEncoding encoding = ERL_NIF_UTF8;
         const uint8_t *name = NULL;
         size_t len = 0;
         if (vterm_get_atom_text(vtenv, vtp, &encoding, &name, &len)) {
-            *termp = erts_atom_put(name, (signed int)len, encoding, 0);
+            if (!edf_atom_text_put(name, len, encoding, termp)) {
+                return 0;
+            }
             return 1;
         }
     }
@@ -502,18 +504,18 @@ encode_write_vterm_atom(ErlNifEnv *caller_env, int flags, vterm_env_t *vtenv, vt
             WRITE_U8(dp->index);
             break;
         } else {
-            ErtsAtomEncoding atom_encoding = ERTS_ATOM_ENC_UTF8;
+            ErlNifCharEncoding atom_encoding = ERL_NIF_UTF8;
             const uint8_t *atom_text = NULL;
             size_t atom_len = 0;
             if (!edf_atom_text_get_length(dp->term, atom_encoding, &atom_len)) {
-                atom_encoding = ERTS_ATOM_ENC_LATIN1;
+                atom_encoding = ERL_NIF_LATIN1;
                 atom_len = 0;
                 if (edf_atom_text_get_length(dp->term, atom_encoding, &atom_len)) {
                     return 0;
                 }
             }
             if (atom_len > MAX_ATOM_CHARACTERS) {
-                if (atom_encoding == ERTS_ATOM_ENC_UTF8) {
+                if (atom_encoding == ERL_NIF_UTF8) {
                     WRITE_U8(ATOM_UTF8_EXT);
                     WRITE_U16((uint16_t)(atom_len));
                 } else {
@@ -521,7 +523,7 @@ encode_write_vterm_atom(ErlNifEnv *caller_env, int flags, vterm_env_t *vtenv, vt
                     WRITE_U16((uint16_t)(atom_len));
                 }
             } else {
-                if (atom_encoding == ERTS_ATOM_ENC_UTF8) {
+                if (atom_encoding == ERL_NIF_UTF8) {
                     WRITE_U8(SMALL_ATOM_UTF8_EXT);
                     WRITE_U8((uint8_t)(atom_len));
                 } else {

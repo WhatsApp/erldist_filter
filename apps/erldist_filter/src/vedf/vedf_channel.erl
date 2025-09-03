@@ -34,7 +34,8 @@
     entry :: vdist_entry:t(),
     control :: udist:dop_t(),
     payload :: vterm:t() | undefined,
-    compact_fragment :: binary()
+    compact_fragment :: binary(),
+    otp_name_blocklist :: boolean()
 }).
 -record(dpi_result, {
     channel :: t(),
@@ -46,6 +47,7 @@
     compact_fragments => boolean(),
     deep_packet_inspection => boolean(),
     logging => boolean(),
+    otp_name_blocklist => boolean(),
     redirect_dist_operations => boolean(),
     sysname => undefined | erldist_filter_nif:sysname(),
     untrusted => boolean()
@@ -81,6 +83,7 @@ new(PacketSize, DistributionFlags, Config) when
     CompactFragments = maps:get(compact_fragments, Config, false),
     DeepPacketInspection = maps:get(deep_packet_inspection, Config, false),
     Logging = maps:get(logging, Config, false),
+    OtpNameBlocklist = maps:get(otp_name_blocklist, Config, false),
     RedirectDistOperations = maps:get(redirect_dist_operations, Config, false),
     Sysname = maps:get(sysname, Config, undefined),
     Untrusted = maps:get(untrusted, Config, false),
@@ -95,6 +98,7 @@ new(PacketSize, DistributionFlags, Config) when
             compact_fragments = CompactFragments,
             deep_packet_inspection = DeepPacketInspection,
             logging = Logging,
+            otp_name_blocklist = OtpNameBlocklist,
             redirect_dist_operations = RedirectDistOperations,
             sysname = Sysname,
             untrusted = Untrusted
@@ -319,7 +323,7 @@ compact_fragments(Q0, Acc) ->
     Actions :: [Action],
     Action :: erldist_filter_nif:action().
 deep_packet_inspection(
-    Channel1 = #vedf_channel{deep_packet_inspection = DeepPacketInspection},
+    Channel1 = #vedf_channel{deep_packet_inspection = DeepPacketInspection, otp_name_blocklist = OtpNameBlocklist},
     Entry = #vdist_entry{},
     ControlMessage,
     MaybePayload,
@@ -338,7 +342,8 @@ deep_packet_inspection(
                 entry = Entry,
                 control = Control,
                 payload = MaybePayload,
-                compact_fragment = CompactFragment
+                compact_fragment = CompactFragment,
+                otp_name_blocklist = OtpNameBlocklist
             },
             #dpi_result{channel = Channel2 = #vedf_channel{}, actions = Actions} =
                 case Control of
@@ -398,26 +403,27 @@ dpi_classify_send_to_alias(DPI = #dpi{}) ->
     dpi_classify_send(DPI).
 
 -spec dpi_classify_send_to_name(dpi()) -> dpi_result().
-dpi_classify_send_to_name(DPI = #dpi{control = Control}) ->
-    case Control of
-        #udist_dop_reg_send{to_name = Name} ->
-            case Name of
-                net_kernel ->
-                    dpi_classify_send_to_net_kernel(DPI);
-                rex ->
-                    dpi_classify_send_to_rex(DPI);
-                _ ->
+dpi_classify_send_to_name(DPI = #dpi{control = Control, otp_name_blocklist = OtpNameBlocklist}) ->
+    Name =
+        case Control of
+            #udist_dop_reg_send{to_name = ToName} -> ToName;
+            #udist_dop_reg_send_tt{to_name = ToName} -> ToName;
+            #udist_dop_altact_sig_send{to = To} -> To
+        end,
+    case Name of
+        net_kernel ->
+            dpi_classify_send_to_net_kernel(DPI);
+        rex ->
+            dpi_classify_send_to_rex(DPI);
+        _ when OtpNameBlocklist =:= true ->
+            case lists:member(Name, erldist_filter_nif:otp_name_blocklist()) of
+                true ->
+                    dpi_classify_send_to_otp_name(DPI);
+                false ->
                     dpi_classify_send(DPI)
             end;
-        #udist_dop_reg_send_tt{to_name = Name} ->
-            case Name of
-                net_kernel ->
-                    dpi_classify_send_to_net_kernel(DPI);
-                rex ->
-                    dpi_classify_send_to_rex(DPI);
-                _ ->
-                    dpi_classify_send(DPI)
-            end
+        _ ->
+            dpi_classify_send(DPI)
     end.
 
 -spec dpi_classify_send_to_pid(dpi()) -> dpi_result().
@@ -534,6 +540,14 @@ dpi_classify_send_to_rex(DPI = #dpi{payload = Payload0}) when ?is_vterm_t(Payloa
             % LOG, DROP or REDIRECT
             dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1)
     end.
+
+-spec dpi_classify_send_to_otp_name(dpi()) -> dpi_result().
+dpi_classify_send_to_otp_name(DPI = #dpi{payload = Payload}) when ?is_vterm_t(Payload) ->
+    %% REG_SEND: OTP registered process name
+    %%
+    %% Redirect the message (drop it).
+    % LOG, DROP or REDIRECT
+    dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1).
 
 -spec dpi_drop(dpi()) -> dpi_result().
 dpi_drop(#dpi{channel = Channel = #vedf_channel{}, compact_fragment = CompactFragment}) ->
@@ -832,6 +846,8 @@ dpi_resolve_token(ControlVTerm) ->
         #vdist_dop_spawn_reply_tt{token = Token} ->
             {ok, Token};
         #vdist_dop_spawn_request_tt{token = Token} ->
+            {ok, Token};
+        #vdist_dop_altact_sig_send{token = {some, Token}} ->
             {ok, Token};
         _ ->
             error

@@ -13,12 +13,12 @@
 extern "C" {
 #endif
 
-#include "../edf_common.h"
-#include "../core/align.h"
-#include "../core/linklist.h"
-#include "../core/mutex.h"
-#include "../core/rwlock.h"
-#include "../edf_mpid.h"
+#include "../erldist_filter_nif.h"
+#include "../../primitive/align.h"
+#include "../../primitive/linklist.h"
+#include "../core/xnif_mutex.h"
+#include "../core/xnif_rwlock.h"
+#include "../core/xnif_monitor.h"
 #include "../ioq.h"
 #include "../vec.h"
 #include "edf_atom_cache.h"
@@ -37,11 +37,6 @@ extern "C" {
 
 /* Type Definitions */
 
-typedef struct edf_channel_s edf_channel_t;
-typedef enum edf_channel_rx_state_t edf_channel_rx_state_t;
-typedef struct edf_channel_resource_s edf_channel_resource_t;
-typedef struct edf_channel_resource_table_s edf_channel_resource_table_t;
-
 enum edf_channel_rx_state_t {
     EDF_CHANNEL_RX_STATE_PACKET_HEADER = 0,
     EDF_CHANNEL_RX_STATE_PACKET_DATA,
@@ -57,10 +52,15 @@ enum edf_channel_rx_state_t {
     EDF_CHANNEL_RX_STATE_DECODE_CONTROL_LENGTH,
 };
 
+typedef struct edf_channel_s edf_channel_t;
+typedef enum edf_channel_rx_state_t edf_channel_rx_state_t;
+typedef struct edf_channel_resource_s edf_channel_resource_t;
+typedef struct edf_channel_resource_table_s edf_channel_resource_table_t;
+
 struct edf_channel_s {
     edf_channel_resource_t *resource;
-    edf_mpid_t owner;
-    edf_mpid_t trace;
+    xnif_monitor_t owner;
+    xnif_monitor_t trace;
     ERL_NIF_TERM sysname;
     uint32_t creation;
     uint32_t connection_id;
@@ -80,13 +80,13 @@ struct edf_channel_s {
 
 struct edf_channel_resource_s {
     linklist_t _link;
-    core_rwlock_t rwlock;
+    xnif_rwlock_t rwlock;
     edf_channel_t *inner;
 };
 
 struct edf_channel_resource_table_s {
     linklist_t _link;
-    core_mutex_t mutex;
+    xnif_mutex_t mutex;
 };
 
 /* Global Declarations */
@@ -168,9 +168,9 @@ edf_channel_resource_acquire_direct(ErlNifEnv *env, edf_channel_resource_t *reso
     }
 
     if ((flags & EDF_CHANNEL_RESOURCE_FLAG_WRITE_LOCK) != 0) {
-        (void)core_rwlock_write_lock(&resource->rwlock);
+        (void)xnif_rwlock_write_lock(&resource->rwlock);
     } else {
-        (void)core_rwlock_read_lock(&resource->rwlock);
+        (void)xnif_rwlock_read_lock(&resource->rwlock);
     }
 
     channel = resource->inner;
@@ -203,9 +203,9 @@ edf_channel_resource_release(edf_channel_resource_t **resourcep, edf_channel_t *
     *resourcep = NULL;
     *channelp = NULL;
     if ((flags & EDF_CHANNEL_RESOURCE_FLAG_WRITE_LOCK) != 0) {
-        (void)core_rwlock_write_unlock(&resource->rwlock);
+        (void)xnif_rwlock_write_unlock(&resource->rwlock);
     } else {
-        (void)core_rwlock_read_unlock(&resource->rwlock);
+        (void)xnif_rwlock_read_unlock(&resource->rwlock);
     }
 }
 #endif

@@ -69,6 +69,9 @@ else
 	C_SRC_OUTPUT_FILE = $(C_SRC_OUTPUT)$(C_SRC_OUTPUT_EXECUTABLE_EXTENSION)
 endif
 
+ASAN_COMMON_FLAGS ?=
+# ASAN_COMMON_FLAGS ?= -fsanitize=address -fno-common -fno-omit-frame-pointer
+
 ifeq ($(PLATFORM),msys2)
 # We hardcode the compiler used on MSYS2. The default CC=cc does
 # not produce working code. The "gcc" MSYS2 package also doesn't.
@@ -81,8 +84,8 @@ ifeq ($(PLATFORM),msys2)
 else ifeq ($(PLATFORM),darwin)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c23 -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++23 -Wall
+	CFLAGS ?= -Og -g -ggdb -std=c23 -Wall -Wmissing-prototypes $(ASAN_COMMON_FLAGS)
+	CXXFLAGS ?= -Og -g -ggdb -std=c++23 -Wall $(ASAN_COMMON_FLAGS)
 	LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
 else ifeq ($(PLATFORM),freebsd)
 	CC ?= cc
@@ -161,8 +164,12 @@ SOURCES := $(sort $(foreach pat,*.c *.C *.cc *.cpp,$(call core_find,$(C_SRC_DIR)
 endif
 OBJECTS = $(addsuffix .o, $(basename $(SOURCES)))
 
-ifeq ($(FORMAT_SOURCES),)
-FORMAT_SOURCES := $(shell find $(C_SRC_DIR)/nif \( -type l -o -type f \) \( -name '*.c' -o -name '*.C' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.c.h' -o -name '*.hpp' \) | grep -v " ")
+ifeq ($(FORMAT_NIF_SOURCES),)
+FORMAT_NIF_SOURCES := $(shell find $(C_SRC_DIR)/nif \( -type l -o -type f \) \( -name '*.c' -o -name '*.C' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.c.h' -o -name '*.hpp' \) | grep -v " ")
+endif
+
+ifeq ($(FORMAT_PRIMITIVE_SOURCES),)
+FORMAT_PRIMITIVE_SOURCES := $(shell find $(C_SRC_DIR)/primitive \( -type l -o -type f \) \( -name '*.c' -o -name '*.C' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.c.h' -o -name '*.hpp' \) | grep -v " ")
 endif
 
 COMPILE_C = $(c_verbose) $(CC) $(CFLAGS) $(CPPFLAGS) -c
@@ -205,7 +212,7 @@ distclean-c_src-env:
 	$(gen_verbose) rm -f $(C_SRC_ENV)
 
 format:
-	$(gen_verbose) clang-format -i $(FORMAT_SOURCES)
+	$(gen_verbose) clang-format -i $(FORMAT_NIF_SOURCES) $(FORMAT_PRIMITIVE_SOURCES)
 
 ifneq ($(wildcard $(C_SRC_DIR)),)
 ERL_ERTS_DIR = $(shell $(ERL) -eval 'io:format("~s~n", [code:lib_dir(erts)]), halt().')
