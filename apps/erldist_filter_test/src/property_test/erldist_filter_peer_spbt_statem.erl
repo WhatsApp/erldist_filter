@@ -76,13 +76,25 @@ command(_SymbolicState, P2P) ->
     X = exactly(P2P),
     oneof([
         {call, ?SHIM, ping, [X]},
-        {call, ?SHIM, alias_priority_send, [X, gen_payload()]},
         {call, ?SHIM, alias_send, [X, gen_payload()]},
-        {call, ?SHIM, exit2_priority_signal, [X, gen_payload()]},
         {call, ?SHIM, exit2_signal, [X, gen_payload()]},
         {call, ?SHIM, reg_send, [X, gen_reg_name(P2P), gen_payload()]},
         {call, ?SHIM, send_sender, [X, gen_payload()]}
+        | otp_28_plus_commands(X)
     ]).
+
+-if(?OTP_RELEASE >= 28).
+-spec otp_28_plus_commands(dynamic()) -> [dynamic()].
+otp_28_plus_commands(X) ->
+    [
+        {call, ?SHIM, alias_priority_send, [X, gen_payload()]},
+        {call, ?SHIM, exit2_priority_signal, [X, gen_payload()]}
+    ].
+-else.
+-spec otp_28_plus_commands(dynamic()) -> [dynamic()].
+otp_28_plus_commands(_X) ->
+    [].
+-endif.
 
 -spec precondition(SymbolicState, SymbolicCall) -> boolean() when
     SymbolicState :: dynamic_state(),
