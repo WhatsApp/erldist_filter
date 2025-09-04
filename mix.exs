@@ -11,21 +11,21 @@ defmodule ErldistFilterElixirTests.MixProject do
     [
       app: :erldist_filter_elixir_tests,
       version: "1.0.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env())
     ]
   end
 
   def application() do
-    [extra_applications: [:logger, :observer, :runtime_tools, :erldist_filter]]
+    [extra_applications: [:logger, :observer, :runtime_tools, :erldist_filter, :erldist_filter_test]]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps() do
     [
-      {:erldist_filter, path: "apps/erldist_filter", only: :test, override: true},
-      {:erldist_filter_test, path: "apps/erldist_filter_test", only: :test, override: true}
+      {:erldist_filter, path: "apps/erldist_filter", override: true},
+      {:erldist_filter_test, path: "apps/erldist_filter_test", override: true}
     ]
   end
 

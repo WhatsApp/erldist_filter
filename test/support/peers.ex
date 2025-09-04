@@ -63,8 +63,20 @@ defmodule ErldistFilterElixirTests.Peers do
     @shim.rpc(peer, module, function, arguments, timeout)
   end
 
+  def handler_dequeue(peer), do: handler_dequeue(peer, 1)
+
+  def handler_dequeue(peer, n) when n > 0 do
+    rpc(peer, @handler, :dequeue, [n])
+  end
+
   def handler_export(peer) do
     rpc(peer, @handler, :export, [])
+  end
+
+  def logger_dequeue(peer), do: logger_dequeue(peer, 1)
+
+  def logger_dequeue(peer, n) when n > 0 do
+    rpc(peer, @logger, :dequeue, [n])
   end
 
   def logger_export(peer) do
@@ -112,6 +124,7 @@ defmodule ErldistFilterElixirTests.Peers do
     :ok = :erldist_filter_nif.config_set(:compact_fragments, true)
     :ok = :erldist_filter_nif.config_set(:deep_packet_inspection, true)
     :ok = :erldist_filter_nif.config_set(:logging, true)
+    :ok = :erldist_filter_nif.config_set(:otp_name_blocklist, true)
     :ok = :erldist_filter_nif.config_set(:redirect_dist_operations, true)
     {:ok, _} = :supervisor.start_child(:kernel_sup, @logger.child_spec())
     {:ok, _} = :supervisor.start_child(:kernel_sup, @handler.child_spec())
@@ -127,6 +140,7 @@ defmodule ErldistFilterElixirTests.Peers do
     :ok = :erldist_filter_nif.config_set(:compact_fragments, false)
     :ok = :erldist_filter_nif.config_set(:deep_packet_inspection, false)
     :ok = :erldist_filter_nif.config_set(:logging, false)
+    :ok = :erldist_filter_nif.config_set(:otp_name_blocklist, false)
     :ok = :erldist_filter_nif.config_set(:redirect_dist_operations, false)
     :ok = :erldist_filter_nif.config_set(:untrusted, false)
     # :ok = :application.stop(:erldist_filter)

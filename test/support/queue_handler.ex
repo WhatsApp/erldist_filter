@@ -25,6 +25,15 @@ defmodule ErldistFilterElixirTests.QueueHandler do
     :gen_statem.start_link({:local, __MODULE__}, __MODULE__, {}, [])
   end
 
+  defmodule Data do
+    defstruct dequeue: :queue.new(), enqueue: :queue.new()
+
+    @type t() :: %__MODULE__{
+            dequeue: :queue.queue(:gen_statem.from()),
+            enqueue: :queue.queue(dynamic())
+          }
+  end
+
   @impl :gen_statem
   def callback_mode() do
     [:handle_event_function]
@@ -32,22 +41,53 @@ defmodule ErldistFilterElixirTests.QueueHandler do
 
   @impl :gen_statem
   def init({}) do
-    data = :queue.new()
+    data = %Data{}
     {:ok, nil, data}
   end
 
   @impl :gen_statem
-  def handle_event({:call, from}, :export, _state, data) do
-    reply = :queue.to_list(data)
-    data = :queue.new()
+  def handle_event({:call, from}, :dequeue, _state, data = %Data{dequeue: dequeue, enqueue: enqueue}) do
+    case :queue.out(enqueue) do
+      {:empty, ^enqueue} ->
+        dequeue = :queue.in(from, dequeue)
+        data = %{data | dequeue: dequeue}
+        {:keep_state, data}
+
+      {{:value, event}, enqueue} ->
+        data = %{data | enqueue: enqueue}
+        actions = [{:reply, from, event}]
+        {:keep_state, data, actions}
+    end
+  end
+
+  def handle_event({:call, from}, :export, _state, data = %Data{enqueue: enqueue}) do
+    reply = :queue.to_list(enqueue)
+    enqueue = :queue.new()
+    data = %{data | enqueue: enqueue}
     actions = [{:reply, from, reply}]
     {:keep_state, data, actions}
   end
 
-  def handle_event(:cast, {:enqueue, message}, _state, data) do
-    data = :queue.in(message, data)
-    {:keep_state, data}
+  def handle_event(:cast, {:enqueue, message}, _state, data = %Data{dequeue: dequeue, enqueue: enqueue}) do
+    case :queue.out(dequeue) do
+      {:empty, ^dequeue} ->
+        enqueue = :queue.in(message, enqueue)
+        data = %{data | enqueue: enqueue}
+        {:keep_state, data}
+
+      {{:value, from}, dequeue} ->
+        actions = [{:reply, from, message}]
+        data = %{data | dequeue: dequeue}
+        {:keep_state, data, actions}
+    end
   end
+
+  def dequeue() do
+    :gen_statem.call(__MODULE__, :dequeue)
+  end
+
+  def dequeue(0), do: []
+  def dequeue(n) when is_integer(n) and n > 0, do: [dequeue() | dequeue(n - 1)]
 
   def enqueue(message) do
     :gen_statem.cast(__MODULE__, {:enqueue, message})

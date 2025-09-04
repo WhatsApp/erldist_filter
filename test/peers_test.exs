@@ -79,7 +79,7 @@ defmodule PeersTest do
         [
           {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_alias_send_process_init, 2}), [_uparent, _ualias]}
         ],
-        @peers.logger_export(vpeer)
+        @peers.logger_dequeue(vpeer, 1)
       )
     )
 
@@ -88,7 +88,7 @@ defmodule PeersTest do
     assert(
       match?(
         [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_alias_send_process_init, [_, _]}],
-        @peers.handler_export(vpeer)
+        @peers.handler_dequeue(vpeer, 1)
       )
     )
 
@@ -183,7 +183,7 @@ defmodule PeersTest do
         [
           {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_registered_process_init, 2}), [_uparent, ^reg_name]}
         ],
-        @peers.logger_export(vpeer)
+        @peers.logger_dequeue(vpeer, 1)
       )
     )
 
@@ -192,7 +192,7 @@ defmodule PeersTest do
     assert(
       match?(
         [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_registered_process_init, [_, _]}],
-        @peers.handler_export(vpeer)
+        @peers.handler_dequeue(vpeer, 1)
       )
     )
 
@@ -284,7 +284,7 @@ defmodule PeersTest do
         [
           {_, ^unode, EDF.udist_dop_spawn_request(mfa: {__MODULE__, :vnode_send_sender_process_init, 2}), [_uparent, _upid]}
         ],
-        @peers.logger_export(vpeer)
+        @peers.logger_dequeue(vpeer, 1)
       )
     )
 
@@ -293,7 +293,7 @@ defmodule PeersTest do
     assert(
       match?(
         [{:spawn_request_init, :keep, ^unode, __MODULE__, :vnode_send_sender_process_init, [_, _]}],
-        @peers.handler_export(vpeer)
+        @peers.handler_dequeue(vpeer, 1)
       )
     )
 

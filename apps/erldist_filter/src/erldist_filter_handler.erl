@@ -70,7 +70,7 @@
 -callback classify(Hint :: hint(), Sysname :: node(), Control :: control_with_payload(), Payload :: payload()) ->
     decision_result().
 -callback spawn_request_init(Sysname :: node(), Module :: module(), FunctionName :: atom(), Arguments :: [payload()]) ->
-    term().
+    dynamic().
 
 %% Macros
 -define(hint_drop_control(), handler_classify(Handler, drop, Sysname, Control)).
@@ -79,6 +79,14 @@
 -define(hint_drop_payload(), handler_classify(Handler, drop, Sysname, Control, Payload)).
 -define(hint_safe_payload(), handler_classify(Handler, safe, Sysname, Control, Payload)).
 -define(hint_unsafe_payload(), handler_classify(Handler, unsafe, Sysname, Control, Payload)).
+-define(infallible(X),
+    (try
+        (X),
+        ok
+    catch
+        _:_ -> ok
+    end)
+).
 -define(is_router_number(X), (is_integer(X) andalso (X) >= 1)).
 
 %%%=============================================================================
@@ -385,14 +393,11 @@ execute({drop, _Control, _Payload}) ->
 execute({keep, Control}) ->
     case Control of
         #udist_dop_exit2{to_pid = ToPid, reason = Reason} when node(ToPid) =:= node() ->
-            _ = catch erlang:exit(ToPid, Reason),
-            ok;
+            ok = ?infallible(erlang:exit(ToPid, Reason));
         #udist_dop_exit2_tt{to_pid = ToPid, reason = Reason} when node(ToPid) =:= node() ->
-            _ = catch erlang:exit(ToPid, Reason),
-            ok;
+            ok = ?infallible(erlang:exit(ToPid, Reason));
         #udist_dop_group_leader{from_pid = FromPid, to_pid = ToPid} when node(ToPid) =:= node() ->
-            _ = catch erlang:group_leader(FromPid, ToPid),
-            ok;
+            ok = ?infallible(erlang:group_leader(FromPid, ToPid));
         _ when ?is_udist_dop_without_payload_t(Control) ->
             % Invalid message: drop
             ok
@@ -400,37 +405,44 @@ execute({keep, Control}) ->
 execute({keep, Control, Payload}) ->
     case Control of
         #udist_dop_alias_send{alias = Alias} when node(Alias) =:= node() ->
-            _ = catch erlang:send(Alias, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(Alias, Payload, [noconnect]));
+        #udist_dop_altact_sig_send{flags = F, to = To} when (F band ?ERTS_DOP_ALTACT_SIG_FLG_EXIT) =/= 0 ->
+            Reason = Payload,
+            case (F band ?ERTS_DOP_ALTACT_SIG_FLG_PRIO) =/= 0 andalso is_reference(To) of
+                false ->
+                    ok = ?infallible(erlang:exit(To, Reason));
+                true ->
+                    ok = ?infallible(erlang:exit(To, Reason, [priority]))
+            end;
+        #udist_dop_altact_sig_send{flags = F, to = To} when (F band ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS) =/= 0 ->
+            case (F band ?ERTS_DOP_ALTACT_SIG_FLG_PRIO) =/= 0 andalso is_reference(To) of
+                false ->
+                    ok = ?infallible(erlang:send(To, Payload));
+                true ->
+                    ok = ?infallible(erlang:send(To, Payload, [priority]))
+            end;
+        #udist_dop_altact_sig_send{to = To} ->
+            ok = ?infallible(erlang:send(To, Payload));
         #udist_dop_alias_send_tt{alias = Alias} when node(Alias) =:= node() ->
-            _ = catch erlang:send(Alias, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(Alias, Payload, [noconnect]));
         #udist_dop_payload_exit2{to_pid = ToPid} when node(ToPid) =:= node() ->
             Reason = Payload,
-            _ = catch erlang:exit(ToPid, Reason),
-            ok;
+            ok = ?infallible(erlang:exit(ToPid, Reason));
         #udist_dop_payload_exit2_tt{to_pid = ToPid} when node(ToPid) =:= node() ->
             Reason = Payload,
-            _ = catch erlang:exit(ToPid, Reason),
-            ok;
+            ok = ?infallible(erlang:exit(ToPid, Reason));
         #udist_dop_reg_send{to_name = ToName} ->
-            _ = catch erlang:send(ToName, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToName, Payload, [noconnect]));
         #udist_dop_reg_send_tt{to_name = ToName} ->
-            _ = catch erlang:send(ToName, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToName, Payload, [noconnect]));
         #udist_dop_send{to_pid = ToPid} when node(ToPid) =:= node() ->
-            _ = catch erlang:send(ToPid, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToPid, Payload, [noconnect]));
         #udist_dop_send_tt{to_pid = ToPid} when node(ToPid) =:= node() ->
-            _ = catch erlang:send(ToPid, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToPid, Payload, [noconnect]));
         #udist_dop_send_sender{to_pid = ToPid} when node(ToPid) =:= node() ->
-            _ = catch erlang:send(ToPid, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToPid, Payload, [noconnect]));
         #udist_dop_send_sender_tt{to_pid = ToPid} when node(ToPid) =:= node() ->
-            _ = catch erlang:send(ToPid, Payload, [noconnect]),
-            ok;
+            ok = ?infallible(erlang:send(ToPid, Payload, [noconnect]));
         _ when ?is_udist_dop_with_payload_t(Control) ->
             % Invalid message: drop
             ok

@@ -14,7 +14,7 @@ defmodule ErldistFilter.MixProject do
       app: app,
       version: to_string(Keyword.fetch!(desc, :vsn)),
       description: to_string(Keyword.fetch!(desc, :description)),
-      elixir: "~> 1.14",
+      elixir: "~> 1.17",
       compilers: [:elixir_make] ++ Mix.compilers(),
       make_args: ["-j"],
       make_env: %{"MIX_ENV" => to_string(Mix.env())},
@@ -34,7 +34,7 @@ defmodule ErldistFilter.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps() do
     [
-      {:elixir_make, "~> 0.7", runtime: false}
+      {:elixir_make, "~> 0.9", runtime: false}
     ]
   end
 
