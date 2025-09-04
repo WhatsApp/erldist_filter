@@ -349,7 +349,7 @@ connected(
     peers,
     _Data = #data{upeer = #peer_data{peer = UPeer}, vpeer = #peer_data{peer = VPeer}}
 ) ->
-    ok = ensure_connected(UPeer, VPeer),
+    % ok = ensure_connected(UPeer, VPeer),
     Actions = [{reply, From, #{upeer => UPeer, vpeer => VPeer}}],
     {keep_state_and_data, Actions}.
 

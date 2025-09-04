@@ -58,10 +58,9 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {_, ^vnode, EDF.udist_dop_demonitor_p(to_proc: :net_kernel)},
           {_, ^vnode, _, {_, :yes}}
         ],
-        @peers.logger_dequeue(upeer, 2)
+        @peers.logger_dequeue(upeer, 1)
       )
     )
 
@@ -114,12 +113,11 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {_, ^vnode, EDF.udist_dop_demonitor_p(to_proc: :net_kernel)},
           {_, ^vnode, EDF.udist_dop_spawn_reply(result: result)},
           {_, ^vnode, EDF.udist_dop_payload_monitor_p_exit(from_proc: result), {_, :return, :unauthorized}}
         ]
         when is_pid(result),
-        @peers.logger_dequeue(upeer, 3)
+        @peers.logger_dequeue(upeer, 2)
       )
     )
 
@@ -162,10 +160,9 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {_, ^vnode, EDF.udist_dop_demonitor_p(to_proc: :net_kernel)},
           {_, ^vnode, _, {_, :unauthorized}}
         ],
-        @peers.logger_dequeue(upeer, 2)
+        @peers.logger_dequeue(upeer, 1)
       )
     )
 
@@ -221,10 +218,9 @@ defmodule UntrustedTest do
     assert(
       match?(
         [
-          {_, ^vnode, EDF.udist_dop_demonitor_p(to_proc: :net_kernel)},
           {_, ^vnode, EDF.udist_dop_send_sender(), {:io_reply, _, {:error, :enotsup}}}
         ],
-        @peers.logger_dequeue(upeer, 2)
+        @peers.logger_dequeue(upeer, 1)
       )
     )
 
