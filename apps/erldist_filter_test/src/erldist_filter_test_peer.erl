@@ -99,7 +99,7 @@ start_link(PeerNode) when is_atom(PeerNode) ->
     case peer:start_link(Options) of
         {ok, PeerPid, _ActualPeerNode} when is_pid(PeerPid) ->
             maybe
-                true ?= peer:call(PeerPid, code, set_path, [code:get_path()]),
+                ok ?= peer:call(PeerPid, code, add_pathsa, [code:get_path()]),
                 {ok, _} ?= peer:call(PeerPid, net_kernel, start, [PeerNode, #{name_domain => longnames}]),
                 ok ?= peer:call(PeerPid, ?MODULE, wait_until_net_kernel_started, [PeerNode]),
                 {ok, PeerPid}
