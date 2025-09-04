@@ -5,6 +5,8 @@
 # LICENSE.md file in the root directory of this source tree.
 
 defmodule ErldistFilterElixirTests.QueueLogger do
+  @call_timeout :timer.seconds(15)
+
   @behaviour :erldist_filter_logger
 
   @spec child_spec() :: :supervisor.child_spec()
@@ -14,7 +16,7 @@ defmodule ErldistFilterElixirTests.QueueLogger do
 
   def dequeue() do
     server_ref = :erldist_filter_logger.child_name(__MODULE__, 1)
-    {:ok, reply} = :gen.call(server_ref, :"$erldist_filter_logger_call", :dequeue)
+    {:ok, reply} = :gen.call(server_ref, :"$erldist_filter_logger_call", :dequeue, @call_timeout)
     reply
   end
 
@@ -23,7 +25,7 @@ defmodule ErldistFilterElixirTests.QueueLogger do
 
   def export() do
     server_ref = :erldist_filter_logger.child_name(__MODULE__, 1)
-    {:ok, reply} = :gen.call(server_ref, :"$erldist_filter_logger_call", :export)
+    {:ok, reply} = :gen.call(server_ref, :"$erldist_filter_logger_call", :export, @call_timeout)
     reply
   end
 
