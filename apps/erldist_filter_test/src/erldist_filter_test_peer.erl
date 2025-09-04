@@ -104,7 +104,8 @@ start_link(PeerNode) when is_atom(PeerNode) ->
                 ok ?= peer:call(PeerPid, ?MODULE, wait_until_net_kernel_started, [PeerNode]),
                 {ok, PeerPid}
             else
-                _ ->
+                _NetKernelFailure ->
+                    io:format(standard_error, "net_kernel start failure: ~0tp\n", [_NetKernelFailure]),
                     ok = peer:stop(PeerPid),
                     {error, net_kernel_start_failed}
             end;
