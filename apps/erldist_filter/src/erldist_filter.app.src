@@ -7,7 +7,7 @@
 %%% LICENSE.md file in the root directory of this source tree.
 {application, erldist_filter, [
     {description, "erldist_filter: Erlang distribution filtering"},
-    {vsn, "1.0.0"},
+    {vsn, "1.28.0"},
     {mod, {erldist_filter_app, []}},
     {modules, []},
     {registered, []},
@@ -21,6 +21,7 @@
     ]},
     {env, []},
     {doc, "doc"},
+    {build_tools, ["mix", "rebar3"]},
     {exclude_patterns, [
         %% emacs temp files
         "~$",
@@ -33,7 +34,11 @@
         %% make temp files
         "env\\.mk$",
         %% vim swap files
-        "\\.swp$"
+        "\\.swp$",
+        %% Hex.pm package related
+        "erldist_filter\\.app\\.src\\.script$",
+        %% local development
+        "erldist_filter_play\\.erl$"
     ]},
     {files, [
         "c_src",
@@ -45,6 +50,7 @@
         "priv",
         "README*",
         "rebar.config",
+        "rebar.lock",
         "src"
     ]},
     {licenses, ["MIT"]},

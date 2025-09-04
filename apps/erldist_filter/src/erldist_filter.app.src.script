@@ -1,0 +1,21 @@
+%%% % @format
+%%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%-----------------------------------------------------------------------------
+
+SourceDir = filename:dirname(SCRIPT),
+AppDir = rebar_file_utils:absolute_path(filename:join([SourceDir, ".."])),
+ProjectDir = rebar_file_utils:absolute_path(filename:join([AppDir, "..", ".."])),
+
+FileNameList = ["CHANGELOG.md", "LICENSE.md", "README.md"],
+
+Sources = [filename:join([ProjectDir, FileName]) || FileName <- FileNameList],
+Dest = AppDir,
+Options = [{dereference, true}],
+ok = rebar_file_utils:cp_r(Sources, Dest, Options),
+
+CONFIG.

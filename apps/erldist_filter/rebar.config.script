@@ -1,0 +1,25 @@
+%%% % @format
+%%%-----------------------------------------------------------------------------
+%%% Copyright (c) Meta Platforms, Inc. and affiliates.
+%%% Copyright (c) WhatsApp LLC
+%%%
+%%% This source code is licensed under the MIT license found in the
+%%% LICENSE.md file in the root directory of this source tree.
+%%%-----------------------------------------------------------------------------
+
+AppDir = filename:dirname(SCRIPT),
+SourceDir = rebar_file_utils:absolute_path(filename:join([AppDir, "src"])),
+AppSrcFile = rebar_file_utils:absolute_path(filename:join([SourceDir, "erldist_filter.app.src"])),
+
+{ok, [{application, erldist_filter, Desc}]} = file:consult(AppSrcFile),
+{vsn, Vsn} = lists:keyfind(vsn, 1, Desc),
+SourceUrlPattern = erlang:iolist_to_binary(
+    io_lib:format("https://github.com/WhatsApp/erldist_filter/blob/v~ts/apps/erldist_filter/%{path}#L%{line}", [Vsn])
+),
+
+Config1 = CONFIG,
+{value, {ex_doc, ExDocConfig1}, Config2} = lists:keytake(ex_doc, 1, Config1),
+ExDocConfig2 = lists:keystore(source_url_pattern, 1, ExDocConfig1, {source_url_pattern, SourceUrlPattern}),
+Config3 = lists:keystore(ex_doc, 1, Config2, {ex_doc, ExDocConfig2}),
+
+Config3.

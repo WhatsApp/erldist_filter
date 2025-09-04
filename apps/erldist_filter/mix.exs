@@ -45,7 +45,7 @@ defmodule ErldistFilter.MixProject do
     {_app, desc} = load_app()
 
     [
-      build_tools: ["mix", "rebar3"],
+      build_tools: Enum.map(Keyword.fetch!(desc, :build_tools), &to_string/1),
       description: to_string(Keyword.fetch!(desc, :description)),
       exclude_patterns:
         Enum.map(Keyword.fetch!(desc, :exclude_patterns), fn pattern ->
