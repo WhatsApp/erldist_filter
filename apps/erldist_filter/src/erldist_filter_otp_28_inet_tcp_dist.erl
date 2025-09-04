@@ -1030,9 +1030,7 @@ receiver(Driver) ->
             Sysname = HSData#hs_data.other_node,
             Creation = HSData#hs_data.other_creation,
             DistFlags = HSData#hs_data.other_flags,
-            LogFile = filename:join(["/tmp", "edf." ++ erlang:atom_to_list(erlang:node()) ++ ".log"]),
             Channel = erldist_filter_nif:channel_open(PacketSize, Sysname, Creation, ConnectionId, DistFlags),
-            ok = file:write_file(LogFile, io_lib:format("[~0tp] C: ~0tp\n", [Channel, #{packet_size => PacketSize, sysname => Sysname, creation => Creation, connection_id => ConnectionId, distribution_flags => DistFlags}]), [append, raw]),
             State = #receiver{
                 driver = Driver,
                 socket = Socket,
@@ -1075,10 +1073,7 @@ receiver_loop(State0 = #receiver{socket = Socket, channel = Channel}) ->
     receive
         {tcp, Socket, Data} ->
             State1 = State0#receiver{socket_notify = false},
-            LogFile = filename:join(["/tmp", "edf." ++ erlang:atom_to_list(erlang:node()) ++ ".log"]),
-            ok = file:write_file(LogFile, io_lib:format("[~0tp] I: ~0tp\n", [Channel, Data]), [append, raw]),
             Actions = erldist_filter_nif:channel_recv(Channel, [Data]),
-            ok = file:write_file(LogFile, io_lib:format("[~0tp] O: ~0tp\n", [Channel, Actions]), [append, raw]),
             receiver_loop_actions(Actions, State1);
         BadMsg ->
             exit({badmsg, BadMsg})
