@@ -6,5 +6,4 @@
  * LICENSE.md file in the root directory of this source tree.
  */
 
-// #include <erl_nif.h>
-#include "/Users/potatosaladx/.asdf/installs/erlang/28.0.2/erts-16.0.2/include/erl_nif.h"
+#include <erl_nif.h>
