@@ -9,6 +9,8 @@
 #include "vterm_env.h"
 #include "vterm.h"
 
+// disable packed structs in khashl.h
+#define kh_packed
 #include "../core/khashl.h"
 
 /* Danger Area */
