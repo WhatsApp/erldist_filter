@@ -5,7 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 defmodule ErldistFilterElixirTests.QueueHandler do
-  @call_timeout :timer.seconds(15)
+  @call_timeout :timer.seconds(5)
 
   @behaviour :erldist_filter_handler
   @behaviour :gen_statem
@@ -89,7 +89,24 @@ defmodule ErldistFilterElixirTests.QueueHandler do
   end
 
   def dequeue(0), do: []
-  def dequeue(n) when is_integer(n) and n > 0, do: [dequeue() | dequeue(n - 1)]
+
+  def dequeue(n) when is_integer(n) and n > 0 do
+    next =
+      try do
+        {:some, dequeue()}
+      catch
+        :exit, :timeout ->
+          :none
+      end
+
+    case next do
+      :none ->
+        []
+
+      {:some, event} ->
+        [event | dequeue(n - 1)]
+    end
+  end
 
   def enqueue(message) do
     :gen_statem.cast(__MODULE__, {:enqueue, message})
