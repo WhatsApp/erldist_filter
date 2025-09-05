@@ -31,12 +31,14 @@
 ]).
 
 %% Types
+-type p2p() :: pid().
 -type t() :: #{
     '__type__' := ?MODULE,
-    p2p := nil | pid()
+    p2p := nil | p2p()
 }.
 
 -export_type([
+    p2p/0,
     t/0
 ]).
 
@@ -117,7 +119,7 @@ symbolic_call(State0 = #{'__type__' := ?MODULE, p2p := P2P}, Func, Args) when P2
 
 -spec p2p(Model) -> {ok, P2P} | error when
     Model :: t(),
-    P2P :: pid().
+    P2P :: p2p().
 p2p(#{'__type__' := ?MODULE, p2p := nil}) ->
     error;
 p2p(#{'__type__' := ?MODULE, p2p := P2P}) ->

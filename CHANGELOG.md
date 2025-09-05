@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.28.1 (2025-09-05)
+
+* Use stricter `CFLAGS` and `CXXFLAGS` for warnings.
+  * Fix warnings exposed.
+* Use codegen version instead of unstable builtin macros.
+* Detect whether `clang` is being used and add warning flags if applicable.
+* Update [`elp` (erlang-language-platform) to 2025-09-01](https://github.com/WhatsApp/erlang-language-platform/releases/tag/2025-09-01).
+* Fix typing errors found from `make lint`.
+
 ## 1.28.0 (2025-09-04)
 
 * Add support for Erlang/OTP 27 and 28.

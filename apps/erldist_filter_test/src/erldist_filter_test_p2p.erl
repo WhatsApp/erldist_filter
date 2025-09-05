@@ -262,9 +262,10 @@ booting({call, _From}, peers, _BootData = #boot_data{}) ->
 -spec connected(EventType, EventContent, Data) -> HandleEventResult when
     EventType :: gen_statem:event_type(),
     EventContent :: event_content(),
-    State :: connected,
+    State :: connected | booting,
     Data :: data(),
-    HandleEventResult :: gen_statem:event_handler_result(State, Data).
+    HandleEventResult :: gen_statem:event_handler_result(State, Data | BootData),
+    BootData :: boot_data().
 connected(
     info,
     {'DOWN', OwnerMon, process, OwnerPid, _Reason},

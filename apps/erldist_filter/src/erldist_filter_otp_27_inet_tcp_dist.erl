@@ -215,6 +215,9 @@ gen_listen(Driver, Name, Host) ->
                family = Family,
                address = Address},
         {ok, {ListenSocket, NetAddress, Creation}}
+    else
+        Error = {error, _} ->
+            Error
     end.
 
 -spec listen_loop(Driver, First, Last, Options) ->
@@ -270,6 +273,9 @@ fam_listen(Family, Name, Host, ListenFun) ->
         {ok, Creation} ?=
             EpmdMod:register_node(Name, Port, Family),
         {ok, {ListenSocket, Address, Creation}}
+    else
+        Error = {error, _} ->
+            Error
     end.
 
 -spec get_port_range() -> {inet:port_number(), inet:port_number()}.

@@ -6,7 +6,7 @@
 
 PROJECT = erldist_filter
 PROJECT_DESCRIPTION = erldist_filter
-PROJECT_VERSION = 1.28.0
+PROJECT_VERSION = 1.28.1
 
 include erlang.mk
 
@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2025-07-21
+ELP_VERSION ?= 2025-09-01
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp
@@ -135,12 +135,14 @@ erlfmt: $(ERLFMT)
 	$(verbose) $(ERLFMT) --verbose --write --require-pragma --print-width=120 \
 		'apps/**/{src,include,test}/**/*.{hrl,erl,app.src}' \
 		'apps/**/{rebar.config,rebar.config.script}' \
+		'apps/**/test/**/*.config' \
 		'{rebar.config,rebar.config.script}'
 
 erlfmt-check: $(ERLFMT)
 	$(verbose) $(ERLFMT) --check --require-pragma --print-width=120 \
 		'apps/**/{src,include,test}/**/*.{hrl,erl,app.src,app.src.script}' \
 		'apps/**/{rebar.config,rebar.config.script}' \
+		'apps/**/test/**/*.config' \
 		'{rebar.config,rebar.config.script}'
 
 distclean-erlfmt:
@@ -161,6 +163,7 @@ lint-dialyzer:
 lint-eqwalizer: eqwalize-all
 
 lint-format: erlfmt-check
+	$(verbose) $(MAKE) -C $(CURDIR)/apps/$(PROJECT)/c_src lint-format
 
 lint-xref:
 	$(verbose) rebar3 xref

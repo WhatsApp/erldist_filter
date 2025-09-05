@@ -107,9 +107,11 @@ init_per_testcase(prop_parallel_statem, Config) ->
 -spec end_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
     erldist_filter_test:end_per_testcase().
 end_per_testcase(_TestCase, Config) ->
-    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
-    ok = erldist_filter_test_p2p:close(P2P),
-    ok.
+    case lists:keyfind(p2p, 1, Config) of
+        {p2p, P2P} when is_pid(P2P) ->
+            ok = erldist_filter_test_p2p:close(P2P),
+            ok
+    end.
 
 %%%=============================================================================
 %%% Test Cases

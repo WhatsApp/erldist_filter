@@ -25,7 +25,11 @@
 %%% PropEr Helpers
 %%%=============================================================================
 
--spec present_result(module(), list(), tuple(), proplists:proplist()) -> boolean().
+-spec present_result(Module, Commands, Triple, Config) -> boolean() when
+    Module :: module(),
+    Commands :: dynamic(),
+    Triple :: dynamic(),
+    Config :: proplists:proplist().
 present_result(Module, Cmds, Triple, Config0) ->
     Config = [{property_test_tool, proper}] ++ Config0,
     ct_property_test:present_result(Module, Cmds, Triple, Config).

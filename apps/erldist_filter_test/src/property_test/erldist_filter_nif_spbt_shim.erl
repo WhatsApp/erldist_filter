@@ -58,31 +58,34 @@ channel_close({channel, Channel}) ->
     Result = erldist_filter_proxy:channel_close(Channel),
     Result.
 
--spec channel_dop_with_payload(Channel, Spec) -> [Action] | {error, Reason} when
+-spec channel_dop_with_payload(Channel, Spec) -> [Action] | {error, Reason} | Exception when
     Channel :: channel(),
     Spec :: erldist_filter_nif_spbt_model_channel:dop_spec(),
     Action :: erldist_filter_nif:action(),
-    Reason :: not_owner | closed.
+    Reason :: erldist_filter_proxy:error_reason(),
+    Exception :: erldist_filter_proxy:exception().
 channel_dop_with_payload({channel, Channel}, _Spec = #{packets := Packets}) ->
     Result = erldist_filter_proxy:channel_recv(Channel, Packets),
     should_log_result(Result) andalso io:format(user, "~s -> ~p~n", [?FUNCTION_NAME, Result]),
     Result.
 
--spec channel_dop_without_payload(Channel, Spec) -> [Action] | {error, Reason} when
+-spec channel_dop_without_payload(Channel, Spec) -> [Action] | {error, Reason} | Exception when
     Channel :: channel(),
     Spec :: erldist_filter_nif_spbt_model_channel:dop_spec(),
     Action :: erldist_filter_nif:action(),
-    Reason :: not_owner | closed.
+    Reason :: erldist_filter_proxy:error_reason(),
+    Exception :: erldist_filter_proxy:exception().
 channel_dop_without_payload({channel, Channel}, _Spec = #{packets := Packets}) ->
     Result = erldist_filter_proxy:channel_recv(Channel, Packets),
     should_log_result(Result) andalso io:format(user, "~s -> ~p~n", [?FUNCTION_NAME, Result]),
     Result.
 
--spec channel_fill_atom_cache(Channel, Spec) -> [Action] | {error, Reason} when
+-spec channel_fill_atom_cache(Channel, Spec) -> [Action] | {error, Reason} | Exception when
     Channel :: channel(),
     Spec :: erldist_filter_nif_spbt_model_channel:dop_spec(),
     Action :: erldist_filter_nif:action(),
-    Reason :: not_owner | closed.
+    Reason :: erldist_filter_proxy:error_reason(),
+    Exception :: erldist_filter_proxy:exception().
 channel_fill_atom_cache({channel, Channel}, _Spec = #{packets := Packets}) ->
     Result = erldist_filter_proxy:channel_recv(Channel, Packets),
     should_log_result(Result) andalso io:format(user, "~s -> ~p~n", [?FUNCTION_NAME, Result]),

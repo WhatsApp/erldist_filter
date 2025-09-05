@@ -44,11 +44,11 @@ child_spec() ->
         modules => [?MODULE]
     }.
 
--spec start_child(PeerStartOptions) -> StartChildReturn when
-    PeerStartOptions :: peer:start_options(),
+-spec start_child(PeerNode) -> StartChildReturn when
+    PeerNode :: node(),
     StartChildReturn :: supervisor:startchild_ret().
-start_child(PeerStartOptions) ->
-    supervisor:start_child(?MODULE, [PeerStartOptions]).
+start_child(PeerNode) ->
+    supervisor:start_child(?MODULE, [PeerNode]).
 
 -spec start_link() -> supervisor:startlink_ret().
 start_link() ->

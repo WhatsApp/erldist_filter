@@ -110,9 +110,11 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
     do {
         switch (trap->state) {
         case EDF_EXTERNAL_RECV_TRAP_STATE_NONE: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_NONE\n", __FILE__, __LINE__);
             return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted trap state: must not be NONE\n"));
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_INIT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_INIT\n", __FILE__, __LINE__);
             if (ext != NULL && ext->fragment_capacity > 1 && !ext->fragments_compacted &&
                 edf_config_is_compact_fragments_enabled()) {
                 goto transition_to_compact_realloc;
@@ -120,6 +122,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_maybe_inspect;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_REALLOC: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_REALLOC\n", __FILE__, __LINE__);
             size_t new_frag_size;
 
             if (ext == NULL) {
@@ -155,6 +158,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_compact_copy;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_COPY: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_COMPACT_COPY\n", __FILE__, __LINE__);
             edf_fragment_t *frag = NULL;
             edf_fragment_t *next_frag = NULL;
 
@@ -206,6 +210,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_maybe_inspect;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_INSPECT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_INSPECT\n", __FILE__, __LINE__);
             if (ext != NULL && (ext->fragment_capacity == 1 || ext->fragments_compacted) &&
                 edf_config_is_deep_packet_inspection_enabled()) {
                 if (edf_external_has_payload(ext)) {
@@ -216,6 +221,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_emit;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_DECODE_PAYLOAD_LENGTH: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_DECODE_PAYLOAD_LENGTH\n", __FILE__, __LINE__);
             edf_trap_result_t child_result;
             if (!edf_trap_has_child(&trap->super)) {
                 ERL_NIF_TERM child_trap_term;
@@ -256,6 +262,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             }
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_INSPECT\n", __FILE__, __LINE__);
             vec_t payload_vec[1];
             slice_t payload_slice[1];
             slice_t *payload = NULL;
@@ -286,12 +293,14 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_emit;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_LOG_EVENT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_LOG_EVENT\n", __FILE__, __LINE__);
             if (edf_config_is_logging_enabled() && (ext->up->flags & UDIST_CLASSIFY_FLAG_LOG_EVENT) != 0) {
                 goto transition_to_log_event;
             }
             goto transition_to_maybe_redirect;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_LOG_EVENT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_LOG_EVENT\n", __FILE__, __LINE__);
             if (!edf_logger_event_create(ext->channel->sysname, ext->attab.size, edf_external_is_pass_through(ext),
                                          ext->slices.control.length, ext->slices.payload.length, &ext->logger_event)) {
                 return TRAP_ERR(EXCP_ERROR(caller_env, "Call to edf_logger_event_create() failed\n"));
@@ -327,6 +336,7 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_maybe_redirect;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_REDIRECT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_MAYBE_REDIRECT\n", __FILE__, __LINE__);
             if ((ext->up->flags & UDIST_CLASSIFY_FLAG_REDIRECT_DOP) != 0 && edf_config_is_redirect_dist_operations_enabled()) {
                 goto transition_to_redirect_dop;
             } else if ((ext->up->flags & UDIST_CLASSIFY_FLAG_REDIRECT_SPAWN_REQUEST) != 0) {
@@ -337,26 +347,31 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_emit;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_DOP: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_DOP\n", __FILE__, __LINE__);
             if (!etf_redirect_dop(caller_env, ext, err_termp)) {
                 return TRAP_ERR(*err_termp);
             }
             goto transition_to_emit;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_SPAWN_REQUEST: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_REDIRECT_SPAWN_REQUEST\n", __FILE__, __LINE__);
             if (!etf_redirect_spawn_request(caller_env, ext, err_termp)) {
                 return TRAP_ERR(*err_termp);
             }
             goto transition_to_emit;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_EMIT: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_EMIT\n", __FILE__, __LINE__);
             ext->emit = 1;
             goto transition_to_done;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_DROP: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_DROP\n", __FILE__, __LINE__);
             ext->emit = 0;
             goto transition_to_done;
         }
         case EDF_EXTERNAL_RECV_TRAP_STATE_DONE: {
+            XNIF_TRACE_F("%s:%d EDF_EXTERNAL_RECV_TRAP_STATE_DONE\n", __FILE__, __LINE__);
             (void)edf_external_recv_trap_clear(caller_env, trap);
             return TRAP_OK(THE_NON_VALUE);
         }

@@ -321,7 +321,7 @@ channel_send_packets(
     },
     case Spec of
         #{control_message := ControlMessage} when
-            ?is_vdist_dop_without_payload_t(ControlMessage) andalso is_map_key(payload, Spec) =:= false
+            ?is_vdist_dop_without_payload_t(ControlMessage) andalso not is_map_key(payload, Spec)
         ->
             case HeaderMode of
                 fragment ->

@@ -156,7 +156,7 @@ terminate(_Reason, _State, _Data = #data{}) ->
 handle(info, {Sysname, Sort, Control0}, Data0 = #data{sysname = Sysname, last_seen = LastSeen}) when
     LastSeen < Sort
 ->
-    Control = udist:cast_to_dop(Control0),
+    Control = udist:cast_to_dop_without_payload(Control0),
     {_Hint, Decision} = classify(erldist_filter:handler_get(), Sysname, Control),
     ok = execute(Decision),
     Data1 = Data0#data{last_seen = Sort},
@@ -164,7 +164,7 @@ handle(info, {Sysname, Sort, Control0}, Data0 = #data{sysname = Sysname, last_se
 handle(
     info, {Sysname, Sort, Control0, Payload}, Data0 = #data{sysname = Sysname, last_seen = LastSeen}
 ) when LastSeen < Sort ->
-    Control = udist:cast_to_dop(Control0),
+    Control = udist:cast_to_dop_with_payload(Control0),
     {_Hint, Decision} = classify(erldist_filter:handler_get(), Sysname, Control, Payload),
     ok = execute(Decision),
     Data1 = Data0#data{last_seen = Sort},
@@ -408,18 +408,18 @@ execute({keep, Control, Payload}) ->
             ok = ?infallible(erlang:send(Alias, Payload, [noconnect]));
         #udist_dop_altact_sig_send{flags = F, to = To} when (F band ?ERTS_DOP_ALTACT_SIG_FLG_EXIT) =/= 0 ->
             Reason = Payload,
-            case (F band ?ERTS_DOP_ALTACT_SIG_FLG_PRIO) =/= 0 andalso is_reference(To) of
-                false ->
-                    ok = ?infallible(erlang:exit(To, Reason));
-                true ->
-                    ok = ?infallible(erlang:exit(To, Reason, [priority]))
+            case (F band ?ERTS_DOP_ALTACT_SIG_FLG_PRIO) =/= 0 of
+                true when is_reference(To) ->
+                    ok = ?infallible(erlang:exit(To, Reason, [priority]));
+                _ when is_pid(To) ->
+                    ok = ?infallible(erlang:exit(To, Reason))
             end;
         #udist_dop_altact_sig_send{flags = F, to = To} when (F band ?ERTS_DOP_ALTACT_SIG_FLG_ALIAS) =/= 0 ->
             case (F band ?ERTS_DOP_ALTACT_SIG_FLG_PRIO) =/= 0 andalso is_reference(To) of
-                false ->
-                    ok = ?infallible(erlang:send(To, Payload));
-                true ->
-                    ok = ?infallible(erlang:send(To, Payload, [priority]))
+                true when is_reference(To) ->
+                    ok = ?infallible(erlang:send(To, Payload, [priority]));
+                _ when is_atom(To) orelse is_pid(To) orelse is_reference(To) ->
+                    ok = ?infallible(erlang:send(To, Payload))
             end;
         #udist_dop_altact_sig_send{to = To} ->
             ok = ?infallible(erlang:send(To, Payload));

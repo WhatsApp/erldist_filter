@@ -235,7 +235,7 @@ do_recv(Channel0 = #vedf_channel{}, _Entry = #vdist_entry{rx_atom_cache = RxAtom
     Options :: vdist_entry_encode:options(),
     Packets :: [binary()].
 send_encode(Channel = #vedf_channel{dflags = DFlags, rx_atom_cache = RxAtomCache}, ControlMessage, Options) when
-    ?is_vdist_dop_without_payload_t(ControlMessage) andalso is_map(Options)
+    (?is_vdist_dop_without_payload_t(ControlMessage) orelse map_get(invalid, Options) =:= true) andalso is_map(Options)
 ->
     Entry0 = vdist_entry:new(DFlags),
     Entry1 = Entry0#vdist_entry{tx_atom_cache = RxAtomCache},
@@ -254,7 +254,7 @@ send_encode(Channel = #vedf_channel{dflags = DFlags, rx_atom_cache = RxAtomCache
 send_encode(
     Channel = #vedf_channel{dflags = DFlags, rx_atom_cache = RxAtomCache}, ControlMessage, Payload, Options
 ) when
-    ?is_vdist_dop_with_payload_t(ControlMessage) andalso
+    (?is_vdist_dop_with_payload_t(ControlMessage) orelse map_get(invalid, Options) =:= true) andalso
         ?is_vterm_t(Payload) andalso is_map(Options)
 ->
     Entry0 = vdist_entry:new(DFlags),
@@ -336,7 +336,13 @@ deep_packet_inspection(
         false ->
             {Channel1, [{emit, CompactFragment}]};
         true ->
-            Control = udist:cast_to_dop(vdist:simplify(ControlMessage)),
+            Control =
+                case MaybePayload of
+                    undefined ->
+                        udist:cast_to_dop_without_payload(vdist:simplify(ControlMessage));
+                    _ ->
+                        udist:cast_to_dop_with_payload(vdist:simplify(ControlMessage))
+                end,
             DPI = #dpi{
                 channel = Channel1,
                 entry = Entry,

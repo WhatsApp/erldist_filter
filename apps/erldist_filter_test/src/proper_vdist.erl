@@ -104,7 +104,15 @@ vdist_altact_sig_flags() ->
             oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_NAME]),
             oneof([0, ?ERTS_DOP_ALTACT_SIG_FLG_EXIT])
         },
-        (Prio bor Token bor Alias bor Name bor Exit)
+        begin
+            case Name of
+                0 ->
+                    (Prio bor Token bor Alias bor Name bor Exit);
+                ?ERTS_DOP_ALTACT_SIG_FLG_NAME ->
+                    %% PRIO, ALIAS, and EXIT are not allowed if NAME is set
+                    (Token bor Name)
+            end
+        end
     ).
 
 -spec vdist_any_header() -> proper_types:type().
@@ -132,6 +140,7 @@ vdist_any_dop_with_payload() ->
     oneof([
         vdist_dop_alias_send(),
         vdist_dop_alias_send_tt(),
+        vdist_dop_altact_sig_send(),
         vdist_dop_payload_exit(),
         vdist_dop_payload_exit_tt(),
         vdist_dop_payload_exit2(),
@@ -209,11 +218,12 @@ vdist_dop_altact_sig_send() ->
                     _ ->
                         ToPid
                 end,
+            FlagsVTerm = vdist_dop_altact_sig_send:flags_as_vterm(Flags),
             case Flags of
                 _ when HasToken =:= true ->
-                    vdist_dop_altact_sig_send:new(Flags, SenderPid, To, Token);
+                    vdist_dop_altact_sig_send:new(FlagsVTerm, SenderPid, To, Token);
                 _ ->
-                    vdist_dop_altact_sig_send:new(Flags, SenderPid, To)
+                    vdist_dop_altact_sig_send:new(FlagsVTerm, SenderPid, To)
             end
         end
     ).

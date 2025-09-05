@@ -355,6 +355,9 @@ distclean-c_src-env:
 format:
 	$(gen_verbose) clang-format -i $(FORMAT_NIF_SOURCES) $(FORMAT_PRIMITIVE_SOURCES)
 
+lint-format:
+	$(gen_verbose) clang-format --dry-run --Werror $(FORMAT_NIF_SOURCES) $(FORMAT_PRIMITIVE_SOURCES)
+
 ifneq ($(wildcard $(C_SRC_DIR)),)
 ERL_ERTS_DIR = $(shell $(ERL) -eval 'io:format("~s~n", [code:lib_dir(erts)]), halt().')
 

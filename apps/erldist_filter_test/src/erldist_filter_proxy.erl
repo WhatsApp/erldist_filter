@@ -40,6 +40,15 @@
     parent = undefined :: undefined | {pid(), reference()}
 }).
 
+%% Types
+-type error_reason() :: closed | not_owner.
+-type exception() :: {Class :: 'error' | 'exit' | 'throw', Reason :: dynamic(), Stacktrace :: erlang:stacktrace()}.
+
+-export_type([
+    error_reason/0,
+    exception/0
+]).
+
 %%%=============================================================================
 %%% OTP API functions
 %%%=============================================================================
@@ -84,7 +93,7 @@ channel_inspect(Pid) ->
             {error, closed}
     end.
 
--spec channel_recv(Pid, IoVec) -> [erldist_filter_nif:action()] | {error, not_owner | closed} when
+-spec channel_recv(Pid, IoVec) -> [erldist_filter_nif:action()] | {error, error_reason()} | exception() when
     Pid :: pid(), IoVec :: erlang:iovec().
 channel_recv(Pid, IoVec) ->
     case erlang:is_process_alive(Pid) of

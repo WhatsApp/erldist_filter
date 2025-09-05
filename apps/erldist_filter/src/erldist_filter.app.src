@@ -7,7 +7,7 @@
 %%% LICENSE.md file in the root directory of this source tree.
 {application, erldist_filter, [
     {description, "erldist_filter: Erlang distribution filtering"},
-    {vsn, "1.28.0"},
+    {vsn, "1.28.1"},
     {mod, {erldist_filter_app, []}},
     {modules, []},
     {registered, []},

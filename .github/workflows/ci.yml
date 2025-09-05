@@ -36,29 +36,45 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
 
-      - name: Erlang Tests
+      - name: (Erlang) Check Formatting
+        if: ${{ matrix.lint }}
+        run: make lint-format
+
+      - name: (Erlang) eqWAlizer
+        if: ${{ matrix.lint }}
+        run: make lint-eqwalizer
+
+      - name: (Erlang) Dialyzer
+        if: ${{ matrix.lint }}
+        run: make lint-dialyzer
+
+      - name: (Erlang) Xref
+        if: ${{ matrix.lint }}
+        run: make lint-xref
+
+      - name: (Erlang) Tests
         run: |
           rebar3 ct
 
-      - name: Retrieve Mix Dependencies Cache
+      - name: (Elixir) Retrieve Mix Dependencies Cache
         uses: actions/cache@v4
         id: mix-cache
         with:
           path: deps
           key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
-      - name: Install Mix Dependencies
+      - name: (Elixir) Install Mix Dependencies
         if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
           mix local.rebar --force
           mix local.hex --force
           mix deps.get
 
-      - name: Check Formatting
+      - name: (Elixir) Check Formatting
         if: ${{ matrix.lint }}
         run: mix format --check-formatted
 
-      - name: Elixir Tests
+      - name: (Elixir) Tests
         run: mix test --trace
 
       - name: Logs
