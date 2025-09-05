@@ -38,7 +38,9 @@ jobs:
 
       - name: (Erlang) Check Formatting
         if: ${{ matrix.lint }}
-        run: make lint-format
+        run: |
+          clang-format --version
+          make lint-format
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
