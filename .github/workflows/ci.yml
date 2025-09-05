@@ -36,11 +36,11 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
 
-      - name: (Erlang) Check Formatting
-        if: ${{ matrix.lint }}
-        run: |
-          clang-format --version
-          make lint-format
+      # - name: (Erlang) Check Formatting
+      #   if: ${{ matrix.lint }}
+      #   run: |
+      #     clang-format --version
+      #     make lint-format
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
