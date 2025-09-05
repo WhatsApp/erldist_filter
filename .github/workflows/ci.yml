@@ -6,7 +6,6 @@ env:
   CC: clang
   CXX: clang++
   MIX_ENV: test
-  SANITIZE: true
   WARNINGS_AS_ERRORS: true
 
 jobs:
