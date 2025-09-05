@@ -3,6 +3,8 @@ name: CI
 on: [push, pull_request]
 
 env:
+  CC: clang
+  CXX: clang++
   MIX_ENV: test
   SANITIZE: true
   WARNINGS_AS_ERRORS: true

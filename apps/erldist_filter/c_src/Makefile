@@ -69,7 +69,7 @@ else
 	C_SRC_OUTPUT_FILE = $(C_SRC_OUTPUT)$(C_SRC_OUTPUT_EXECUTABLE_EXTENSION)
 endif
 
-COMMON_CFLAGS ?= \
+CFLAGS_COMMON ?= \
 -O2 \
 -g \
 -ggdb \
@@ -79,28 +79,28 @@ COMMON_CFLAGS ?= \
 -D_GNU_SOURCE \
 -D_REENTRANT
 
-COMMON_CXXFLAGS ?= \
+CXXFLAGS_COMMON ?= \
 -O2 \
 -g \
 -ggdb \
 -std=c++20 \
 -finline-functions \
 -fno-omit-frame-pointer \
+-D_GLIBCXX_RESTRICT_EXCEPTIONS \
 -D_GNU_SOURCE \
 -D_REENTRANT
 
-SANITIZE_CFLAGS ?= \
+CFLAGS_SANITIZE ?= \
 -fsanitize=address \
 -fno-common
 
-SANITIZE_CXXFLAGS ?= \
+CXXFLAGS_SANITIZE ?= \
 -fsanitize=address \
 -fno-common
 
-WARNING_CFLAGS ?= \
+CFLAGS_WARNING_CLANG ?= \
 -Waddress \
 -Waddress-of-packed-member \
--Wall \
 -Wambiguous-reversed-operator \
 -Wbitwise-instead-of-logical \
 -Wdeprecated-copy-with-user-provided-copy \
@@ -177,9 +177,8 @@ WARNING_CFLAGS ?= \
 -Wunused-variable \
 -Wvexing-parse
 
-WARNING_CXXFLAGS ?= \
-$(WARNING_CFLAGS) \
--D_GLIBCXX_RESTRICT_EXCEPTIONS \
+CXXFLAGS_WARNING_CLANG ?= \
+$(CFLAGS_WARNING_CLANG) \
 -Wno-class-memaccess \
 -Wno-error=address-of-packed-member \
 -Wno-error=noexcept-type \
@@ -195,29 +194,35 @@ ifeq ($(PLATFORM),msys2)
 	export CC
 	CXX = /mingw64/bin/g++
 	export CXX
-	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
-	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
-else ifeq ($(PLATFORM),darwin)
-	CC ?= cc
-	CXX ?= c++
-	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
-	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
-	LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
-else ifeq ($(PLATFORM),freebsd)
-	CC ?= cc
-	CXX ?= c++
-	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
-	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
-else ifeq ($(PLATFORM),linux)
-	CC ?= gcc
-	CXX ?= g++
-	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
-	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
-else ifeq ($(PLATFORM),solaris)
-	CC ?= cc
-	CXX ?= c++
-	CFLAGS ?= $(COMMON_CFLAGS) -fstack-protector $(WARNING_CFLAGS)
-	CXXFLAGS ?= $(COMMON_CXXFLAGS) -fstack-protector $(WARNING_CXXFLAGS)
+	CFLAGS ?= $(CFLAGS_COMMON) -Wall
+	CXXFLAGS ?= $(CXXFLAGS_COMMON) -Wall
+else
+# Determine whether `clang` is available
+	CLANG_AVAILABLE := $(shell command -v clang >/dev/null 2>&1 && echo yes)
+	ifneq ($(CLANG_AVAILABLE),)
+		CC ?= clang
+		CXX ?= clang++
+	else ifeq ($(PLATFORM),linux)
+		CC ?= gcc
+		CXX ?= g++
+	else
+		CC ?= cc
+		CXX ?= c++
+	endif
+	ifeq ($(PLATFORM),darwin)
+		CFLAGS ?= $(CFLAGS_COMMON) -Wall
+		CXXFLAGS ?= $(CXXFLAGS_COMMON) -Wall
+		LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
+	else ifeq ($(PLATFORM),freebsd)
+		CFLAGS ?= $(CFLAGS_COMMON) -Wall
+		CXXFLAGS ?= $(CXXFLAGS_COMMON) -Wall
+	else ifeq ($(PLATFORM),linux)
+		CFLAGS ?= $(CFLAGS_COMMON) -Wall
+		CXXFLAGS ?= $(CXXFLAGS_COMMON) -Wall
+	else ifeq ($(PLATFORM),solaris)
+		CFLAGS ?= $(CFLAGS_COMMON) -fstack-protector
+		CXXFLAGS ?= $(CXXFLAGS_COMMON) -fstack-protector
+	endif
 endif
 
 ifneq ($(PLATFORM),msys2)
@@ -230,9 +235,19 @@ ifneq ($(CROSSCOMPILER),)
 	CXX = $(CROSSCOMPILER)g++
 endif
 
+C_COMPILER_ID := $(shell $(CC) --version 2>/dev/null | head -1)
+IS_CLANG := $(findstring clang,$(C_COMPILER_ID))
+
+ifneq ($(IS_CLANG),)
+	CFLAGS += $(CFLAGS_WARNING_CLANG)
+	CXXFLASG += $(CXXFLAGS_WARNING_CLANG)
+else
+	$(error not using clang)
+endif
+
 ifneq ($(SANITIZE),)
-	CFLAGS += $(SANITIZE_CFLAGS)
-	CXXFLASG += $(SANITIZE_CXXFLAGS)
+	CFLAGS += $(CFLAGS_SANITIZE)
+	CXXFLASG += $(CXXFLAGS_SANITIZE)
 endif
 
 ifneq ($(WARNINGS_AS_ERRORS),)
