@@ -11,5 +11,6 @@ AlwaysBreakAfterDefinitionReturnType: true
 BreakBeforeBraces: Linux
 ColumnLimit: 132
 IndentWidth: 4
+InsertNewlineAtEOF: true
 SortIncludes: false
 ...

@@ -10,7 +10,7 @@ defmodule ErldistFilterElixirTests.MixProject do
   def project() do
     [
       app: :erldist_filter_elixir_tests,
-      version: "1.28.1",
+      version: "1.28.2",
       elixir: "~> 1.17",
       deps: deps(),
       elixirc_paths: elixirc_paths(Mix.env())

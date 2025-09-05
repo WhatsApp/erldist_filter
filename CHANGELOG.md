@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.28.2 (2025-09-05)
+
+* Minor fix: codesigning and formatting.
+
 ## 1.28.1 (2025-09-05)
 
 * Use stricter `CFLAGS` and `CXXFLAGS` for warnings.

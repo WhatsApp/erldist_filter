@@ -118,6 +118,11 @@ class Stage:
             target.render()
         return
 
+    def sign(self) -> None:
+        for target in self.targets:
+            target.sign()
+        return
+
 
 @dataclass
 class StageTarget:
@@ -166,7 +171,7 @@ class StageTarget:
         template: Template = self.env.get_template(self.template_name)
         print(f"[{self.label}] {self.output_name}")
         template.stream(ctx=self.codegen.ctx).dump(self.output_file, encoding="utf-8")
-        self.sign()
+        # self.sign()
         return
 
     def sign(self) -> None:
@@ -217,6 +222,12 @@ class CodeGenerator:
         self._analyze_c_src_nif_atoms()
         print("Stage1 Render")
         self.stage1.render()
+
+    def sign(self) -> None:
+        print("Stage0 Sign")
+        self.stage0.sign()
+        print("Stage1 Sign")
+        self.stage1.sign()
 
     def _analyze_c_src_nif_atoms(self) -> None:
         c_src_nif_root: str = os.path.join(self.output_path, "apps", "erldist_filter", "c_src", "nif")

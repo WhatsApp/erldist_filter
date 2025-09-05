@@ -6,7 +6,7 @@
 
 PROJECT = erldist_filter
 PROJECT_DESCRIPTION = erldist_filter
-PROJECT_VERSION = 1.28.1
+PROJECT_VERSION = 1.28.2
 
 include erlang.mk
 

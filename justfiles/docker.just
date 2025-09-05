@@ -38,3 +38,8 @@ docker-lock:
 [macos]
 docker-shell:
     @just _docker-interactive /bin/bash
+
+[group('docker')]
+[macos]
+docker-sign:
+    @just _docker-exec just sign

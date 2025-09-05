@@ -40,5 +40,18 @@ def json_schema(output_path: str):
     print(f"Wrote JSON schema to: {output_path}")
 
 
+@main.command("sign")
+@click.argument("config_file", type=click.Path(exists=True))
+@click.argument("output_path", type=click.Path())
+@click.argument("templates0_path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.argument("templates1_path", type=click.Path(exists=True, file_okay=False, dir_okay=True))
+def sign(config_file: str, output_path: str, templates0_path: str, templates1_path: str):
+    """Sign C and Erlang code from YAML configuration using Jinja2."""
+
+    code_generator: CodeGenerator = CodeGenerator(config_file, output_path, templates0_path, templates1_path)
+
+    code_generator.sign()
+
+
 if __name__ == "__main__":
     main()  # type: ignore
