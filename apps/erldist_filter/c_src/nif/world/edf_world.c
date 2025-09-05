@@ -18,6 +18,8 @@ static void edf_world_stats_init_empty(edf_world_stats_t *stats);
 int
 edf_world_load(ErlNifEnv *env)
 {
+    (void)env;
+
     int retval = 0;
 
     if (!atomic_flag_test_and_set(&edf_world_initialized)) {

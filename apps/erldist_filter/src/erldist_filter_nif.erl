@@ -396,7 +396,7 @@ router_name(_Sysname) ->
 spawn_flags() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
--spec version() -> #{date := string(), time := string()}.
+-spec version() -> non_neg_integer().
 version() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 

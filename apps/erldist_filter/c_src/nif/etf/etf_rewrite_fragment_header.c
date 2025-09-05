@@ -398,12 +398,15 @@ etf_rewrite_fragment_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, 
                     case 4:
                         ep -= 1;
                         ep[0] = (uint8_t)((flags >> 24) & 0xff);
+                        [[fallthrough]];
                     case 3:
                         ep -= 1;
                         ep[0] = (uint8_t)((flags >> 16) & 0xff);
+                        [[fallthrough]];
                     case 2:
                         ep -= 1;
                         ep[0] = (uint8_t)((flags >> 8) & 0xff);
+                        [[fallthrough]];
                     case 1:
                         ep -= 1;
                         ep[0] = (uint8_t)(flags & 0xff);

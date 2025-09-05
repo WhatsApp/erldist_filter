@@ -183,12 +183,17 @@ etf_decode_dist_header_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
                             flags = 0;
                             switch (half_bytes_remaining) {
                             case 6:
+                                [[fallthrough]];
                             case 5:
                                 flags |= (((uint32_t)trap->flagsp[2]) << 16);
+                                [[fallthrough]];
                             case 4:
+                                [[fallthrough]];
                             case 3:
                                 flags |= (((uint32_t)trap->flagsp[1]) << 8);
+                                [[fallthrough]];
                             case 2:
+                                [[fallthrough]];
                             case 1:
                                 flags |= ((uint32_t)trap->flagsp[0]);
                             }
@@ -427,12 +432,17 @@ etf_fast_decode_dist_header(ErlNifEnv *caller_env, edf_channel_t *channel, edf_a
                     flags = 0;
                     switch (half_bytes_remaining) {
                     case 6:
+                        [[fallthrough]];
                     case 5:
                         flags |= (((uint32_t)flagsp[2]) << 16);
+                        [[fallthrough]];
                     case 4:
+                        [[fallthrough]];
                     case 3:
                         flags |= (((uint32_t)flagsp[1]) << 8);
+                        [[fallthrough]];
                     case 2:
+                        [[fallthrough]];
                     case 1:
                         flags |= ((uint32_t)flagsp[0]);
                     }

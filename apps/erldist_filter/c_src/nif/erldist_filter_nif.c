@@ -11,6 +11,8 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+#include "erldist_filter_nif_version.h"
+
 #include "blocklist/edf_otp_name_blocklist.h"
 #include "channel/edf_atom_text.h"
 #include "channel/edf_channel_impl.h"
@@ -42,7 +44,6 @@ static ERL_NIF_TERM erldist_filter_nif_internal_hash_1(ErlNifEnv *env, int argc,
 static ERL_NIF_TERM erldist_filter_nif_dist_ext_to_term_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_router_info_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_router_name_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
-static ERL_NIF_TERM erldist_filter_nif_version_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 
 /* NIF Function Definitions */
 
@@ -182,40 +183,6 @@ erldist_filter_nif_router_name_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM ar
     }
 
     return edf_channel_router_name(env, sysname);
-}
-
-ERL_NIF_TERM
-erldist_filter_nif_version_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
-{
-#define RET_MAP_SIZE (2)
-
-    if (argc != 0) {
-        return EXCP_BADARG(env, "argc must be 2");
-    }
-
-    ERL_NIF_TERM keys[RET_MAP_SIZE];
-    ERL_NIF_TERM vals[RET_MAP_SIZE];
-    size_t k = 0;
-    size_t v = 0;
-    ERL_NIF_TERM out_term;
-
-    static const char erldist_filter_nif_version_date[12] = __DATE__;
-    static const char erldist_filter_nif_version_time[9] = __TIME__;
-
-    keys[k++] = ATOM(date);
-    vals[v++] =
-        enif_make_string_len(env, erldist_filter_nif_version_date, sizeof(erldist_filter_nif_version_date) - 1, ERL_NIF_LATIN1);
-    keys[k++] = ATOM(time);
-    vals[v++] =
-        enif_make_string_len(env, erldist_filter_nif_version_time, sizeof(erldist_filter_nif_version_time) - 1, ERL_NIF_LATIN1);
-
-    if (!enif_make_map_from_arrays(env, keys, vals, RET_MAP_SIZE, &out_term)) {
-        return EXCP_BADARG(env, "Call to enif_make_map_from_arrays() failed: duplicate keys detected");
-    }
-
-    return out_term;
-
-#undef RET_MAP_SIZE
 }
 
 /* NIF Callbacks */

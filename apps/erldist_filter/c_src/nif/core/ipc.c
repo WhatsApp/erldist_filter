@@ -6,8 +6,10 @@
  * LICENSE.md file in the root directory of this source tree.
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* See feature_test_macros(7) */
-#include <fcntl.h>  /* O_CLOEXEC and O_NONBLOCK, if supported. */
+#endif
+#include <fcntl.h> /* O_CLOEXEC and O_NONBLOCK, if supported. */
 #include <unistd.h>
 
 #include "ipc.h"

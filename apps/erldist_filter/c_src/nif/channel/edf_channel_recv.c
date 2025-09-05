@@ -810,6 +810,9 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                     (void)vec_reader_destroy(vr);
                     CHANNEL_RX_STATS_COUNT(trap->channel, dist_frag_cont_count, 1);
                     goto transition_to_fragment_continuation;
+                } else {
+                    TRAP_PREP_ERR(EXCP_ERROR_F(caller_env, "Dist Frame tagged with unknown Tag=%u\n", tag));
+                    return TRAP_ERR(err_term);
                 }
             };
 

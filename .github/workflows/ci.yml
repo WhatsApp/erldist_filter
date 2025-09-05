@@ -4,6 +4,8 @@ on: [push, pull_request]
 
 env:
   MIX_ENV: test
+  SANITIZE: true
+  WARNINGS_AS_ERRORS: true
 
 jobs:
   test:

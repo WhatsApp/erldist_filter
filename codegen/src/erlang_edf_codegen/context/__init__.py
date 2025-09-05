@@ -9,6 +9,7 @@ import abc
 import bisect
 from collections import OrderedDict
 from dataclasses import dataclass, field
+from datetime import datetime
 
 # from pydantic import BaseModel, Field, PrivateAttr
 from typing import Any, Iterator, Optional
@@ -69,6 +70,7 @@ class Context:
     dpi: "Dpi" = field(init=False)
     nif: "NIF" = field(init=False)
     test: "Test" = field(init=False)
+    version: int = field(init=False)
 
     def __post_init__(self) -> None:
         from .channel import Channel
@@ -78,6 +80,7 @@ class Context:
         from .nif import NIF
         from .test import Test
 
+        self.version = int(datetime.now().strftime("%Y%m%d%H%M%S"))
         self.channel = Channel(ctx=self, schema=self.schema.channel)
         self.config = Config(ctx=self, schema=self.schema.config)
         self.dist = Dist(ctx=self, schema=self.schema.dist)

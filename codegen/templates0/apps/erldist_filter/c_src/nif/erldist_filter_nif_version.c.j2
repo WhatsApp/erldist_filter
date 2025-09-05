@@ -1,0 +1,23 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * Copyright (c) WhatsApp LLC
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ */
+
+#include "erldist_filter_nif_version.h"
+
+/* clang-format off */ //-
+static const ErlNifUInt64 erldist_filter_nif_version = {{ ctx.version }}ULL;
+/* clang-format on */ //-
+
+ERL_NIF_TERM
+erldist_filter_nif_version_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    if (argc != 0) {
+        return EXCP_BADARG(env, "argc must be 0");
+    }
+
+    return enif_make_uint64(env, erldist_filter_nif_version);
+}

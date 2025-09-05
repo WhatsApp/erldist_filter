@@ -69,8 +69,124 @@ else
 	C_SRC_OUTPUT_FILE = $(C_SRC_OUTPUT)$(C_SRC_OUTPUT_EXECUTABLE_EXTENSION)
 endif
 
-ASAN_COMMON_FLAGS ?=
-# ASAN_COMMON_FLAGS ?= -fsanitize=address -fno-common -fno-omit-frame-pointer
+COMMON_CFLAGS ?= \
+-O2 \
+-g \
+-ggdb \
+-std=c2x \
+-finline-functions \
+-fno-omit-frame-pointer \
+-D_GNU_SOURCE \
+-D_REENTRANT
+
+COMMON_CXXFLAGS ?= \
+-O2 \
+-g \
+-ggdb \
+-std=c++20 \
+-finline-functions \
+-fno-omit-frame-pointer \
+-D_GNU_SOURCE \
+-D_REENTRANT
+
+SANITIZE_CFLAGS ?= \
+-fsanitize=address \
+-fno-common
+
+SANITIZE_CXXFLAGS ?= \
+-fsanitize=address \
+-fno-common
+
+WARNING_CFLAGS ?= \
+-Waddress \
+-Waddress-of-packed-member \
+-Wall \
+-Wambiguous-reversed-operator \
+-Wbitwise-instead-of-logical \
+-Wdeprecated-copy-with-user-provided-copy \
+-Wdeprecated-dynamic-exception-spec \
+-Wdeprecated-implementations \
+-Wenum-compare \
+-Wgcc-compat \
+-Wheader-hygiene \
+-Wimplicit-fallthrough \
+-Wimplicitly-unsigned-literal \
+-Wimport-preprocessor-directive-pedantic \
+-Wincompatible-function-pointer-types \
+-Winfinite-recursion \
+-Wmisleading-indentation \
+-Wmismatched-tags \
+-Wmissing-braces \
+-Wmissing-prototypes \
+-Wmove \
+-Wno-builtin-macro-redefined \
+-Wno-c++1z-compat \
+-Wno-comment \
+-Wno-constant-logical-operand \
+-Wno-defaulted-function-deleted \
+-Wno-deprecated \
+-Wno-deprecated-declarations \
+-Wno-error=\#warnings \
+-Wno-error=backend-plugin \
+-Wno-error=conditional-uninitialized \
+-Wno-error=constant-conversion \
+-Wno-error=deprecated-declarations \
+-Wno-error=explicit-specialization-storage-class \
+-Wno-error=format-truncation= \
+-Wno-error=missing-designated-field-initializers \
+-Wno-error=nan-infinity-disabled \
+-Wno-error=parentheses-equality \
+-Wno-error=pass-failed \
+-Wno-error=potentially-evaluated-expression \
+-Wno-error=shadow=compatible-local \
+-Wno-error=string-concatenation \
+-Wno-error=unused-but-set-variable \
+-Wno-error=vla-cxx-extension \
+-Wno-exceptions \
+-Wno-extra-semi-stmt \
+-Wno-implicit-const-int-float-conversion \
+-Wno-inconsistent-missing-destructor-override \
+-Wno-inconsistent-missing-override \
+-Wno-nullability-completeness \
+-Wno-reorder-init-list \
+-Wno-sign-compare \
+-Wno-stringop-overflow \
+-Wno-stringop-overread \
+-Wno-stringop-truncation \
+-Wno-tautological-compare \
+-Wno-unknown-warning-option \
+-Wno-unreachable-code-aggressive \
+-Wno-unused \
+-Wno-unused-private-field \
+-Wnull-conversion \
+-Wpacked-non-pod \
+-Wpessimizing-move \
+-Wself-assign \
+-Wsemicolon-before-method-body \
+-Wshift-sign-overflow \
+-Wthread-safety \
+-Wundefined-var-template \
+-Wuninitialized \
+-Wuninitialized-const-reference \
+-Wunused-but-set-variable \
+-Wunused-const-variable \
+-Wunused-label \
+-Wunused-local-typedef \
+-Wunused-result \
+-Wunused-value \
+-Wunused-variable \
+-Wvexing-parse
+
+WARNING_CXXFLAGS ?= \
+$(WARNING_CFLAGS) \
+-D_GLIBCXX_RESTRICT_EXCEPTIONS \
+-Wno-class-memaccess \
+-Wno-error=address-of-packed-member \
+-Wno-error=noexcept-type \
+-Wno-error=terminate \
+-Wno-missing-exception-spec \
+-Wno-reserved-identifier \
+-Wnon-virtual-dtor
 
 ifeq ($(PLATFORM),msys2)
 # We hardcode the compiler used on MSYS2. The default CC=cc does
@@ -79,29 +195,29 @@ ifeq ($(PLATFORM),msys2)
 	export CC
 	CXX = /mingw64/bin/g++
 	export CXX
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
+	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
 else ifeq ($(PLATFORM),darwin)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -Og -g -ggdb -std=c2x -Wall -Wmissing-prototypes $(ASAN_COMMON_FLAGS)
-	CXXFLAGS ?= -Og -g -ggdb -std=c++20 -Wall $(ASAN_COMMON_FLAGS)
+	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
+	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
 	LDFLAGS ?= -flat_namespace -undefined dynamic_lookup
 else ifeq ($(PLATFORM),freebsd)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
+	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
 else ifeq ($(PLATFORM),linux)
 	CC ?= gcc
 	CXX ?= g++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -Wall
+	CFLAGS ?= $(COMMON_CFLAGS) $(WARNING_CFLAGS)
+	CXXFLAGS ?= $(COMMON_CXXFLAGS) $(WARNING_CXXFLAGS)
 else ifeq ($(PLATFORM),solaris)
 	CC ?= cc
 	CXX ?= c++
-	CFLAGS ?= -O2 -g -ggdb -std=c2x -finline-functions -fstack-protector -Wall -Wmissing-prototypes
-	CXXFLAGS ?= -O2 -g -ggdb -std=c++20 -finline-functions -fstack-protector -Wall
+	CFLAGS ?= $(COMMON_CFLAGS) -fstack-protector $(WARNING_CFLAGS)
+	CXXFLAGS ?= $(COMMON_CXXFLAGS) -fstack-protector $(WARNING_CXXFLAGS)
 endif
 
 ifneq ($(PLATFORM),msys2)
@@ -114,8 +230,18 @@ ifneq ($(CROSSCOMPILER),)
 	CXX = $(CROSSCOMPILER)g++
 endif
 
-CFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)" -fno-omit-frame-pointer
-CXXFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)" -fno-omit-frame-pointer
+ifneq ($(SANITIZE),)
+	CFLAGS += $(SANITIZE_CFLAGS)
+	CXXFLASG += $(SANITIZE_CXXFLAGS)
+endif
+
+ifneq ($(WARNINGS_AS_ERRORS),)
+	CFLAGS += -Werror
+	CXXFLASG += -Werror
+endif
+
+CFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)"
+CXXFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)"
 
 LDLIBS += -L"$(ERL_INTERFACE_LIB_DIR)"
 
