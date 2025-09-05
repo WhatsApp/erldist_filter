@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.28.3 (2025-09-05)
+
+* Minor fix: remove unnecessary codesigning.
+
 ## 1.28.2 (2025-09-05)
 
 * Minor fix: codesigning and formatting.
