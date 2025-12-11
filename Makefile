@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2025-09-01
+ELP_VERSION ?= 2025-12-11
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp

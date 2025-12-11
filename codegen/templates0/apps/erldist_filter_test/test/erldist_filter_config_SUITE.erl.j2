@@ -7,6 +7,7 @@
 %%% LICENSE.md file in the root directory of this source tree.
 %%%-----------------------------------------------------------------------------
 -module(erldist_filter_config_SUITE).
+-typing([eqwalizer]).
 -moduledoc """
 Test suite for `erldist_filter_nif` configuration options.
 
@@ -208,8 +209,8 @@ compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
     {ok, A2, C2} = vedf_channel:recv(C1, P1),
     {ok, P2, C2} = vedf_channel:send_encode(C2, ControlC, vterm:expand(Payload), SendOptions),
     {ok, A3, C3} = vedf_channel:recv(C2, P2),
-    AllPackets = lists:concat([P0, P1, P2]),
-    AllActions = lists:concat([A1, A2, A3]),
+    AllPackets = lists:flatten([P0, P1, P2]),
+    AllActions = lists:flatten([A1, A2, A3]),
     ?assertEqual(AllActions, simplify_logger_time(erldist_filter_nif:channel_recv(Channel, AllPackets))),
     _ = C3,
     ok = erldist_filter_nif:channel_close(Channel),
@@ -248,8 +249,8 @@ logging_spawn_request_test(_Config, DFlags, SendOptions) ->
     {ok, A2, C2} = vedf_channel:recv(C1, P1),
     {ok, P2, C2} = vedf_channel:send_encode(C2, ControlC, vterm:expand(Payload), SendOptions),
     {ok, A3, C3} = vedf_channel:recv(C2, P2),
-    AllPackets = lists:concat([P0, P1, P2]),
-    AllActions0 = lists:concat([A1, A2, A3]),
+    AllPackets = lists:flatten([P0, P1, P2]),
+    AllActions0 = lists:flatten([A1, A2, A3]),
     {AllActions, [_Log_A, Log_B, Log_C]} = extract_action_logs(AllActions0, [], []),
     {log, _, {_, {Sysname, Atoms_B, Control_B, Payload_B}}} = Log_B,
     {log, _, {_, {Sysname, Atoms_C, Control_C, Payload_C}}} = Log_C,
@@ -399,9 +400,9 @@ traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config) ->
     {ok, A~J< packet.index + 1 >., C~J< packet.index + 1 >.} = vedf_channel:recv(C~J< packet.index >., P~J< packet.index >.),
 ~J{ endfor }.
     ~J{ set all_packets_joiner = joiner(",") }.
-    AllPackets = lists:concat([~J{ for packet in dpi.packets_list }.~J< all_packets_joiner() >.P~J< packet.index >.~J{ endfor }.]),
+    AllPackets = lists:flatten([~J{ for packet in dpi.packets_list }.~J< all_packets_joiner() >.P~J< packet.index >.~J{ endfor }.]),
     ~J{ set all_actions_joiner = joiner(",") }.
-    AllActions0 = lists:concat([~J{ for packet in dpi.packets_list }.~J< all_actions_joiner() >.A~J< packet.index + 1 >.~J{ endfor }.]),
+    AllActions0 = lists:flatten([~J{ for packet in dpi.packets_list }.~J< all_actions_joiner() >.A~J< packet.index + 1 >.~J{ endfor }.]),
     ~J{ set all_actions_log_joiner = joiner(",") }.
     {AllActions, [~J{ for packet in dpi.packets_list }.~J{ if packet.log }.~J< all_actions_log_joiner() ->.~J{ if packet.drop }._~J{ endif }.Log_~J< packet.index >.~J{ endif }.~J{ endfor }.]} =
         extract_action_logs(AllActions0, [], []),
@@ -989,14 +990,14 @@ simplify_logger_events([], _SimpleTime, Acc) ->
 %% @private
 -spec simplify_logger_time(Events) -> Events when
     Events :: [Event],
-    Event :: erldist_filter_nif:action_log().
+    Event :: erldist_filter_nif:action().
 simplify_logger_time(Events) ->
     simplify_logger_time(Events, 0).
 
 %% @private
 -spec simplify_logger_time(Events, SimpleTime) -> Events when
     Events :: [Event],
-    Event :: erldist_filter_nif:action_log(),
+    Event :: erldist_filter_nif:action(),
     SimpleTime :: erldist_filter_nif:logger_time().
 simplify_logger_time(Events, SimpleTime) ->
     simplify_logger_time(Events, SimpleTime, []).
@@ -1004,7 +1005,7 @@ simplify_logger_time(Events, SimpleTime) ->
 %% @private
 -spec simplify_logger_time(Events, SimpleTime, Acc) -> Events when
     Events :: [Event],
-    Event :: erldist_filter_nif:action_log(),
+    Event :: erldist_filter_nif:action(),
     SimpleTime :: erldist_filter_nif:logger_time(),
     Acc :: [Event].
 simplify_logger_time([{log, FragmentCount, {_LoggerTime, LoggerEvent}} | Events], SimpleTime, Acc) ->

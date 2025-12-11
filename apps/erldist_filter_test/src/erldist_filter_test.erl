@@ -51,7 +51,7 @@
     | {fail, Reason :: term()}
     | {skip, Reason :: term()}.
 -type suite() ::
-    [Info :: ct_suite:ct_info()].
+    [Info :: ct_suite:ct_info() | {doc, string()}].
 -type testcase() ::
     term()
     | {skip, Reason :: term()}
@@ -60,7 +60,7 @@
     | {save_config, SaveConfig :: ct_suite:ct_config()}
     | {skip_and_save, Reason :: term(), SaveConfig :: ct_suite:ct_config()}.
 -type testcase_info() ::
-    [Info :: ct_suite:ct_info()].
+    [Info :: ct_suite:ct_info() | {doc, string()}].
 
 -export_type([
     all/0,
