@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.18.4
-            otp: 28.0.2
+          - elixir: 1.19.4
+            otp: 28.3
             rebar3: 3.25.1
             lint: true
 
           - elixir: 1.18.4
-            otp: 27.3
+            otp: 27.3.4.6
             rebar3: 3.25.1
 
     steps:
