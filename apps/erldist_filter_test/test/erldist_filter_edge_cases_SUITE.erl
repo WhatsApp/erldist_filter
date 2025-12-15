@@ -217,23 +217,28 @@ packet_size_8_tick(Config) ->
     SymbolicCall :: proper_statem:symbolic_call().
 emulate_simple_commands([{set, Var1, {call, ?NIF_SPBT_SHIM, Fun = channel_open, Args}} | Commands]) ->
     {true, Channel} = emulate_simple_command(Fun, Args),
-    ok = emulate_simple_commands({channel, Var1}, {channel, Channel}, Commands),
+    SymbolicChannel = {channel, Var1},
+    LiteralChannel = {channel, Channel},
+    ok = emulate_simple_commands(SymbolicChannel, LiteralChannel, Commands),
     ok = erldist_filter_nif:channel_close(Channel),
     ok.
 
 %% @private
--spec emulate_simple_commands(Var, Channel, CommandList) -> ok when
-    Var :: SymbolicVar,
+-spec emulate_simple_commands(SymbolicChannel, LiteralChannel, CommandList) -> ok when
+    SymbolicChannel :: {channel, SymbolicVar},
+    SymbolicVar :: proper_statem:symbolic_var(),
+    LiteralChannel :: {channel, Channel},
     Channel :: erldist_filter_nif:channel(),
     CommandList :: [Command],
     Command :: {'set', SymbolicVar, SymbolicCall},
-    SymbolicVar :: proper_statem:symbolic_var(),
     SymbolicCall :: proper_statem:symbolic_call().
-emulate_simple_commands(Var, Channel, [{set, _, {call, ?NIF_SPBT_SHIM, Fun, [Var | Args0]}} | Commands]) ->
-    Args = [Channel | Args0],
+emulate_simple_commands(SymbolicChannel, LiteralChannel, [
+    {set, _, {call, ?NIF_SPBT_SHIM, Fun, [SymbolicChannel | Args0]}} | Commands
+]) ->
+    Args = [LiteralChannel | Args0],
     ?assertMatch({true, _}, emulate_simple_command(Fun, Args)),
-    emulate_simple_commands(Var, Channel, Commands);
-emulate_simple_commands(_Var, _Channel, []) ->
+    emulate_simple_commands(SymbolicChannel, LiteralChannel, Commands);
+emulate_simple_commands(_SymbolicChannel, _LiteralChannel, []) ->
     ok.
 
 %% @private
@@ -253,11 +258,31 @@ emulate_simple_command(channel_get_rx_atom_cache, [{channel, Channel}]) ->
     {true, RxAtomCache}.
 
 %% @private
--spec packet_size_x_tick(Config :: ct_suite:ct_config()) ->
-    erldist_filter_test:testcase().
+-spec get_packet_size(Config) -> PacketSize when
+    Config :: ct_suite:ct_config(), PacketSize :: erldist_filter_nif:packet_size().
+get_packet_size(Config) ->
+    case lists:keyfind(packet_size, 1, Config) of
+        {packet_size, PacketSize} when
+            PacketSize =:= 0 orelse PacketSize =:= 1 orelse PacketSize =:= 2 orelse PacketSize =:= 4 orelse
+                PacketSize =:= 8
+        ->
+            PacketSize
+    end.
+
+%% @private
+-spec get_tick(Config) -> Tick when Config :: ct_suite:ct_config(), Tick :: binary().
+get_tick(Config) ->
+    case lists:keyfind(tick, 1, Config) of
+        {tick, Tick} when is_binary(Tick) ->
+            Tick
+    end.
+
+%% @private
+-spec packet_size_x_tick(Config) -> TestCaseResult when
+    Config :: ct_suite:ct_config(), TestCaseResult :: erldist_filter_test:testcase().
 packet_size_x_tick(Config) ->
-    {tick, Tick} = lists:keyfind(tick, 1, Config),
-    {packet_size, PacketSize} = lists:keyfind(packet_size, 1, Config),
+    Tick = get_tick(Config),
+    PacketSize = get_packet_size(Config),
     Sysname = 'packet-size-x@127.0.0.1',
     Creation = 1756475325,
     ConnectionId = 4804673,

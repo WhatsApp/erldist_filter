@@ -180,8 +180,8 @@ case0_multiple_packets(_Config) ->
     {ok, A8, C8} = vedf_channel:recv(C7, P7),
     {ok, P8, C8} = vedf_channel:send_encode(C8, ControlMessageI, vterm:expand(Payload), SendOptions),
     {ok, A9, C9} = vedf_channel:recv(C8, P8),
-    AllPackets = lists:concat([P0, P1, P2, P3, P4, P5, P6, P7, P8]),
-    AllActions = lists:concat([A1, A2, A3, A4, A5, A6, A7, A8, A9]),
+    AllPackets = lists:flatten([P0, P1, P2, P3, P4, P5, P6, P7, P8]),
+    AllActions = lists:flatten([A1, A2, A3, A4, A5, A6, A7, A8, A9]),
     ?assertEqual(AllActions, erldist_filter_nif:channel_recv(Channel, AllPackets)),
     _ = C9,
     ok = erldist_filter_nif:channel_close(Channel).
@@ -467,8 +467,8 @@ case4_zero_packet_size(_Config) ->
     {ok, A8, C8} = vedf_channel:recv(C7, P7),
     {ok, P8, C8} = vedf_channel:send_encode(C8, ControlMessageI, vterm:expand(Payload), SendOptions),
     {ok, A9, C9} = vedf_channel:recv(C8, P8),
-    AllPackets = lists:concat([P0, P1, P2, P3, P4, P5, P6, P7, P8]),
-    AllActions = lists:concat([A1, A2, A3, A4, A5, A6, A7, A8, A9]),
+    AllPackets = lists:flatten([P0, P1, P2, P3, P4, P5, P6, P7, P8]),
+    AllActions = lists:flatten([A1, A2, A3, A4, A5, A6, A7, A8, A9]),
     ?assertEqual(
         AllActions, lists:flatten([erldist_filter_nif:channel_recv(Channel, [Packet]) || Packet <- AllPackets])
     ),

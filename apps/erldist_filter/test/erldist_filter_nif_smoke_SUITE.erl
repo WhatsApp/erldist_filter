@@ -121,7 +121,7 @@ end_per_testcase(_TestCase, _Config) ->
 %%% Test Cases
 %%%=============================================================================
 
--spec test_altact_sig_flags() -> [ct_suite:ct_info()].
+-spec test_altact_sig_flags() -> [ct_suite:ct_info() | {doc, string()}].
 test_altact_sig_flags() ->
     [
         {doc, "Loads the `erldist_filter_nif' and verifies that `altact_sig_flags/0' returns a map."},
@@ -139,7 +139,7 @@ test_altact_sig_flags(_Config) ->
     },
     ?assertEqual(Expected, erldist_filter_nif:altact_sig_flags()).
 
--spec test_distribution_flags() -> [ct_suite:ct_info()].
+-spec test_distribution_flags() -> [ct_suite:ct_info() | {doc, string()}].
 test_distribution_flags() ->
     [
         {doc, "Loads the `erldist_filter_nif' and verifies that `distribution_flags/0' returns a map."},
@@ -196,7 +196,7 @@ test_distribution_flags(_Config) ->
     },
     ?assertEqual(Expected, erldist_filter_nif:distribution_flags()).
 
--spec test_spawn_flags() -> [ct_suite:ct_info()].
+-spec test_spawn_flags() -> [ct_suite:ct_info() | {doc, string()}].
 test_spawn_flags() ->
     [
         {doc, "Loads the `erldist_filter_nif' and verifies that `spawn_flags/0' returns a map."},
