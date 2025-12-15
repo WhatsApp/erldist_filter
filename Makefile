@@ -75,7 +75,7 @@ eqwalize: $(ELP)
 	$(verbose) $(ELP) eqwalize $(PROJECT)
 
 eqwalize-all: $(ELP)
-	$(verbose) $(ELP) eqwalize-all
+	$(verbose) $(ELP) eqwalize-all --include-tests
 
 distclean-elp:
 	$(gen_verbose) rm -rf $(ELP)
