@@ -36,7 +36,7 @@ line-length = 132
 packages = [{include = "erlang_edf_codegen", from = "src"}]
 
 [tool.poetry.group.dev.dependencies]
-black = "^25.1.0"
+black = "^26.3.1"
 pytest = "^8.4.1"
 
 [tool.pytest.ini_options]
