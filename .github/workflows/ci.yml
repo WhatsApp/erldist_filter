@@ -22,8 +22,8 @@ jobs:
             elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
-            elp: 2025-12-12
-            elp_eqwalize_all_opts: "--include-tests"
+            elp: 2026-01-15
+            elp_eqwalize_all_opts: ""
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
