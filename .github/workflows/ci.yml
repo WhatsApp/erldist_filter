@@ -61,6 +61,10 @@ jobs:
       #     clang-format --version
       #     make lint-format
 
+      - name: (Erlang) Prefetch eqWAlizer Dependencies
+        if: ${{ matrix.eqwalizer_rebar3 }}
+        run: rebar3 as test get-deps
+
       - name: (Erlang) Install eqWAlizer Rebar3
         if: ${{ matrix.eqwalizer_rebar3 }}
         run: |
