@@ -23,7 +23,7 @@ jobs:
             otp: 29.0-rc3
             rebar3: 3.27.0
             elp: 2026-02-27
-            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test"
+            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test --bail-on-error"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -33,7 +33,7 @@ jobs:
             otp: 28.3
             rebar3: 3.27.0
             elp: 2026-02-27
-            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test"
+            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test --bail-on-error"
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -106,7 +106,6 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: (Elixir) Install Mix Dependencies
-        if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
           mix deps.get
 

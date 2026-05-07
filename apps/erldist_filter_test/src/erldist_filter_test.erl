@@ -22,13 +22,73 @@
 ]).
 
 %% Types
--type ct_config() :: [term()].
--type ct_group_def() :: term().
+-type ct_config() :: [{Key :: atom(), Value :: term()}].
 -type ct_groupname() :: atom().
--type ct_info() :: term().
--type ct_status() :: term().
--type ct_test_def() :: atom() | {group, ct_groupname()}.
+-type ct_status() :: ok | skipped | failed.
 -type ct_testname() :: atom().
+
+-type ct_group_props() :: [
+    parallel
+    | sequence
+    | shuffle
+    | {shuffle, Seed :: {integer(), integer(), integer()}}
+    | {ct_group_repeat_type(), ct_test_repeat()}
+].
+-type ct_group_props_ref() :: ct_group_props() | default.
+-type ct_group_repeat_type() ::
+    repeat
+    | repeat_until_all_ok
+    | repeat_until_all_fail
+    | repeat_until_any_ok
+    | repeat_until_any_fail.
+-type ct_test_repeat() :: integer() | forever.
+-type ct_subgroups_def() ::
+    {ct_groupname(), ct_group_props_ref()}
+    | {ct_groupname(), ct_group_props_ref(), ct_subgroups_def()}.
+-type ct_group_ref() ::
+    {group, ct_groupname()}
+    | {group, ct_groupname(), ct_group_props_ref()}
+    | {group, ct_groupname(), ct_group_props_ref(), ct_subgroups_def()}.
+-type ct_testcase_repeat_prop() :: [
+    {repeat, ct_test_repeat()}
+    | {repeat_until_ok, ct_test_repeat()}
+    | {repeat_until_fail, ct_test_repeat()}
+].
+-type ct_testcase_ref() :: {testcase, ct_testname(), ct_testcase_repeat_prop()}.
+-type ct_group_def() ::
+    {ct_groupname(), ct_group_props(), [
+        ct_testname()
+        | ct_group_def()
+        | {group, ct_groupname()}
+        | ct_testcase_ref()
+    ]}.
+-type ct_test_def() :: ct_testname() | ct_group_ref() | ct_testcase_ref().
+-type ct_info_timetrap() ::
+    timeout()
+    | {seconds, integer()}
+    | {minutes, integer()}
+    | {hours, integer()}
+    | {Mod :: atom(), Func :: atom(), Args :: list()}
+    | fun().
+-type ct_info_required_subkeys() :: atom() | [atom()].
+-type ct_info_required() ::
+    atom()
+    | {atom(), ct_info_required_subkeys()}
+    | {atom(), atom()}
+    | {atom(), atom(), ct_info_required_subkeys()}.
+-type ct_hooks() :: [
+    module()
+    | {module(), term()}
+    | {module(), term(), integer()}
+].
+-type ct_info() ::
+    {timetrap, ct_info_timetrap()}
+    | {require, ct_info_required()}
+    | {require, Name :: atom(), ct_info_required()}
+    | {userdata, UserData :: term()}
+    | {silent_connections, Conns :: [atom()]}
+    | {stylesheet, CSSFile :: string()}
+    | {ct_hooks, ct_hooks()}.
 
 -type all() ::
     [TestDef :: ct_test_def()]
