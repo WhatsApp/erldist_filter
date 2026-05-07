@@ -82,7 +82,10 @@ jobs:
           )"
           test -n "$ELP_EQWALIZE_MODULES"
           printf 'eqWAlizer modules: %s\n' "$ELP_EQWALIZE_MODULES"
-          make eqwalize ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_OPTS="${{ matrix.elp_eqwalize_opts }}" ELP_EQWALIZE_MODULES="$ELP_EQWALIZE_MODULES"
+          for module in $ELP_EQWALIZE_MODULES; do
+            printf 'eqWAlizer module: %s\n' "$module"
+            make eqwalize ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_OPTS="${{ matrix.elp_eqwalize_opts }}" ELP_EQWALIZE_MODULES="$module"
+          done
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
