@@ -46,6 +46,8 @@ else
 endif
 
 ELP_OPTS ?=
+ELP_EQWALIZE_OPTS ?=
+ELP_EQWALIZE_MODULES ?= $(PROJECT)
 ELP_EQWALIZE_ALL_OPTS ?= --as test --stats --list-modules
 ELP_BUILD_DIR ?= $(CURDIR)/_elp_build
 ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
@@ -73,7 +75,7 @@ $(ELP):
 	$(verbose) rm -rf $(ELP_BUILD_DIR)
 
 eqwalize: $(ELP)
-	$(verbose) $(ELP) eqwalize $(PROJECT)
+	$(verbose) $(ELP) eqwalize $(ELP_EQWALIZE_OPTS) $(ELP_EQWALIZE_MODULES)
 
 eqwalize-all: $(ELP)
 	$(verbose) $(ELP) eqwalize-all $(ELP_EQWALIZE_ALL_OPTS)
