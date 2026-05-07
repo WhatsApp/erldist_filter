@@ -24,6 +24,7 @@ jobs:
             rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
+            elp_manifest_otp_lib_dir: "/__elp_otp_28_embedded_stubs__"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -34,6 +35,7 @@ jobs:
             rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
+            elp_manifest_otp_lib_dir: ""
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -69,7 +71,15 @@ jobs:
 
       - name: (Erlang) Generate eqWAlizer Manifest
         if: ${{ matrix.lint }}
-        run: rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
+        run: |
+          rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
+          if [ -n "${{ matrix.elp_manifest_otp_lib_dir }}" ]; then
+            # ELP 2026-02-27 is built against OTP 28; avoid parsing OTP 29 stdlib types.
+            jq --arg otp_lib_dir "${{ matrix.elp_manifest_otp_lib_dir }}" \
+              '.otp_lib_dir = $otp_lib_dir' \
+              .eqwalizer-rebar-manifest.json > .eqwalizer-rebar-manifest.elp.json
+            mv .eqwalizer-rebar-manifest.elp.json .eqwalizer-rebar-manifest.json
+          fi
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
