@@ -22,6 +22,7 @@ jobs:
             elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
+            eqwalizer_rebar3: 3.25.1
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -60,9 +61,21 @@ jobs:
       #     clang-format --version
       #     make lint-format
 
+      - name: (Erlang) Install eqWAlizer Rebar3
+        if: ${{ matrix.eqwalizer_rebar3 }}
+        run: |
+          mkdir -p .ci-bin
+          curl -fsSLo .ci-bin/rebar3 https://github.com/erlang/rebar3/releases/download/${{ matrix.eqwalizer_rebar3 }}/rebar3
+          chmod +x .ci-bin/rebar3
+          .ci-bin/rebar3 version
+
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
-        run: make lint-eqwalizer
+        run: |
+          if [ -d .ci-bin ]; then
+            export PATH="$PWD/.ci-bin:$PATH"
+          fi
+          make lint-eqwalizer
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
