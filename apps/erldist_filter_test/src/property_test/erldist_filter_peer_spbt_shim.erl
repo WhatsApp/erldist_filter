@@ -231,6 +231,7 @@ upeer_send_sender(VNode, Term) ->
     ReqId :: reference(),
     VAlias :: reference().
 unode_start_aliased_priority_process(VNode, UAlias) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_aliased_priority_process_init, [UParent, UAlias], [{reply, yes}]),
     receive
@@ -249,6 +250,7 @@ unode_start_aliased_priority_process(VNode, UAlias) ->
     ReqId :: reference(),
     VAlias :: reference().
 unode_start_aliased_process(VNode, UAlias) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_aliased_process_init, [UParent, UAlias], [{reply, yes}]),
     receive
@@ -267,6 +269,7 @@ unode_start_aliased_process(VNode, UAlias) ->
     VMon :: reference(),
     VAlias :: reference().
 unode_start_exit2_priority_process(VNode) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_exit2_priority_process_init, [UParent], [monitor, {reply, yes}]),
     receive
@@ -285,6 +288,7 @@ unode_start_exit2_priority_process(VNode) ->
     VPid :: pid(),
     VMon :: reference().
 unode_start_exit2_process(VNode) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_exit2_process_init, [UParent], [monitor, {reply, yes}]),
     receive
@@ -364,6 +368,7 @@ vnode_exit2_process_loop(UParent) ->
     RegName :: atom(),
     ReqId :: reference().
 unode_start_registered_process(VNode, RegName) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_registered_process_init, [UParent, RegName], [{reply, yes}]),
     receive
@@ -400,6 +405,7 @@ vnode_registered_process_loop(RegName) ->
     ReqId :: reference(),
     VPid :: pid().
 unode_start_send_sender_process(VNode, UPid) ->
+    ok = upeer_ensure_connected(VNode),
     UParent = self(),
     ReqId = erlang:spawn_request(VNode, ?MODULE, vnode_send_sender_process_init, [UParent, UPid], [{reply, yes}]),
     receive
@@ -429,6 +435,25 @@ vnode_send_sender_process_loop(VPid, UPid) ->
         {UPid, UNode, stop} when UNode =/= node() ->
             UPid ! {VPid, node(), stopped},
             exit(normal)
+    end.
+
+-spec upeer_ensure_connected(VNode) -> ok when VNode :: node().
+upeer_ensure_connected(VNode) ->
+    upeer_ensure_connected(VNode, 5).
+
+-spec upeer_ensure_connected(VNode, Attempts) -> ok when VNode :: node(), Attempts :: non_neg_integer().
+upeer_ensure_connected(_VNode, 0) ->
+    erlang:error(noconnection);
+upeer_ensure_connected(VNode, Attempts) ->
+    case net_kernel:connect_node(VNode) of
+        true ->
+            ok;
+        false ->
+            timer:sleep(50),
+            upeer_ensure_connected(VNode, Attempts - 1);
+        ignored ->
+            timer:sleep(50),
+            upeer_ensure_connected(VNode, Attempts - 1)
     end.
 
 %%%-----------------------------------------------------------------------------
