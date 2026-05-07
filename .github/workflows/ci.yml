@@ -24,7 +24,8 @@ jobs:
             rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
-            elp_manifest_otp_lib_dir: "/__elp_otp_28_embedded_stubs__"
+            elp_manifest_otp_lib_dir: "/usr/local/lib/erlang/lib"
+            elp_runtime_image: "docker.io/erlang:28"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -36,6 +37,7 @@ jobs:
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
             elp_manifest_otp_lib_dir: ""
+            elp_runtime_image: ""
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -74,7 +76,7 @@ jobs:
         run: |
           rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
           if [ -n "${{ matrix.elp_manifest_otp_lib_dir }}" ]; then
-            # ELP 2026-02-27 is built against OTP 28; avoid parsing OTP 29 stdlib types.
+            # ELP 2026-02-27 is built against OTP 28; point it at OTP 28 stdlib types.
             jq --arg otp_lib_dir "${{ matrix.elp_manifest_otp_lib_dir }}" \
               '.otp_lib_dir = $otp_lib_dir' \
               .eqwalizer-rebar-manifest.json > .eqwalizer-rebar-manifest.elp.json
@@ -84,7 +86,16 @@ jobs:
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
         run: |
-          make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
+          if [ -n "${{ matrix.elp_runtime_image }}" ]; then
+            make ELP_VERSION=${{ matrix.elp }} "$(pwd)/elp"
+            docker run --rm \
+              -v "$PWD:$PWD" \
+              -w "$PWD" \
+              "${{ matrix.elp_runtime_image }}" \
+              ./elp eqwalize-all ${{ matrix.elp_eqwalize_all_opts }}
+          else
+            make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
+          fi
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
