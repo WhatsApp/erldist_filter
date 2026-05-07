@@ -10,7 +10,24 @@
 
 #include "../erts/external.h"
 
-extern int erts_debug_atom_to_out_cache_index(ERL_NIF_TERM atom);
+#define EDF_ATOM_IMMED2_SIZE 6
+
+static int
+edf_atom_to_out_cache_index(ERL_NIF_TERM atom)
+{
+    uintptr_t atom_index = ((uintptr_t)atom) >> EDF_ATOM_IMMED2_SIZE;
+
+    /*
+     * Mirrors ERTS atom2cix() from erts/emulator/beam/external.c. The
+     * previous erts_debug_atom_to_out_cache_index() helper is not exported by
+     * OTP 29.
+     */
+#if ERTS_USE_ATOM_CACHE_SIZE == 256
+    return (int)(atom_index & ((uintptr_t)0xff));
+#else
+    return (int)(atom_index % ERTS_USE_ATOM_CACHE_SIZE);
+#endif
+}
 
 int
 edf_atom_cache_index(ERL_NIF_TERM atom)
@@ -18,7 +35,7 @@ edf_atom_cache_index(ERL_NIF_TERM atom)
     if (!enif_is_atom(NULL, atom)) {
         return -1;
     }
-    return erts_debug_atom_to_out_cache_index(atom);
+    return edf_atom_to_out_cache_index(atom);
 }
 
 void
