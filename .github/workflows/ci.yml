@@ -23,6 +23,7 @@ jobs:
             otp: 29.0-rc3
             rebar3: 3.27.0
             elp: 2026-02-27
+            elp_eqwalize_all_opts: ""
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -32,6 +33,7 @@ jobs:
             otp: 28.3
             rebar3: 3.25.1
             elp: 2025-12-11
+            elp_eqwalize_all_opts: "--include-tests"
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -64,7 +66,7 @@ jobs:
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
-        run: make lint-eqwalizer ELP_VERSION=${{ matrix.elp }}
+        run: make lint-eqwalizer ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
