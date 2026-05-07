@@ -36,6 +36,14 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
           version-type: strict
+          install-hex: false
+          install-rebar: false
+
+      - name: (Elixir) Install Mix Bootstrap Tools
+        run: |
+          curl -fsSLO https://builds.hex.pm/installs/1.19.0/hex-2.4.2-otp-28.ez
+          mix archive.install ./hex-2.4.2-otp-28.ez --force
+          mix local.rebar rebar3 "$(command -v rebar3)" --force
 
       # - name: (Erlang) Check Formatting
       #   if: ${{ matrix.lint }}
@@ -69,8 +77,6 @@ jobs:
       - name: (Elixir) Install Mix Dependencies
         if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
-          mix local.rebar --force
-          mix local.hex --force
           mix deps.get
 
       - name: (Elixir) Check Formatting
