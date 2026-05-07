@@ -24,6 +24,7 @@ jobs:
             rebar3: 3.27.0
             setup_beam_tools: false
             manual_bootstrap: true
+            lint: true
 
           - label: OTP 28
             elixir: 1.19.4
