@@ -23,7 +23,7 @@ jobs:
             otp: 29.0-rc3
             rebar3: 3.27.0
             elp: 2026-02-27
-            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test --bail-on-error"
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -33,7 +33,7 @@ jobs:
             otp: 28.3
             rebar3: 3.27.0
             elp: 2026-02-27
-            elp_eqwalize_opts: "--project .eqwalizer-rebar-manifest.json --as test --bail-on-error"
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -74,18 +74,7 @@ jobs:
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
         run: |
-          ELP_EQWALIZE_MODULES="$(
-            grep -R -l --include='*.erl' '^-typing(\[eqwalizer\])\.' apps |
-              xargs sed -n 's/^-module(\([^)]*\)).*$/\1/p' |
-              sort |
-              tr '\n' ' '
-          )"
-          test -n "$ELP_EQWALIZE_MODULES"
-          printf 'eqWAlizer modules: %s\n' "$ELP_EQWALIZE_MODULES"
-          for module in $ELP_EQWALIZE_MODULES; do
-            printf 'eqWAlizer module: %s\n' "$module"
-            make eqwalize ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_OPTS="${{ matrix.elp_eqwalize_opts }}" ELP_EQWALIZE_MODULES="$module"
-          done
+          make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
