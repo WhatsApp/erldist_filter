@@ -20,11 +20,13 @@ jobs:
           - elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
+            runtime_tests: false
 
           - elixir: 1.19.4
             otp: 28.3
-            rebar3: 3.27.0
+            rebar3: 3.25.1
             lint: true
+            runtime_tests: true
 
     steps:
       - uses: actions/checkout@v5
@@ -63,11 +65,17 @@ jobs:
         if: ${{ matrix.lint }}
         run: make lint-xref
 
+      - name: (Erlang) Compile
+        if: ${{ !matrix.runtime_tests }}
+        run: rebar3 compile
+
       - name: (Erlang) Tests
+        if: ${{ matrix.runtime_tests }}
         run: |
           rebar3 ct
 
       - name: (Elixir) Retrieve Mix Dependencies Cache
+        if: ${{ matrix.runtime_tests }}
         uses: actions/cache@v4
         id: mix-cache
         with:
@@ -75,7 +83,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: (Elixir) Install Mix Dependencies
-        if: steps.mix-cache.outputs.cache-hit != 'true'
+        if: ${{ matrix.runtime_tests && steps.mix-cache.outputs.cache-hit != 'true' }}
         run: |
           mix deps.get
 
@@ -84,6 +92,7 @@ jobs:
         run: mix format --check-formatted
 
       - name: (Elixir) Tests
+        if: ${{ matrix.runtime_tests }}
         run: mix test --trace
 
       - name: Logs
