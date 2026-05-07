@@ -72,6 +72,7 @@ jobs:
 
       - name: (Erlang) Tests
         run: |
+          rebar3 as test compile
           rebar3 as test ct
 
       - name: (Elixir) Retrieve Mix Dependencies Cache
