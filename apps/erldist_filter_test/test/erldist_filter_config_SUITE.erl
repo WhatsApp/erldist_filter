@@ -346,21 +346,21 @@ groups() ->
         ]}
     ].
 
--spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
+-spec init_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:init_per_suite().
 init_per_suite(Config) ->
     Config.
 
--spec end_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_suite().
+-spec end_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:end_per_suite().
 end_per_suite(_Config) ->
     ok.
 
--spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+-spec init_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:init_per_group().
 init_per_group(_Group, Config) ->
     ok = config_set_default(),
     Config.
 
--spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+-spec end_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:end_per_group().
 end_per_group(_Group, _Config) ->
     ok = config_set_default(),
@@ -371,7 +371,7 @@ end_per_group(_Group, _Config) ->
 %%%=============================================================================
 
 -spec compact_fragments_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options().
 compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
@@ -407,7 +407,7 @@ compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
     ok.
 
 -spec logging_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options().
 logging_spawn_request_test(_Config, DFlags, SendOptions) ->
@@ -468,7 +468,7 @@ compact_fragments_fragment_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec compact_fragments_fragment_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec compact_fragments_fragment_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 compact_fragments_fragment_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -484,7 +484,7 @@ compact_fragments_normal_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec compact_fragments_normal_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec compact_fragments_normal_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 compact_fragments_normal_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -499,7 +499,7 @@ compact_fragments_pass_through_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec compact_fragments_pass_through_spawn_request_test(Config :: ct_suite:ct_config()) ->
+-spec compact_fragments_pass_through_spawn_request_test(Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:testcase().
 compact_fragments_pass_through_spawn_request_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
@@ -515,7 +515,7 @@ logging_fragment_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec logging_fragment_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec logging_fragment_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 logging_fragment_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -531,7 +531,7 @@ logging_normal_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec logging_normal_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec logging_normal_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 logging_normal_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -546,7 +546,7 @@ logging_pass_through_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec logging_pass_through_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec logging_pass_through_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 logging_pass_through_spawn_request_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -562,7 +562,7 @@ traffic_drop_fragment_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_exit_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -579,7 +579,7 @@ traffic_drop_fragment_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_exit2_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -596,7 +596,7 @@ traffic_drop_fragment_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_group_leader_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -613,7 +613,7 @@ traffic_drop_fragment_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_link_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -630,7 +630,7 @@ traffic_drop_fragment_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_monitor_related_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_monitor_related_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_monitor_related_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -647,7 +647,7 @@ traffic_drop_fragment_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_send_to_alias_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_send_to_alias_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -664,7 +664,7 @@ traffic_drop_fragment_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_send_to_name_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -681,7 +681,7 @@ traffic_drop_fragment_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -698,7 +698,7 @@ traffic_drop_fragment_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -715,7 +715,7 @@ traffic_drop_fragment_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -732,7 +732,7 @@ traffic_drop_fragment_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_fragment_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_fragment_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_fragment_unlink_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -749,7 +749,7 @@ traffic_drop_normal_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_exit_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -765,7 +765,7 @@ traffic_drop_normal_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_exit2_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -781,7 +781,7 @@ traffic_drop_normal_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_group_leader_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -797,7 +797,7 @@ traffic_drop_normal_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_link_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -813,7 +813,7 @@ traffic_drop_normal_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_monitor_related_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_monitor_related_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_monitor_related_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -829,7 +829,7 @@ traffic_drop_normal_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_send_to_alias_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_send_to_alias_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -845,7 +845,7 @@ traffic_drop_normal_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_send_to_name_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -861,7 +861,7 @@ traffic_drop_normal_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -877,7 +877,7 @@ traffic_drop_normal_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -893,7 +893,7 @@ traffic_drop_normal_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -909,7 +909,7 @@ traffic_drop_normal_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_normal_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_normal_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_normal_unlink_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -925,7 +925,7 @@ traffic_drop_pass_through_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_exit_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -941,7 +941,7 @@ traffic_drop_pass_through_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_exit2_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -957,7 +957,7 @@ traffic_drop_pass_through_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_group_leader_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -973,7 +973,7 @@ traffic_drop_pass_through_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_link_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -989,7 +989,7 @@ traffic_drop_pass_through_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_monitor_related_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_monitor_related_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_monitor_related_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1005,7 +1005,7 @@ traffic_drop_pass_through_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_send_to_alias_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_send_to_alias_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1021,7 +1021,7 @@ traffic_drop_pass_through_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_send_to_name_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1037,7 +1037,7 @@ traffic_drop_pass_through_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1053,7 +1053,7 @@ traffic_drop_pass_through_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1069,7 +1069,7 @@ traffic_drop_pass_through_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_spawn_request_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1085,7 +1085,7 @@ traffic_drop_pass_through_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_pass_through_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_pass_through_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_pass_through_unlink_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1101,7 +1101,7 @@ traffic_redirect_fragment_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_exit_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1118,7 +1118,7 @@ traffic_redirect_fragment_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_exit2_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1135,7 +1135,7 @@ traffic_redirect_fragment_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_group_leader_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1152,7 +1152,7 @@ traffic_redirect_fragment_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_link_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1169,7 +1169,7 @@ traffic_redirect_fragment_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_monitor_related_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_monitor_related_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_monitor_related_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1186,7 +1186,7 @@ traffic_redirect_fragment_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_send_to_alias_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_send_to_alias_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1203,7 +1203,7 @@ traffic_redirect_fragment_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_send_to_name_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1220,7 +1220,7 @@ traffic_redirect_fragment_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1237,7 +1237,7 @@ traffic_redirect_fragment_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1254,7 +1254,7 @@ traffic_redirect_fragment_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1271,7 +1271,7 @@ traffic_redirect_fragment_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_fragment_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_fragment_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_fragment_unlink_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1288,7 +1288,7 @@ traffic_redirect_normal_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_exit_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1304,7 +1304,7 @@ traffic_redirect_normal_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_exit2_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1320,7 +1320,7 @@ traffic_redirect_normal_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_group_leader_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1336,7 +1336,7 @@ traffic_redirect_normal_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_link_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1352,7 +1352,7 @@ traffic_redirect_normal_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_monitor_related_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_monitor_related_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_monitor_related_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1368,7 +1368,7 @@ traffic_redirect_normal_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_send_to_alias_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_send_to_alias_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1384,7 +1384,7 @@ traffic_redirect_normal_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_send_to_name_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1400,7 +1400,7 @@ traffic_redirect_normal_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1416,7 +1416,7 @@ traffic_redirect_normal_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1432,7 +1432,7 @@ traffic_redirect_normal_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_spawn_request_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1448,7 +1448,7 @@ traffic_redirect_normal_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_normal_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_normal_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_normal_unlink_test(Config) ->
     #{'DFLAG_DIST_DEFAULT' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1464,7 +1464,7 @@ traffic_redirect_pass_through_exit_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_exit_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_exit_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_exit_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1480,7 +1480,7 @@ traffic_redirect_pass_through_exit2_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_exit2_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_exit2_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_exit2_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1496,7 +1496,7 @@ traffic_redirect_pass_through_group_leader_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_group_leader_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_group_leader_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_group_leader_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1512,7 +1512,7 @@ traffic_redirect_pass_through_link_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_link_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_link_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_link_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1528,7 +1528,7 @@ traffic_redirect_pass_through_monitor_related_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_monitor_related_test(Config :: ct_suite:ct_config()) ->
+-spec traffic_redirect_pass_through_monitor_related_test(Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:testcase().
 traffic_redirect_pass_through_monitor_related_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
@@ -1545,7 +1545,7 @@ traffic_redirect_pass_through_send_to_alias_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_send_to_alias_test(Config :: ct_suite:ct_config()) ->
+-spec traffic_redirect_pass_through_send_to_alias_test(Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:testcase().
 traffic_redirect_pass_through_send_to_alias_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
@@ -1562,7 +1562,7 @@ traffic_redirect_pass_through_send_to_name_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_send_to_name_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_send_to_name_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_send_to_name_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1578,7 +1578,7 @@ traffic_redirect_pass_through_send_to_pid_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_send_to_pid_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_send_to_pid_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_send_to_pid_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1594,7 +1594,7 @@ traffic_redirect_pass_through_spawn_reply_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_spawn_reply_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_spawn_reply_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_spawn_reply_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1610,7 +1610,7 @@ traffic_redirect_pass_through_spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_spawn_request_test(Config :: ct_suite:ct_config()) ->
+-spec traffic_redirect_pass_through_spawn_request_test(Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:testcase().
 traffic_redirect_pass_through_spawn_request_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
@@ -1627,7 +1627,7 @@ traffic_redirect_pass_through_unlink_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_pass_through_unlink_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_pass_through_unlink_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_pass_through_unlink_test(Config) ->
     #{'DFLAG_DIST_MANDATORY' := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -1640,7 +1640,7 @@ traffic_redirect_pass_through_unlink_test(Config) ->
 %%%=============================================================================
 
 -spec dpi_exit_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -1713,7 +1713,7 @@ dpi_exit_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_exit2_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -1834,7 +1834,7 @@ dpi_exit2_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_group_leader_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -1891,7 +1891,7 @@ dpi_group_leader_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_link_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -1948,7 +1948,7 @@ dpi_link_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_monitor_related_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2004,7 +2004,7 @@ dpi_monitor_related_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_send_to_alias_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2100,7 +2100,7 @@ dpi_send_to_alias_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_send_to_name_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2220,7 +2220,7 @@ dpi_send_to_name_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_send_to_pid_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2348,7 +2348,7 @@ dpi_send_to_pid_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_spawn_reply_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2395,7 +2395,7 @@ dpi_spawn_reply_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_spawn_request_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
@@ -2456,7 +2456,7 @@ dpi_spawn_request_test(_Config, DFlags, SendOptions, ConfigMap0) ->
     ok.
 
 -spec dpi_unlink_test(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().

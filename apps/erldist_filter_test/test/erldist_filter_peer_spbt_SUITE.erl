@@ -76,26 +76,26 @@ groups() ->
         ]}
     ].
 
--spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
+-spec init_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:init_per_suite().
 init_per_suite(Config) ->
     {ok, _} = application:ensure_all_started(erldist_filter_test),
     Config.
 
--spec end_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_suite().
+-spec end_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:end_per_suite().
 end_per_suite(_Config) ->
     ok.
 
--spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+-spec init_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:init_per_group().
 init_per_group(_Group, Config) ->
     Config.
 
--spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) ->
+-spec end_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:end_per_group().
 end_per_group(_Group, _Config) ->
     ok.
 
--spec init_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+-spec init_per_testcase(TestCase :: erldist_filter_test:ct_testname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:init_per_testcase().
 init_per_testcase(prop_serial_statem, Config) ->
     P2P = erldist_filter_test_p2p:open(<<"edf-serial-statem">>),
@@ -104,7 +104,7 @@ init_per_testcase(prop_parallel_statem, Config) ->
     P2P = erldist_filter_test_p2p:open(<<"edf-parallel-statem">>),
     [{p2p, P2P} | Config].
 
--spec end_per_testcase(TestCase :: ct_suite:ct_testname(), Config :: ct_suite:ct_config()) ->
+-spec end_per_testcase(TestCase :: erldist_filter_test:ct_testname(), Config :: erldist_filter_test:ct_config()) ->
     erldist_filter_test:end_per_testcase().
 end_per_testcase(_TestCase, Config) ->
     case lists:keyfind(p2p, 1, Config) of

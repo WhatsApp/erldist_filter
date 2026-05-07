@@ -22,48 +22,63 @@
 ]).
 
 %% Types
+-type ct_config() :: [term()].
+-type ct_group_def() :: term().
+-type ct_groupname() :: atom().
+-type ct_info() :: term().
+-type ct_status() :: term().
+-type ct_test_def() :: atom() | {group, ct_groupname()}.
+-type ct_testname() :: atom().
+
 -type all() ::
-    [TestDef :: ct_suite:ct_test_def()]
+    [TestDef :: ct_test_def()]
     | {skip, Reason :: term()}.
 -type end_per_group() ::
     term()
-    | {return_group_result, Status :: ct_suite:ct_status()}.
+    | {return_group_result, Status :: ct_status()}.
 -type end_per_suite() ::
     term()
-    | {save_config, SaveConfig :: ct_suite:ct_config()}.
+    | {save_config, SaveConfig :: ct_config()}.
 -type end_per_testcase() ::
     term()
     | {fail, Reason :: term()}
-    | {save_config, SaveConfig :: ct_suite:ct_config()}.
--type groups() :: [GroupDef :: ct_suite:ct_group_def()].
+    | {save_config, SaveConfig :: ct_config()}.
+-type groups() :: [GroupDef :: ct_group_def()].
 -type init_per_group() ::
     NewConfig ::
-    ct_suite:ct_config()
+    ct_config()
     | {skip, Reason :: term()}.
 -type init_per_suite() ::
     NewConfig ::
-    ct_suite:ct_config()
+    ct_config()
     | {skip, Reason :: term()}
-    | {skip_and_save, Reason :: term(), SaveConfig :: ct_suite:ct_config()}.
+    | {skip_and_save, Reason :: term(), SaveConfig :: ct_config()}.
 -type init_per_testcase() ::
     NewConfig ::
-    ct_suite:ct_config()
+    ct_config()
     | {fail, Reason :: term()}
     | {skip, Reason :: term()}.
 -type suite() ::
-    [Info :: ct_suite:ct_info() | {doc, string()}].
+    [Info :: ct_info() | {doc, string()}].
 -type testcase() ::
     term()
     | {skip, Reason :: term()}
     | {fail, Reason :: term()}
     | {comment, Comment :: string()}
-    | {save_config, SaveConfig :: ct_suite:ct_config()}
-    | {skip_and_save, Reason :: term(), SaveConfig :: ct_suite:ct_config()}.
+    | {save_config, SaveConfig :: ct_config()}
+    | {skip_and_save, Reason :: term(), SaveConfig :: ct_config()}.
 -type testcase_info() ::
-    [Info :: ct_suite:ct_info() | {doc, string()}].
+    [Info :: ct_info() | {doc, string()}].
 
 -export_type([
     all/0,
+    ct_config/0,
+    ct_group_def/0,
+    ct_groupname/0,
+    ct_info/0,
+    ct_status/0,
+    ct_test_def/0,
+    ct_testname/0,
     end_per_group/0,
     end_per_suite/0,
     end_per_testcase/0,

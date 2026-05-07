@@ -159,20 +159,20 @@ groups() ->
         ]}
     ].
 
--spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
+-spec init_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:init_per_suite().
 init_per_suite(Config) ->
     Config.
 
--spec end_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_suite().
+-spec end_per_suite(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:end_per_suite().
 end_per_suite(_Config) ->
     ok.
 
--spec init_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_group().
+-spec init_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:init_per_group().
 init_per_group(_Group, Config) ->
     ok = config_set_default(),
     Config.
 
--spec end_per_group(GroupName :: ct_suite:ct_groupname(), Config :: ct_suite:ct_config()) -> erldist_filter_test:end_per_group().
+-spec end_per_group(GroupName :: erldist_filter_test:ct_groupname(), Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:end_per_group().
 end_per_group(_Group, _Config) ->
     ok = config_set_default(),
     ok.
@@ -182,7 +182,7 @@ end_per_group(_Group, _Config) ->
 %%%=============================================================================
 
 -spec compact_fragments_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options().
 compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
@@ -218,7 +218,7 @@ compact_fragments_spawn_request_test(_Config, DFlags, SendOptions) ->
     ok.
 
 -spec logging_spawn_request_test(Config, DFlags, SendOptions) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options().
 logging_spawn_request_test(_Config, DFlags, SendOptions) ->
@@ -280,7 +280,7 @@ compact_fragments_~J< header.key >._spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec compact_fragments_~J< header.key >._spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec compact_fragments_~J< header.key >._spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 compact_fragments_~J< header.key >._spawn_request_test(Config) ->
     #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -301,7 +301,7 @@ logging_~J< header.key >._spawn_request_test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec logging_~J< header.key >._spawn_request_test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec logging_~J< header.key >._spawn_request_test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 logging_~J< header.key >._spawn_request_test(Config) ->
     #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -323,7 +323,7 @@ traffic_drop_~J< header.key >._~J< traffic.key >._test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_drop_~J< header.key >._~J< traffic.key >._test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_drop_~J< header.key >._~J< traffic.key >._test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_drop_~J< header.key >._~J< traffic.key >._test(Config) ->
     #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -345,7 +345,7 @@ traffic_redirect_~J< header.key >._~J< traffic.key >._test() ->
         {timetrap, {seconds, 60}}
     ].
 
--spec traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+-spec traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config :: erldist_filter_test:ct_config()) -> erldist_filter_test:testcase().
 traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config) ->
     #{~J< header.dflags >. := DFlags} = erldist_filter_nif:distribution_flags(),
     SendOptions = #{
@@ -365,7 +365,7 @@ traffic_redirect_~J< header.key >._~J< traffic.key >._test(Config) ->
 
 ~J{ for dpi in ctx.test.config.dpi_list }.
 -spec ~J< dpi.key >.(Config, DFlags, SendOptions, ConfigMap) -> erldist_filter_test:testcase() when
-    Config :: ct_suite:ct_config(),
+    Config :: erldist_filter_test:ct_config(),
     DFlags :: erldist_filter_nif_types:flag(),
     SendOptions :: vdist_entry_encode:options(),
     ConfigMap :: erldist_filter_nif_types:config_map_set().
