@@ -64,6 +64,9 @@ jobs:
       #     clang-format --version
       #     make lint-format
 
+      - name: (Erlang) Compile Test Profile
+        run: rebar3 as test compile
+
       - name: (Erlang) Generate eqWAlizer Manifest
         if: ${{ matrix.lint }}
         run: rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
@@ -81,9 +84,7 @@ jobs:
         run: make lint-xref
 
       - name: (Erlang) Tests
-        run: |
-          rebar3 as test compile
-          rebar3 as test ct
+        run: rebar3 as test ct
 
       - name: (Elixir) Retrieve Mix Dependencies Cache
         uses: actions/cache@v4
