@@ -67,7 +67,7 @@ jobs:
 
       - name: (Erlang) Compile
         if: ${{ !matrix.runtime_tests }}
-        run: rebar3 compile
+        run: rebar3 as test compile
 
       - name: (Erlang) Tests
         if: ${{ matrix.runtime_tests }}
