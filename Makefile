@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2025-12-11
+ELP_VERSION ?= 2026-02-27
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp
@@ -46,7 +46,7 @@ else
 endif
 
 ELP_OPTS ?=
-ELP_EQWALIZE_ALL_OPTS ?= --include-tests
+ELP_EQWALIZE_ALL_OPTS ?= --as test --stats --list-modules
 ELP_BUILD_DIR ?= $(CURDIR)/_elp_build
 ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 

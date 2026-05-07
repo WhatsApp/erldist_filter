@@ -22,8 +22,8 @@ jobs:
             elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
-            elp: 2026-01-15
-            elp_eqwalize_all_opts: ""
+            elp: 2026-02-27
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -32,8 +32,8 @@ jobs:
             elixir: 1.19.4
             otp: 28.3
             rebar3: 3.25.1
-            elp: 2025-12-11
-            elp_eqwalize_all_opts: "--include-tests"
+            elp: 2026-02-27
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules"
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -63,6 +63,10 @@ jobs:
       #   run: |
       #     clang-format --version
       #     make lint-format
+
+      - name: (Erlang) Generate eqWAlizer Manifest
+        if: ${{ matrix.lint }}
+        run: rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
