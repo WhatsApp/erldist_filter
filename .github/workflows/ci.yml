@@ -17,18 +17,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - label: OTP 29 compile
+          - label: OTP 29
             elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
-            runtime_tests: false
+            setup_beam_tools: false
+            manual_bootstrap: true
 
           - label: OTP 28
             elixir: 1.19.4
             otp: 28.3
             rebar3: 3.25.1
+            setup_beam_tools: true
+            manual_bootstrap: false
             lint: true
-            runtime_tests: true
 
     steps:
       - uses: actions/checkout@v5
@@ -40,11 +42,11 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
           version-type: strict
-          install-hex: ${{ matrix.runtime_tests }}
-          install-rebar: ${{ matrix.runtime_tests }}
+          install-hex: ${{ matrix.setup_beam_tools }}
+          install-rebar: ${{ matrix.setup_beam_tools }}
 
       - name: (Elixir) Install OTP 29 Bootstrap Tools
-        if: ${{ !matrix.runtime_tests }}
+        if: ${{ matrix.manual_bootstrap }}
         run: |
           curl -fsSLO https://builds.hex.pm/installs/1.19.0/hex-2.4.2-otp-28.ez
           mix archive.install ./hex-2.4.2-otp-28.ez --force
@@ -68,17 +70,11 @@ jobs:
         if: ${{ matrix.lint }}
         run: make lint-xref
 
-      - name: (Erlang) Compile
-        if: ${{ !matrix.runtime_tests }}
-        run: rebar3 as test compile
-
       - name: (Erlang) Tests
-        if: ${{ matrix.runtime_tests }}
         run: |
           rebar3 ct
 
       - name: (Elixir) Retrieve Mix Dependencies Cache
-        if: ${{ matrix.runtime_tests }}
         uses: actions/cache@v4
         id: mix-cache
         with:
@@ -86,7 +82,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: (Elixir) Install Mix Dependencies
-        if: ${{ matrix.runtime_tests && steps.mix-cache.outputs.cache-hit != 'true' }}
+        if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
           mix deps.get
 
@@ -95,7 +91,6 @@ jobs:
         run: mix format --check-formatted
 
       - name: (Elixir) Tests
-        if: ${{ matrix.runtime_tests }}
         run: mix test --trace
 
       - name: Logs
