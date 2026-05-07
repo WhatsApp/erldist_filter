@@ -10,19 +10,21 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Test (${{ matrix.label }})
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.20.0-rc.4
+          - label: OTP 29 compile
+            elixir: 1.20.0-rc.4
             otp: 29.0-rc3
             rebar3: 3.27.0
             runtime_tests: false
 
-          - elixir: 1.19.4
+          - label: OTP 28
+            elixir: 1.19.4
             otp: 28.3
             rebar3: 3.25.1
             lint: true
@@ -38,14 +40,8 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
           version-type: strict
-          install-hex: false
-          install-rebar: false
-
-      - name: (Elixir) Install Mix Bootstrap Tools
-        run: |
-          curl -fsSLO https://builds.hex.pm/installs/1.19.0/hex-2.4.2-otp-28.ez
-          mix archive.install ./hex-2.4.2-otp-28.ez --force
-          mix local.rebar rebar3 "$(command -v rebar3)" --force
+          install-hex: ${{ matrix.runtime_tests }}
+          install-rebar: ${{ matrix.runtime_tests }}
 
       # - name: (Erlang) Check Formatting
       #   if: ${{ matrix.lint }}
