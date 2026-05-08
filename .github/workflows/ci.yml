@@ -22,7 +22,6 @@ jobs:
             rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
-            elp_runtime_image: "docker.io/erlang:28"
             setup_beam_tools: false
             manual_bootstrap: true
             lint: true
@@ -32,7 +31,6 @@ jobs:
             rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
-            elp_runtime_image: ""
             setup_beam_tools: true
             manual_bootstrap: false
             lint: true
@@ -69,17 +67,7 @@ jobs:
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
-        run: |
-          if [ -n "${{ matrix.elp_runtime_image }}" ]; then
-            make ELP_VERSION=${{ matrix.elp }} "$(pwd)/elp"
-            docker run --rm \
-              -v "$PWD:$PWD" \
-              -w "$PWD" \
-              "${{ matrix.elp_runtime_image }}" \
-              ./elp eqwalize-all ${{ matrix.elp_eqwalize_all_opts }}
-          else
-            make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
-          fi
+        run: make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
