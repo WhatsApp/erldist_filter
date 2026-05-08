@@ -5,7 +5,6 @@ on: [push, pull_request]
 env:
   CC: clang
   CXX: clang++
-  HEX_CDN: https://repo.hex.pm
   MIX_ENV: test
   WARNINGS_AS_ERRORS: true
 
