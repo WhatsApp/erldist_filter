@@ -65,9 +65,6 @@ jobs:
       #     clang-format --version
       #     make lint-format
 
-      - name: (Erlang) Compile Test Profile
-        run: rebar3 as test compile
-
       - name: (Erlang) Generate eqWAlizer Manifest
         if: ${{ matrix.lint }}
         run: |
