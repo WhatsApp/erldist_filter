@@ -46,7 +46,6 @@ jobs:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
-          version-type: strict
           install-hex: ${{ matrix.setup_beam_tools }}
           install-rebar: ${{ matrix.setup_beam_tools }}
 
