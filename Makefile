@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2026-02-27
+ELP_VERSION ?= 2025-12-11
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp
@@ -46,9 +46,6 @@ else
 endif
 
 ELP_OPTS ?=
-ELP_EQWALIZE_OPTS ?=
-ELP_EQWALIZE_MODULES ?= $(PROJECT)
-ELP_EQWALIZE_ALL_OPTS ?= --as test --stats --list-modules --bail-on-error
 ELP_BUILD_DIR ?= $(CURDIR)/_elp_build
 ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 
@@ -57,7 +54,7 @@ ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 help::
 	$(verbose) printf "%s\n" "" \
 		"elp targets:" \
-		"  eqwalize     Run 'elp eqwalize' on the current project" \
+		"  eqwalize     Run 'elp eqwalize-app argo' on the current project" \
 		"  eqwalize-all Run 'elp eqwalize-all' on the current project"
 
 distclean:: distclean-elp
@@ -75,10 +72,10 @@ $(ELP):
 	$(verbose) rm -rf $(ELP_BUILD_DIR)
 
 eqwalize: $(ELP)
-	$(verbose) $(ELP) eqwalize $(ELP_EQWALIZE_OPTS) $(ELP_EQWALIZE_MODULES)
+	$(verbose) $(ELP) eqwalize $(PROJECT)
 
 eqwalize-all: $(ELP)
-	$(verbose) $(ELP) eqwalize-all $(ELP_EQWALIZE_ALL_OPTS)
+	$(verbose) $(ELP) eqwalize-all --include-tests
 
 distclean-elp:
 	$(gen_verbose) rm -rf $(ELP)
