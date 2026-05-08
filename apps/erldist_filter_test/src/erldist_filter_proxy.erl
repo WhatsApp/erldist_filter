@@ -134,7 +134,7 @@ handle_call(channel_inspect, _From, State0 = #state{channel = Channel}) when Cha
     catch
         Class:Reason:Stacktrace ->
             Reply = {Class, Reason, Stacktrace},
-            _ = try erldist_filter_nif:channel_close(Channel) catch _:_ -> ok end,
+            _ = catch erldist_filter_nif:channel_close(Channel),
             State1 = State0#state{channel = undefined},
             {stop, normal, Reply, State1}
     end;
@@ -145,7 +145,7 @@ handle_call({channel_recv, IoVec}, _From, State0 = #state{channel = Channel}) wh
     catch
         Class:Reason:Stacktrace ->
             Reply = {Class, Reason, Stacktrace},
-            _ = try erldist_filter_nif:channel_close(Channel) catch _:_ -> ok end,
+            _ = catch erldist_filter_nif:channel_close(Channel),
             State1 = State0#state{channel = undefined},
             {stop, normal, Reply, State1}
     end.
@@ -161,7 +161,7 @@ handle_info(
     {'DOWN', ParentMon, process, ParentPid, _Reason},
     State0 = #state{channel = Channel, parent = {ParentPid, ParentMon}}
 ) when Channel =/= undefined ->
-    _ = try erldist_filter_nif:channel_close(Channel) catch _:_ -> ok end,
+    _ = catch erldist_filter_nif:channel_close(Channel),
     State1 = State0#state{channel = undefined, parent = undefined},
     {stop, normal, State1}.
 

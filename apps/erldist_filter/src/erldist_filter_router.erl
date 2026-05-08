@@ -166,7 +166,7 @@ route(info, Info, Data0 = #data{handlers = Handlers0, monitors = Monitors0}) ->
 route_to_handler(Sysname, Operation, Data = #data{handlers = Handlers}) ->
     case maps:find(Sysname, Handlers) of
         {ok, HandlerPid} ->
-            _ = try erlang:send(HandlerPid, Operation, [noconnect]) catch _:_ -> ok end,
+            _ = catch erlang:send(HandlerPid, Operation, [noconnect]),
             keep_state_and_data;
         error ->
             start_and_route_to_handler(Sysname, Operation, Data)
@@ -183,7 +183,7 @@ start_and_route_to_handler(
 ) ->
     case supervisor:start_child(HandlerSup, [Sysname]) of
         {ok, HandlerPid} when is_pid(HandlerPid) ->
-            _ = try erlang:send(HandlerPid, Operation, [noconnect]) catch _:_ -> ok end,
+            _ = catch erlang:send(HandlerPid, Operation, [noconnect]),
             HandlerMon = erlang:monitor(process, HandlerPid),
             Handlers1 = Handlers0#{Sysname => HandlerPid},
             Monitors1 = Monitors0#{HandlerMon => {Sysname, HandlerPid}},
