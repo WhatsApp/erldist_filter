@@ -23,8 +23,8 @@ jobs:
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
             elp_runtime_image: "docker.io/erlang:28"
-            setup_beam_tools: true
-            manual_bootstrap: false
+            setup_beam_tools: false
+            manual_bootstrap: true
             lint: true
 
           - elixir: 1.19.4
@@ -48,6 +48,13 @@ jobs:
           rebar3-version: ${{ matrix.rebar3 }}
           install-hex: ${{ matrix.setup_beam_tools }}
           install-rebar: ${{ matrix.setup_beam_tools }}
+
+      - name: (Elixir) Install OTP 29 Bootstrap Tools
+        if: ${{ matrix.manual_bootstrap }}
+        run: |
+          curl -fsSLO https://builds.hex.pm/installs/1.19.0/hex-2.4.2-otp-28.ez
+          mix archive.install ./hex-2.4.2-otp-28.ez --force
+          mix local.rebar rebar3 "$(command -v rebar3)" --force
 
       # - name: (Erlang) Check Formatting
       #   if: ${{ matrix.lint }}
