@@ -30,7 +30,7 @@ jobs:
 
           - elixir: 1.19.4
             otp: 28.3
-            rebar3: 3.25.1
+            rebar3: 3.27.0
             elp: 2026-02-27
             elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
             elp_manifest_otp_lib_dir: ""
