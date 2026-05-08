@@ -46,6 +46,7 @@ else
 endif
 
 ELP_OPTS ?=
+ELP_EQWALIZE_ALL_OPTS ?= --include-tests
 ELP_BUILD_DIR ?= $(CURDIR)/_elp_build
 ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 
@@ -75,7 +76,7 @@ eqwalize: $(ELP)
 	$(verbose) $(ELP) eqwalize $(PROJECT)
 
 eqwalize-all: $(ELP)
-	$(verbose) $(ELP) eqwalize-all --include-tests
+	$(verbose) $(ELP) eqwalize-all $(ELP_EQWALIZE_ALL_OPTS)
 
 distclean-elp:
 	$(gen_verbose) rm -rf $(ELP)
