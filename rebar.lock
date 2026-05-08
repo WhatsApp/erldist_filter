@@ -4,8 +4,10 @@
               {ref,"54a74ae351f494328fa77515830a87275088426a"},
               "eqwalizer_support"},
   0},
- {<<"proper">>,
-  {git,"https://github.com/proper-testing/proper.git",
-       {ref,"5640d0715d4b346676267504d8e84398e2a29f75"}},
-  0}]}.
-[].
+ {<<"proper">>,{pkg,<<"proper">>,<<"1.5.0">>},0}]}.
+[
+{pkg_hash,[
+ {<<"proper">>, <<"4A87CE8B219858E64C9AA015F4F7ED739D0AC3CA6BFD77FA62794617EE784225">>}]},
+{pkg_hash_ext,[
+ {<<"proper">>, <<"FBF7CF0625E5441A314514F7D8E1EAFF52090FCD94FF34B5171FF293D3F9969A">>}]}
+].
