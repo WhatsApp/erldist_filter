@@ -6,14 +6,33 @@
  * LICENSE.md file in the root directory of this source tree.
  */
 
+#include <dlfcn.h>
+
 #include "vterm_env.h"
 #include "vterm.h"
-#include "../etf/etf_decode_term_length.h"
-#include "../etf/etf_decode_vterm.h"
 
 // disable packed structs in khashl.h
 #define kh_packed
 #include "../core/khashl.h"
+
+/* Danger Area */
+
+typedef struct __vterm_erl_nif_env_s __vterm_erl_nif_env_t;
+typedef struct __vterm_erl_process_s __vterm_erl_process_t;
+
+typedef ERL_NIF_TERM (*erts_debug_dist_ext_to_term_2_fn)(__vterm_erl_process_t *A__p, ERL_NIF_TERM *BIF__ARGS,
+                                                         const void *A__I);
+
+static erts_debug_dist_ext_to_term_2_fn vterm_env_dist_ext_to_term_2 = NULL;
+
+struct __vterm_erl_process_s {
+    void *_void;
+};
+
+struct __vterm_erl_nif_env_s {
+    void *mod_nif;
+    __vterm_erl_process_t *proc;
+};
 
 /* Type Definitions */
 
@@ -29,6 +48,7 @@ struct vterm_env_heap_direct_s {
 
 struct __vterm_env_s {
     vterm_env_t super;
+    ErlNifEnv *tmp_env;
     void *resource;
     ERL_NIF_TERM atoms;
     vterm_resolved_table_t *resolved;
@@ -207,6 +227,21 @@ vterm_env_load(ErlNifEnv *env)
         return retval;
     }
 
+    /* OTP 29 hides BEAM-internal symbols by default (-fvisibility=hidden), so
+     * the linker can no longer resolve erts_debug_dist_ext_to_term_2 at NIF
+     * dlopen time. Resolve it dynamically here and fail load loudly if absent;
+     * this NIF is non-functional without that hot path. */
+    vterm_env_dist_ext_to_term_2 =
+        (erts_debug_dist_ext_to_term_2_fn)dlsym(RTLD_DEFAULT, "erts_debug_dist_ext_to_term_2");
+    if (vterm_env_dist_ext_to_term_2 == NULL) {
+        (void)enif_fprintf(stderr, "erldist_filter: failed to resolve required BEAM symbol "
+                                   "'erts_debug_dist_ext_to_term_2': %s\n",
+                           dlerror());
+        (void)fflush(stderr);
+        retval = -1;
+        return retval;
+    }
+
     return retval;
 }
 
@@ -215,12 +250,11 @@ vterm_env_unload(ErlNifEnv *env)
 {
     (void)env;
     vterm_env_resource_type = NULL;
+    vterm_env_dist_ext_to_term_2 = NULL;
     return;
 }
 
 static ERL_NIF_TERM vterm_env_make_atoms_tuple(__vterm_env_t *vtenv);
-static int vterm_env_dist_ext_to_term_x(ErlNifEnv *env, edf_atom_translation_table_t *attab, const uint8_t *buf, size_t len,
-                                        ERL_NIF_TERM *termp);
 
 vterm_env_t *
 vterm_env_alloc(edf_atom_translation_table_t *attab)
@@ -242,6 +276,7 @@ vterm_env_prealloc(edf_atom_translation_table_t *attab, size_t prealloc_heap_siz
         return NULL;
     }
     vtenv->super.attab = attab;
+    vtenv->tmp_env = NULL;
     vtenv->resource = NULL;
     if (attab == NULL) {
         vtenv->atoms = enif_make_tuple(vtenv->super.nif_env, 0);
@@ -369,6 +404,10 @@ vterm_env_free(vterm_env_t *super)
             vtenv->directs = direct->next;
             (void)enif_free((void *)direct);
         }
+        if (vtenv->tmp_env != NULL) {
+            (void)enif_free_env(vtenv->tmp_env);
+            vtenv->tmp_env = NULL;
+        }
         if (vtenv->super.nif_env != NULL) {
             (void)enif_free_env(vtenv->super.nif_env);
             vtenv->super.nif_env = NULL;
@@ -403,114 +442,52 @@ vterm_env_ctx_swap(vterm_env_t *super, vterm_env_ctx_t *new_ctx, vterm_env_ctx_t
 int
 vterm_env_dist_ext_to_term(vterm_env_t *super, const uint8_t *buf, size_t len, ERL_NIF_TERM *termp)
 {
-    if (super == NULL) {
+    __vterm_env_t *vtenv = (void *)super;
+    ERL_NIF_TERM bif_args[2];
+    ERL_NIF_TERM bif_ret = THE_NON_VALUE;
+    if (vtenv->tmp_env == NULL) {
+        vtenv->tmp_env = enif_alloc_env();
+        if (vtenv->tmp_env == NULL) {
+            return 0;
+        }
+    } else {
+        (void)enif_clear_env(vtenv->tmp_env);
+    }
+    bif_args[0] = vtenv->atoms;
+    bif_args[1] = enif_make_resource_binary(vtenv->tmp_env, vtenv->resource, buf, len);
+    bif_ret = vterm_env_dist_ext_to_term_2(((__vterm_erl_nif_env_t *)(vtenv->tmp_env))->proc, bif_args, NULL);
+    if (bif_ret == THE_NON_VALUE) {
+        {
+            (void)enif_fprintf(stderr, "Atoms = %T\n", vtenv->atoms);
+            (void)enif_fprintf(stderr, "Binary = ");
+            (void)vterm_env_dump_bin(buf, len);
+            (void)enif_fprintf(stderr, "\n");
+            (void)fflush(stderr);
+        };
         return 0;
     }
-    return vterm_env_dist_ext_to_term_x(super->nif_env, super->attab, buf, len, termp);
+    *termp = bif_ret;
+    return 1;
 }
 
 ERL_NIF_TERM
 vterm_env_direct_dist_ext_to_term(ErlNifEnv *env, ERL_NIF_TERM atoms_tuple, ERL_NIF_TERM input_binary)
 {
-    const ERL_NIF_TERM *atoms = NULL;
-    int atoms_arity;
-    int i;
-    ErlNifBinary bin;
-    edf_atom_translation_table_t attab;
-    ERL_NIF_TERM term = THE_NON_VALUE;
-
-    if (!enif_get_tuple(env, atoms_tuple, &atoms_arity, &atoms) || atoms_arity < 0 ||
-        atoms_arity > ERTS_MAX_INTERNAL_ATOM_CACHE_ENTRIES || !enif_inspect_binary(env, input_binary, &bin)) {
+    ErlNifEnv *tmp_env = NULL;
+    ERL_NIF_TERM bif_args[2];
+    ERL_NIF_TERM bif_ret = THE_NON_VALUE;
+    tmp_env = enif_alloc_env();
+    if (tmp_env == NULL) {
         return enif_make_badarg(env);
     }
-
-    (void)edf_atom_translation_table_init(&attab);
-    if (!edf_atom_translation_table_set_size(&attab, (size_t)atoms_arity)) {
-        (void)edf_atom_translation_table_destroy(&attab);
+    bif_args[0] = atoms_tuple;
+    bif_args[1] = input_binary;
+    bif_ret = vterm_env_dist_ext_to_term_2(((__vterm_erl_nif_env_t *)(tmp_env))->proc, bif_args, NULL);
+    if (bif_ret == THE_NON_VALUE) {
+        (void)enif_free_env(tmp_env);
         return enif_make_badarg(env);
     }
-
-    for (i = 0; i < atoms_arity; i++) {
-        if (!enif_is_atom(env, atoms[i]) || !edf_atom_translation_table_set_entry(&attab, 0, i, atoms[i], false)) {
-            (void)edf_atom_translation_table_destroy(&attab);
-            return enif_make_badarg(env);
-        }
-    }
-
-    if (!vterm_env_dist_ext_to_term_x(env, &attab, bin.data, bin.size, &term)) {
-        (void)edf_atom_translation_table_destroy(&attab);
-        return enif_make_badarg(env);
-    }
-
-    (void)edf_atom_translation_table_destroy(&attab);
-    return term;
-}
-
-static int
-vterm_env_dist_ext_to_term_x(ErlNifEnv *env, edf_atom_translation_table_t *attab, const uint8_t *buf, size_t len,
-                             ERL_NIF_TERM *termp)
-{
-    ErlNifEnv *work_env = NULL;
-    vec_t slice;
-    etf_decode_term_length_trap_t *length_trap = NULL;
-    etf_decode_vterm_trap_t *decode_trap = NULL;
-    edf_trap_result_t trap_result;
-    ERL_NIF_TERM trap_term;
-    vterm_env_t *decode_vtenv = NULL;
-    int retval = 0;
-
-    if (env == NULL || buf == NULL || termp == NULL) {
-        return 0;
-    }
-
-    *termp = THE_NON_VALUE;
-    (void)vec_init_free(&slice);
-
-    work_env = enif_alloc_env();
-    if (work_env == NULL) {
-        return 0;
-    }
-
-    if (!vec_create_from_slice(&slice, buf, buf + len)) {
-        goto cleanup;
-    }
-
-    trap_term = etf_decode_term_length_trap_open(work_env, true, &slice, NULL, NULL, &length_trap);
-    if (length_trap == NULL || enif_is_exception(work_env, trap_term)) {
-        goto cleanup;
-    }
-    trap_result = edf_trap_block_on_next(work_env, &length_trap->super);
-    if (trap_result.tag != EDF_TRAP_RESULT_TAG_OK) {
-        goto cleanup;
-    }
-
-    decode_vtenv = vterm_env_prealloc(attab, length_trap->heap_size);
-    if (decode_vtenv == NULL) {
-        goto cleanup;
-    }
-
-    trap_term = etf_decode_vterm_trap_open(work_env, decode_vtenv, true, attab, &slice, -1, NULL, NULL, &decode_trap);
-    if (decode_trap == NULL || enif_is_exception(work_env, trap_term)) {
-        goto cleanup;
-    }
-    trap_result = edf_trap_block_on_next(work_env, &decode_trap->super);
-    if (trap_result.tag != EDF_TRAP_RESULT_TAG_OK || decode_trap->vterm == NULL) {
-        goto cleanup;
-    }
-
-    if (!vterm_encode_and_try_resolve(env, decode_vtenv, &decode_trap->vterm, termp)) {
-        goto cleanup;
-    }
-
-    retval = 1;
-
-cleanup:
-    if (decode_vtenv != NULL) {
-        (void)vterm_env_free(decode_vtenv);
-    }
-    (void)vec_destroy(&slice);
-    if (work_env != NULL) {
-        (void)enif_free_env(work_env);
-    }
-    return retval;
+    bif_ret = enif_make_copy(env, bif_ret);
+    (void)enif_free_env(tmp_env);
+    return bif_ret;
 }
