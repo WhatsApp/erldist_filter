@@ -5,6 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 """Context Test models for codegen."""
+
 import bisect
 from abc import abstractclassmethod
 from collections import OrderedDict

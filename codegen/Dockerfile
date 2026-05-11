@@ -7,7 +7,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 # Use an official Python image.
-FROM python:3.13-alpine
+FROM python:3.14-alpine
 
 # Install apk dependencies.
 RUN apk add --no-cache bash clang-extra-tools

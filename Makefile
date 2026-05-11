@@ -6,7 +6,7 @@
 
 PROJECT = erldist_filter
 PROJECT_DESCRIPTION = erldist_filter
-PROJECT_VERSION = 1.28.3
+PROJECT_VERSION = 1.28.5
 
 include erlang.mk
 
@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2025-12-11
+ELP_VERSION ?= 2026-02-27
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp
@@ -54,7 +54,7 @@ ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 help::
 	$(verbose) printf "%s\n" "" \
 		"elp targets:" \
-		"  eqwalize     Run 'elp eqwalize-app argo' on the current project" \
+		"  eqwalize     Run 'elp eqwalize-app erldist_filter' on the current project" \
 		"  eqwalize-all Run 'elp eqwalize-all' on the current project"
 
 distclean:: distclean-elp
@@ -75,7 +75,7 @@ eqwalize: $(ELP)
 	$(verbose) $(ELP) eqwalize $(PROJECT)
 
 eqwalize-all: $(ELP)
-	$(verbose) $(ELP) eqwalize-all --include-tests
+	$(verbose) $(ELP) eqwalize-all
 
 distclean-elp:
 	$(gen_verbose) rm -rf $(ELP)
@@ -83,7 +83,7 @@ distclean-elp:
 .PHONY: erlfmt erlfmt-check distclean-erlfmt format
 
 # Configuration.
-ERLFMT_VERSION ?= 1.7.0
+ERLFMT_VERSION ?= 1.8.0
 
 ERLFMT ?= $(CURDIR)/erlfmt
 export ERLFMT

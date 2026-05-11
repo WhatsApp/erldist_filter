@@ -5,6 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 """Context Dist models for codegen."""
+
 import bisect
 from abc import abstractclassmethod
 from collections import OrderedDict
@@ -20,7 +21,6 @@ from ..schema import (
     DistAltactSigFlag as DistAltactSigFlagSchema,
 )
 from . import Atom, Context
-
 
 DistAnyFlag = Union["DistFlag", "DistExtraFlag"]
 

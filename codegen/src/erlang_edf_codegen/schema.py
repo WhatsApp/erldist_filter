@@ -5,6 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 """Models for codegen."""
+
 from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 

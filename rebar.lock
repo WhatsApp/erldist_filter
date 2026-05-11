@@ -1,7 +1,7 @@
 {"1.2.0",
 [{<<"eqwalizer_support">>,
   {git_subdir,"https://github.com/WhatsApp/eqwalizer.git",
-              {ref,"54a74ae351f494328fa77515830a87275088426a"},
+              {ref,"4986d98000d933b1dfb2af5dbe8215d22f4625fe"},
               "eqwalizer_support"},
   0},
  {<<"proper">>,{pkg,<<"proper">>,<<"1.5.0">>},0}]}.

@@ -5,6 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 """Generate C and Erlang code from YAML configuration using Jinja2."""
+
 from .code_generator import CodeGenerator
 from .schema import Root
 

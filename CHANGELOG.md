@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.28.5 (2026-05-11)
+
+* Minor fix: replace deprecated bare `catch Expr` with `try ... catch ... end` [#5](https://github.com/WhatsApp/erldist_filter/pull/5)
+* Maintenance
+  * Bump codegen deps
+  * Bump CI versions tested for Erlang/OTP to 28.5 and 27.3.4.11
+
 ## 1.28.3 (2025-09-05)
 
 * Minor fix: remove unnecessary codesigning.

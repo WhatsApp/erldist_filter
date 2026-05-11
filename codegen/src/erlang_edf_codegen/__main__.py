@@ -5,6 +5,7 @@
 # LICENSE.md file in the root directory of this source tree.
 
 """Command-line interface for codegen."""
+
 import click
 import json
 from pathlib import Path

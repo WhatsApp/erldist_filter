@@ -17,14 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.19.4
-            otp: 28.3
-            rebar3: 3.25.1
+          - elixir: 1.19.5
+            otp: 28.5
+            rebar3: 3.27.0
             lint: true
 
           - elixir: 1.18.4
-            otp: 27.3.4.6
-            rebar3: 3.25.1
+            otp: 27.3.4.11
+            rebar3: 3.27.0
 
     steps:
       - uses: actions/checkout@v5

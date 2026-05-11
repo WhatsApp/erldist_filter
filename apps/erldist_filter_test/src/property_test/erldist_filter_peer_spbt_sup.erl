@@ -48,8 +48,18 @@ start_child(ChildSpec) ->
 
 -spec stop_child(term()) -> ok.
 stop_child(ChildId) ->
-    _ = try supervisor:terminate_child(?MODULE, ChildId) catch _:_ -> ok end,
-    _ = try supervisor:delete_child(?MODULE, ChildId) catch _:_ -> ok end,
+    _ =
+        try
+            supervisor:terminate_child(?MODULE, ChildId)
+        catch
+            _:_ -> ok
+        end,
+    _ =
+        try
+            supervisor:delete_child(?MODULE, ChildId)
+        catch
+            _:_ -> ok
+        end,
     ok.
 
 -spec stop_all_children() -> ok.

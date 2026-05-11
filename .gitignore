@@ -59,5 +59,6 @@ rebar3.crashdump
 /apps/erldist_filter/priv/*.dll
 /apps/erldist_filter/priv/*.dylib
 /apps/erldist_filter/priv/*.so
+/elp
 /erlfmt
 /rebar3
