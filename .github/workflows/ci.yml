@@ -17,14 +17,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.19.4
-            otp: 28.3
-            rebar3: 3.25.1
+          - elixir: 1.20.0-rc.4
+            otp: 29.0-rc3
+            rebar3: 3.27.0
+            elp: 2026-02-27
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
+            elp_runtime_image: "docker.io/erlang:28"
+            setup_beam_tools: false
+            manual_bootstrap: true
             lint: true
 
-          - elixir: 1.18.4
-            otp: 27.3.4.6
-            rebar3: 3.25.1
+          - elixir: 1.19.4
+            otp: 28.3
+            rebar3: 3.27.0
+            elp: 2026-02-27
+            elp_eqwalize_all_opts: "--project .eqwalizer-rebar-manifest.json --as test --stats --list-modules --bail-on-error"
+            elp_runtime_image: ""
+            setup_beam_tools: true
+            manual_bootstrap: false
+            lint: true
 
     steps:
       - uses: actions/checkout@v5
@@ -35,6 +46,15 @@ jobs:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
+          install-hex: ${{ matrix.setup_beam_tools }}
+          install-rebar: ${{ matrix.setup_beam_tools }}
+
+      - name: (Elixir) Install OTP 29 Bootstrap Tools
+        if: ${{ matrix.manual_bootstrap }}
+        run: |
+          curl -fsSLO https://builds.hex.pm/installs/1.19.0/hex-2.4.2-otp-28.ez
+          mix archive.install ./hex-2.4.2-otp-28.ez --force
+          mix local.rebar rebar3 "$(command -v rebar3)" --force
 
       # - name: (Erlang) Check Formatting
       #   if: ${{ matrix.lint }}
@@ -42,9 +62,23 @@ jobs:
       #     clang-format --version
       #     make lint-format
 
+      - name: (Erlang) Generate eqWAlizer Manifest
+        if: ${{ matrix.lint }}
+        run: rebar3 as test experimental manifest --format json --to .eqwalizer-rebar-manifest.json
+
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
-        run: make lint-eqwalizer
+        run: |
+          if [ -n "${{ matrix.elp_runtime_image }}" ]; then
+            make ELP_VERSION=${{ matrix.elp }} "$(pwd)/elp"
+            docker run --rm \
+              -v "$PWD:$PWD" \
+              -w "$PWD" \
+              "${{ matrix.elp_runtime_image }}" \
+              ./elp eqwalize-all ${{ matrix.elp_eqwalize_all_opts }}
+          else
+            make eqwalize-all ELP_VERSION=${{ matrix.elp }} ELP_EQWALIZE_ALL_OPTS="${{ matrix.elp_eqwalize_all_opts }}"
+          fi
 
       - name: (Erlang) Dialyzer
         if: ${{ matrix.lint }}
@@ -55,8 +89,7 @@ jobs:
         run: make lint-xref
 
       - name: (Erlang) Tests
-        run: |
-          rebar3 ct
+        run: rebar3 as test ct
 
       - name: (Elixir) Retrieve Mix Dependencies Cache
         uses: actions/cache@v4

@@ -10,15 +10,33 @@
 
 #include "../erts/external.h"
 
+#if defined(ERL_NIF_MAJOR_VERSION) &&                                                                                             \
+    (ERL_NIF_MAJOR_VERSION > 2 || (ERL_NIF_MAJOR_VERSION == 2 && ERL_NIF_MINOR_VERSION >= 18))
+#define EDF_HAVE_NIF_ATOM_CACHE_INDEX 1
+#else
+#define EDF_HAVE_NIF_ATOM_CACHE_INDEX 0
+#endif
+
+#if !EDF_HAVE_NIF_ATOM_CACHE_INDEX
 extern int erts_debug_atom_to_out_cache_index(ERL_NIF_TERM atom);
+#endif
 
 int
 edf_atom_cache_index(ERL_NIF_TERM atom)
 {
+#if EDF_HAVE_NIF_ATOM_CACHE_INDEX
+    unsigned index;
+    if (!enif_get_atom_cache_index(NULL, atom, &index) || index > enif_max_atom_cache_index() ||
+        index >= ERTS_ATOM_CACHE_SIZE) {
+        return -1;
+    }
+    return (int)index;
+#else
     if (!enif_is_atom(NULL, atom)) {
         return -1;
     }
     return erts_debug_atom_to_out_cache_index(atom);
+#endif
 }
 
 void
