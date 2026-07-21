@@ -60,7 +60,6 @@ extern int vterm_env_resolve(vterm_env_t *vtenv, vterm_t *vtp, ERL_NIF_TERM *ter
 extern void vterm_env_ctx_swap(vterm_env_t *vtenv, vterm_env_ctx_t *new_ctx, vterm_env_ctx_t *old_ctx);
 
 extern int vterm_env_dist_ext_to_term(vterm_env_t *vtenv, const uint8_t *buf, size_t len, ERL_NIF_TERM *termp);
-extern ERL_NIF_TERM vterm_env_direct_dist_ext_to_term(ErlNifEnv *env, ERL_NIF_TERM atoms_tuple, ERL_NIF_TERM input_binary);
 
 /* Inline Function Definitions */
 

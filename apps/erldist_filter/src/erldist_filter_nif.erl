@@ -76,7 +76,6 @@
     config_get/0,
     config_get/1,
     config_set/2,
-    dist_ext_to_term/2,
     dist_ext_to_vdist/2,
     dist_ext_to_vterm/2,
     dist_ext_to_vterm/3,
@@ -289,8 +288,11 @@ config_set(_ConfigKey, _ConfigVal) ->
 
 -spec dist_ext_to_term(AtomsTuple, InputBinary) -> Term when
     AtomsTuple :: logger_event_atoms(), InputBinary :: binary(), Term :: dynamic().
-dist_ext_to_term(_AtomsTuple, _InputBinary) ->
-    erlang:nif_error({nif_not_loaded, ?MODULE}).
+dist_ext_to_term(AtomsTuple, InputBinary) ->
+    % Previously a NIF wrapping the private erts_debug_dist_ext_to_term_2 symbol,
+    % which OTP 29 no longer exports to NIFs. The BIF is still callable from
+    % Erlang, so delegate to it directly.
+    erts_debug:dist_ext_to_term(AtomsTuple, InputBinary).
 
 -spec dist_ext_to_vdist(AtomsTuple, InputBinary) -> VDist when
     AtomsTuple :: logger_event_atoms(), InputBinary :: binary(), VDist :: vdist:dop_t().

@@ -1355,14 +1355,6 @@ etf_decode_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_
 {
     vec_reader_t vr[1];
     uint8_t tag;
-    uint8_t *head = NULL;
-    uint8_t *tail = NULL;
-    size_t term_length = 0;
-    uint8_t restore;
-    int retval;
-    ERL_NIF_TERM temp_term;
-
-#define RAW_BYTES() (void *)(vec_reader_raw_bytes(vr))
 
 #define READ_U8(val)                                                                                                               \
     do {                                                                                                                           \
@@ -1380,9 +1372,8 @@ etf_decode_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_
         }                                                                                                                          \
     } while (0)
 
+    (void)vtenv;
     (void)vec_reader_clone(vr, orig_vr);
-
-    head = RAW_BYTES();
 
     if (is_external_term) {
         uint8_t version_magic;
@@ -1404,29 +1395,14 @@ etf_decode_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_
         if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
             return 0;
         }
-        tail = RAW_BYTES();
+        /* Materialization of external pids via the ERTS distribution decoder
+         * has been removed: it depended on the private
+         * erts_debug_dist_ext_to_term_2 symbol, which OTP 29 no longer exports
+         * to NIFs (-fvisibility=hidden, erlang/otp#9864). Consumers that need
+         * the real term decode it in Erlang via erts_debug:dist_ext_to_term/2.
+         */
         if (pidp != NULL) {
-            term_length = (size_t)(tail - head);
-            if (!is_external_term) {
-                /* Unsafe, since head - 1 is not known to exist,
-                 * but given current dist term encoding,
-                 * we always have at least one free byte to the left.
-                 */
-                head -= 1;
-                restore = head[0];
-                head[0] = VERSION_MAGIC;
-                term_length += 1;
-            }
-            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-            if (!is_external_term) {
-                head[0] = restore;
-            }
-            if (!retval) {
-                *err_termp =
-                    EXCP_ERROR(caller_env, "Call to etf_decode_pid_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-                return 0;
-            }
-            *pidp = enif_make_copy(vtenv->nif_env, temp_term);
+            *pidp = THE_NON_VALUE;
         }
         break;
     }
@@ -1441,7 +1417,6 @@ etf_decode_pid_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external_
 
 #undef PEEK_U8
 #undef READ_U8
-#undef RAW_BYTES
 }
 
 int
@@ -1450,14 +1425,6 @@ etf_decode_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
 {
     vec_reader_t vr[1];
     uint8_t tag;
-    uint8_t *head = NULL;
-    uint8_t *tail = NULL;
-    size_t term_length = 0;
-    uint8_t restore;
-    int retval;
-    ERL_NIF_TERM temp_term;
-
-#define RAW_BYTES() (void *)(vec_reader_raw_bytes(vr))
 
 #define READ_U8(val)                                                                                                               \
     do {                                                                                                                           \
@@ -1475,9 +1442,8 @@ etf_decode_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
         }                                                                                                                          \
     } while (0)
 
+    (void)vtenv;
     (void)vec_reader_clone(vr, orig_vr);
-
-    head = RAW_BYTES();
 
     if (is_external_term) {
         uint8_t version_magic;
@@ -1501,29 +1467,9 @@ etf_decode_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
         if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
             return 0;
         }
-        tail = RAW_BYTES();
+        /* External port materialization removed; see etf_decode_pid_term(). */
         if (portp != NULL) {
-            term_length = (size_t)(tail - head);
-            if (!is_external_term) {
-                /* Unsafe, since head - 1 is not known to exist,
-                 * but given current dist term encoding,
-                 * we always have at least one free byte to the left.
-                 */
-                head -= 1;
-                restore = head[0];
-                head[0] = VERSION_MAGIC;
-                term_length += 1;
-            }
-            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-            if (!is_external_term) {
-                head[0] = restore;
-            }
-            if (!retval) {
-                *err_termp =
-                    EXCP_ERROR(caller_env, "Call to etf_decode_port_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-                return 0;
-            }
-            *portp = enif_make_copy(vtenv->nif_env, temp_term);
+            *portp = THE_NON_VALUE;
         }
         break;
     }
@@ -1539,7 +1485,6 @@ etf_decode_port_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_external
 
 #undef PEEK_U8
 #undef READ_U8
-#undef RAW_BYTES
 }
 
 int
@@ -1548,14 +1493,6 @@ etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_ext
 {
     vec_reader_t vr[1];
     uint8_t tag;
-    uint8_t *head = NULL;
-    uint8_t *tail = NULL;
-    size_t term_length = 0;
-    uint8_t restore;
-    int retval;
-    ERL_NIF_TERM temp_term;
-
-#define RAW_BYTES() (void *)(vec_reader_raw_bytes(vr))
 
 #define READ_U8(val)                                                                                                               \
     do {                                                                                                                           \
@@ -1573,9 +1510,8 @@ etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_ext
         }                                                                                                                          \
     } while (0)
 
+    (void)vtenv;
     (void)vec_reader_clone(vr, orig_vr);
-
-    head = RAW_BYTES();
 
     if (is_external_term) {
         uint8_t version_magic;
@@ -1599,29 +1535,9 @@ etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_ext
         if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
             return 0;
         }
-        tail = RAW_BYTES();
+        /* External reference materialization removed; see etf_decode_pid_term(). */
         if (refp != NULL) {
-            term_length = (size_t)(tail - head);
-            if (!is_external_term) {
-                /* Unsafe, since head - 1 is not known to exist,
-                 * but given current dist term encoding,
-                 * we always have at least one free byte to the left.
-                 */
-                head -= 1;
-                restore = head[0];
-                head[0] = VERSION_MAGIC;
-                term_length += 1;
-            }
-            retval = vterm_env_dist_ext_to_term(vtenv, head, term_length, &temp_term);
-            if (!is_external_term) {
-                head[0] = restore;
-            }
-            if (!retval) {
-                *err_termp = EXCP_ERROR(caller_env,
-                                        "Call to etf_decode_reference_term() failed: vterm_env_dist_ext_to_term raised badarg\n");
-                return 0;
-            }
-            *refp = enif_make_copy(vtenv->nif_env, temp_term);
+            *refp = THE_NON_VALUE;
         }
         break;
     }
@@ -1637,7 +1553,6 @@ etf_decode_reference_term(ErlNifEnv *caller_env, vterm_env_t *vtenv, bool is_ext
 
 #undef PEEK_U8
 #undef READ_U8
-#undef RAW_BYTES
 }
 
 int
