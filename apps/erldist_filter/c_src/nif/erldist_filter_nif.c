@@ -41,7 +41,6 @@ static ERL_NIF_TERM erldist_filter_nif_atom2cix_1(ErlNifEnv *env, int argc, cons
 static ERL_NIF_TERM erldist_filter_nif_atom_text_get_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_atom_text_put_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_internal_hash_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
-static ERL_NIF_TERM erldist_filter_nif_dist_ext_to_term_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_router_info_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 static ERL_NIF_TERM erldist_filter_nif_router_name_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]);
 
@@ -131,16 +130,6 @@ erldist_filter_nif_internal_hash_1(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
 }
 
 ERL_NIF_TERM
-erldist_filter_nif_dist_ext_to_term_2(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
-{
-    if (argc != 2) {
-        return EXCP_BADARG(env, "argc must be 2");
-    }
-
-    return vterm_env_direct_dist_ext_to_term(env, argv[0], argv[1]);
-}
-
-ERL_NIF_TERM
 erldist_filter_nif_router_info_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
 #define RET_MAP_SIZE (3)
@@ -203,7 +192,6 @@ static ErlNifFunc erldist_filter_nif_funcs[] = {
     {"config_get", 0, erldist_filter_nif_config_get_0, ERL_NIF_NORMAL_JOB_BOUND},
     {"config_get", 1, erldist_filter_nif_config_get_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"config_set", 2, erldist_filter_nif_config_set_2, ERL_NIF_NORMAL_JOB_BOUND},
-    {"dist_ext_to_term", 2, erldist_filter_nif_dist_ext_to_term_2, ERL_NIF_NORMAL_JOB_BOUND},
     {"dist_ext_to_vdist", 2, erldist_filter_nif_dist_ext_to_vdist_2, ERL_NIF_NORMAL_JOB_BOUND},
     {"dist_ext_to_vterm", 2, erldist_filter_nif_dist_ext_to_vterm_2, ERL_NIF_NORMAL_JOB_BOUND},
     {"dist_ext_to_vterm", 3, erldist_filter_nif_dist_ext_to_vterm_3, ERL_NIF_NORMAL_JOB_BOUND},

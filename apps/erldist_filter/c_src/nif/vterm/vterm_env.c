@@ -13,22 +13,6 @@
 #define kh_packed
 #include "../core/khashl.h"
 
-/* Danger Area */
-
-typedef struct __vterm_erl_nif_env_s __vterm_erl_nif_env_t;
-typedef struct __vterm_erl_process_s __vterm_erl_process_t;
-
-extern ERL_NIF_TERM erts_debug_dist_ext_to_term_2(__vterm_erl_process_t *A__p, ERL_NIF_TERM *BIF__ARGS, const void *A__I);
-
-struct __vterm_erl_process_s {
-    void *_void;
-};
-
-struct __vterm_erl_nif_env_s {
-    void *mod_nif;
-    __vterm_erl_process_t *proc;
-};
-
 /* Type Definitions */
 
 typedef struct __vterm_env_s __vterm_env_t;
@@ -421,52 +405,12 @@ vterm_env_ctx_swap(vterm_env_t *super, vterm_env_ctx_t *new_ctx, vterm_env_ctx_t
 int
 vterm_env_dist_ext_to_term(vterm_env_t *super, const uint8_t *buf, size_t len, ERL_NIF_TERM *termp)
 {
-    __vterm_env_t *vtenv = (void *)super;
-    ERL_NIF_TERM bif_args[2];
-    ERL_NIF_TERM bif_ret = THE_NON_VALUE;
-    if (vtenv->tmp_env == NULL) {
-        vtenv->tmp_env = enif_alloc_env();
-        if (vtenv->tmp_env == NULL) {
-            return 0;
-        }
-    } else {
-        (void)enif_clear_env(vtenv->tmp_env);
-    }
-    bif_args[0] = vtenv->atoms;
-    bif_args[1] = enif_make_resource_binary(vtenv->tmp_env, vtenv->resource, buf, len);
-    bif_ret = erts_debug_dist_ext_to_term_2(((__vterm_erl_nif_env_t *)(vtenv->tmp_env))->proc, bif_args, NULL);
-    if (bif_ret == THE_NON_VALUE) {
-        {
-            (void)enif_fprintf(stderr, "Atoms = %T\n", vtenv->atoms);
-            (void)enif_fprintf(stderr, "Binary = ");
-            (void)vterm_env_dump_bin(buf, len);
-            (void)enif_fprintf(stderr, "\n");
-            (void)fflush(stderr);
-        };
-        return 0;
-    }
-    *termp = bif_ret;
-    return 1;
-}
-
-ERL_NIF_TERM
-vterm_env_direct_dist_ext_to_term(ErlNifEnv *env, ERL_NIF_TERM atoms_tuple, ERL_NIF_TERM input_binary)
-{
-    ErlNifEnv *tmp_env = NULL;
-    ERL_NIF_TERM bif_args[2];
-    ERL_NIF_TERM bif_ret = THE_NON_VALUE;
-    tmp_env = enif_alloc_env();
-    if (tmp_env == NULL) {
-        return enif_make_badarg(env);
-    }
-    bif_args[0] = atoms_tuple;
-    bif_args[1] = input_binary;
-    bif_ret = erts_debug_dist_ext_to_term_2(((__vterm_erl_nif_env_t *)(tmp_env))->proc, bif_args, NULL);
-    if (bif_ret == THE_NON_VALUE) {
-        (void)enif_free_env(tmp_env);
-        return enif_make_badarg(env);
-    }
-    bif_ret = enif_make_copy(env, bif_ret);
-    (void)enif_free_env(tmp_env);
-    return bif_ret;
+    (void)super;
+    (void)buf;
+    (void)len;
+    (void)termp;
+    /* Removed: depended on the private erts_debug_dist_ext_to_term_2 symbol,
+     * which OTP 29 no longer exports to NIFs. This function is retained as a
+     * hard failure only to keep any stray caller safe; there are none. */
+    return 0;
 }

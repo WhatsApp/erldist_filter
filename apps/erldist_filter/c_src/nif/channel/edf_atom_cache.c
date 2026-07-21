@@ -10,15 +10,30 @@
 
 #include "../erts/external.h"
 
+#if ERL_NIF_MINOR_VERSION < 18
+/* OTP < 29 does not export the public NIF atom-cache API, so we reach into the
+ * private ERTS symbol. From OTP 29 the emulator is built with
+ * -fvisibility=hidden and this symbol is no longer visible to NIFs; the public
+ * enif_get_atom_cache_index/3 API (erl_nif.h 2.18, erlang/otp#10887) replaces
+ * it below. */
 extern int erts_debug_atom_to_out_cache_index(ERL_NIF_TERM atom);
+#endif
 
 int
 edf_atom_cache_index(ERL_NIF_TERM atom)
 {
+#if ERL_NIF_MINOR_VERSION >= 18
+    unsigned index;
+    if (!enif_get_atom_cache_index(NULL, atom, &index)) {
+        return -1;
+    }
+    return (int)index;
+#else
     if (!enif_is_atom(NULL, atom)) {
         return -1;
     }
     return erts_debug_atom_to_out_cache_index(atom);
+#endif
 }
 
 void
