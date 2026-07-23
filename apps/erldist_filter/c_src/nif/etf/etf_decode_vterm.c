@@ -623,6 +623,32 @@ etf_decode_vterm_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                     }
                     break;
                 }
+                case RECORD_EXT: {
+                    uint32_t num_fields;
+                    uint8_t flags;
+                    vterm_t *entries = NULL;
+                    READ_U32(&num_fields);
+                    READ_U8(&flags);
+                    n = (size_t)num_fields;
+                    // entries: [module, name, field_names[num_fields], values[num_fields]]
+                    CHKSIZE(2 + n * 2);
+                    if (trap->limit == 0) {
+                        BACK(1 + 4 + 1);
+                        trap->objp = objp;
+                        trap->next = next;
+                        trap->state = ETF_DECODE_VTERM_TRAP_STATE_DECODE_SKIP;
+                        goto next_state;
+                    }
+                    *objp = vterm_make_record_ext(vtenv, num_fields, (flags & 1), &entries);
+                    n = 2 + n * 2;
+                    objp = &entries[n - 1];
+                    while (n-- > 0) {
+                        objp[0] = (vterm_t)(next);
+                        next = objp;
+                        objp -= 1;
+                    }
+                    break;
+                }
                 case ATOM_UTF8_EXT: {
                     uint16_t len;
                     uint8_t *name = NULL;

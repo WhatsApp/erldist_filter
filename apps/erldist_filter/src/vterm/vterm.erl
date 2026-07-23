@@ -70,6 +70,7 @@
     | vterm_new_fun_ext:t()
     | vterm_export_ext:t()
     | vterm_map_ext:t()
+    | vterm_record_ext:t()
     | vterm_atom_utf8_ext:t()
     | vterm_small_atom_utf8_ext:t()
     | vterm_v4_port_ext:t()
@@ -332,6 +333,17 @@ xform(VT0, Acc0, Fun) when ?is_vterm_t(VT0) andalso is_function(Fun, 2) ->
                     {Pairs1, Acc2} = xform_pairs(Pairs0, Acc1, Fun, []),
                     VT2 = VT1#vterm_map_ext{pairs = Pairs1},
                     {VT2, Acc2};
+                #vterm_record_ext{
+                    module = Module0, name = Name0, field_names = FieldNames0, values = Values0
+                } ->
+                    {Module1, Acc2} = xform_expect_atom(Module0, Acc1, Fun),
+                    {Name1, Acc3} = xform_expect_atom(Name0, Acc2, Fun),
+                    {FieldNames1, Acc4} = xform_expect_atoms(FieldNames0, Acc3, Fun, []),
+                    {Values1, Acc5} = xform_elements(Values0, Acc4, Fun, []),
+                    VT2 = VT1#vterm_record_ext{
+                        module = Module1, name = Name1, field_names = FieldNames1, values = Values1
+                    },
+                    {VT2, Acc5};
                 #vterm_pid_ext{node = Node0} ->
                     {Node1, Acc2} = xform_expect_atom(Node0, Acc1, Fun),
                     VT2 = VT1#vterm_pid_ext{node = Node1},
@@ -465,6 +477,18 @@ xform_expect_atom(VT0, Acc0, Fun) ->
         Result = {VT1, _Acc1} when ?is_vterm_atom_t(VT1) ->
             Result
     end.
+
+-spec xform_expect_atoms(
+    Atoms,
+    Acc,
+    Fun :: xform_func(VT, Acc, VT, Acc),
+    Atoms
+) -> {Atoms, Acc :: dynamic()} when Atoms :: [vterm:atom_t()], VT :: vterm:t(), Acc :: dynamic().
+xform_expect_atoms([Atom0 | In], Acc0, Fun, Out) ->
+    {Atom1, Acc1} = xform_expect_atom(Atom0, Acc0, Fun),
+    xform_expect_atoms(In, Acc1, Fun, [Atom1 | Out]);
+xform_expect_atoms([], Acc, _Fun, Out) ->
+    {lists:reverse(Out), Acc}.
 
 -spec xform_expect_fixed_integer(VT0, Acc, Fun) -> {VT1, Acc} when
     VT0 :: vterm:t(),
