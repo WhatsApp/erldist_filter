@@ -408,6 +408,23 @@ encode_write_vterm(ErlNifEnv *caller_env, int flags, vterm_env_t *vtenv, vterm_t
         }
         break;
     }
+    case VTERM_TAG_RECORD_EXT: {
+        vterm_data_record_ext_t *dp = &(*vtp)->data.record_ext;
+        size_t num_fields = (size_t)(dp->num_fields);
+        WRITE_U8(RECORD_EXT);
+        WRITE_U32(dp->num_fields);
+        WRITE_U8(dp->exported ? 1 : 0);
+        // entries: [module, name, field_names[num_fields], values[num_fields]]
+        WRITE_ATOM(&dp->entries[0]);
+        WRITE_ATOM(&dp->entries[1]);
+        for (size_t i = 0; i < num_fields; i++) {
+            WRITE_ATOM(&dp->entries[2 + i]);
+        }
+        for (size_t i = 0; i < num_fields; i++) {
+            WRITE_VTERM(&dp->entries[2 + num_fields + i]);
+        }
+        break;
+    }
     case VTERM_TAG_ATOM_UTF8_EXT: {
         vterm_data_atom_utf8_ext_t *dp = &(*vtp)->data.atom_utf8_ext;
         WRITE_U8(ATOM_UTF8_EXT);

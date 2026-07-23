@@ -442,6 +442,7 @@ erldist_filter_nif_make_atoms(ErlNifEnv *env)
     MAKE_ATOM(vterm_nil_ext, "vterm_nil_ext");
     MAKE_ATOM(vterm_pid_ext, "vterm_pid_ext");
     MAKE_ATOM(vterm_port_ext, "vterm_port_ext");
+    MAKE_ATOM(vterm_record_ext, "vterm_record_ext");
     MAKE_ATOM(vterm_reference_ext, "vterm_reference_ext");
     MAKE_ATOM(vterm_small_atom_ext, "vterm_small_atom_ext");
     MAKE_ATOM(vterm_small_atom_utf8_ext, "vterm_small_atom_utf8_ext");
