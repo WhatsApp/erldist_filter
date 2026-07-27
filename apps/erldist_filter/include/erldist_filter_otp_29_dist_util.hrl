@@ -1,10 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-27/lib/kernel/include/dist_util.hrl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-29/lib/kernel/include/dist_util.hrl
 %% @oncall whatsapp_clr
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1999-2021. All Rights Reserved.
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1999-2025. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.
@@ -41,8 +43,8 @@
 -define(trace_factor,1).
 -endif.
 
--define(shutdown(Data), erldist_filter_otp_27_dist_util:shutdown(?MODULE, ?LINE, Data)).
--define(shutdown2(Data, Reason), erldist_filter_otp_27_dist_util:shutdown(?MODULE, ?LINE, Data, Reason)).
+-define(shutdown(Data), erldist_filter_otp_29_dist_util:shutdown(?MODULE, ?LINE, Data)).
+-define(shutdown2(Data, Reason), erldist_filter_otp_29_dist_util:shutdown(?MODULE, ?LINE, Data, Reason)).
 
 %% Handshake state structure
 -record(hs_data, {

@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright Ericsson AB 1996-2025. All Rights Reserved.
+ * Copyright Ericsson AB 1996-2026. All Rights Reserved.
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * Copyright (c) WhatsApp LLC
  *
@@ -37,7 +37,7 @@ extern "C" {
 #include <stdint.h>
 
 /// See
-/// [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/external.h#L33-L74)
+/// [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/maint-29/erts/emulator/beam/external.h)
 /// in the Erlang/OTP source code.
 
 #define SMALL_INTEGER_EXT 'a'

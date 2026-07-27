@@ -20,11 +20,11 @@ jobs:
           - elixir: 1.20.2
             otp: 29.0.4
             rebar3: 3.27.0
-            lint: true
 
           - elixir: 1.20.2
             otp: 28.5.0.4
             rebar3: 3.27.0
+            lint: true
 
     steps:
       - uses: actions/checkout@v5

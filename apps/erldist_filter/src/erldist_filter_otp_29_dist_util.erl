@@ -1,10 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-27/lib/kernel/src/dist_util.erl
-%% NOTE: Support for 4-arity f_handshake_complete has been added, see https://github.com/erlang/otp/pull/8473
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-29/lib/kernel/src/dist_util.erl
+%% NOTE: f_handshake_complete/4 receives #hs_data{} here to support the erldist_filter connection handoff.
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1999-2024. All Rights Reserved.
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1999-2026. All Rights Reserved.
 %% Copyright (c) Meta Platforms, Inc. and affiliates.
 %% Copyright (c) WhatsApp LLC
 %%
@@ -28,10 +30,13 @@
 %%%           distribution protocols.
 %%%----------------------------------------------------------------------
 
--module(erldist_filter_otp_27_dist_util).
+-module(erldist_filter_otp_29_dist_util).
 -moduledoc false.
 -compile(warn_missing_spec_all).
 -oncall("whatsapp_clr").
+
+-compile([{nowarn_possibly_unsafe_function, {erlang, list_to_atom, 1}},
+          {nowarn_possibly_unsafe_function, {erlang, binary_to_atom, 2}}]).
 
 %%-compile(export_all).
 -export([handshake_we_started/1, handshake_other_started/1,
@@ -42,10 +47,10 @@
          shutdown/3, shutdown/4,
          net_ticker_spawn_options/0]).
 
--import(error_logger,[error_msg/2]).
+-import(error_logger,[error_msg/2, warning_msg/2]).
 
--include_lib("erldist_filter/include/erldist_filter_otp_27_dist_util.hrl").
--include_lib("erldist_filter/include/erldist_filter_otp_27_dist.hrl").
+-include_lib("erldist_filter/include/erldist_filter_otp_29_dist_util.hrl").
+-include_lib("erldist_filter/include/erldist_filter_otp_29_dist.hrl").
 
 -ifdef(DEBUG).
 -define(shutdown_trace(A,B), io:format(A,B)).
@@ -135,6 +140,12 @@ dflag2str(?DFLAG_V4_NC) ->
     "V4_NC";
 dflag2str(?DFLAG_ALIAS) ->
     "ALIAS";
+dflag2str(?DFLAG_LOCAL_EXT) ->
+    "LOCAL_EXT";
+dflag2str(?DFLAG_ALTACT_SIG) ->
+    "ALTACT_SIG";
+dflag2str(?DFLAG_NATIVE_RECORDS) ->
+    "NATIVE_RECORDS";
 dflag2str(Other) ->
     lists:flatten(io_lib:format("UNKNOWN<~.16.0B>", [Other])).
 
@@ -432,7 +443,7 @@ shutdown(Module, Line, Data) ->
 shutdown(Module, Line, Data, Reason) ->
     ?shutdown_trace("Net Kernel 2: shutting down connection "
                     "~p:~p, data ~p,reason ~p~n",
-                    [Module, Line, Data, Reason]),
+                    [_Module,_Line, _Data, Reason]),
     case application:get_env(erldist_filter, dist_util_tracer) of
         {ok, TracerModule} when is_atom(TracerModule) andalso TracerModule =/= undefined ->
             _ = code:ensure_loaded(TracerModule),
@@ -1250,6 +1261,7 @@ to_port(FSend, Socket, Data) ->
 send_tick(#state{handle = DHandle, socket = Socket,
                  tick_intensity = TickIntensity,
                  publish_type = Type, f_tick = MFTick,
+                 node = Node,
                  f_getstat = MFGetstat}, Tick) ->
     #tick{tick = T0,
           read = Read,
@@ -1257,12 +1269,30 @@ send_tick(#state{handle = DHandle, socket = Socket,
           ticked = Ticked0} = Tick,
     T = T0 + 1,
     T1 = T rem TickIntensity,
+    LogMissed = application:get_env(kernel, log_missed_net_ticks, false),
     case getstat(DHandle, Socket, MFGetstat) of
         {ok, Read, _, _} when Ticked0 =:= T ->
+            LogMissed andalso
+            warning_msg("** Node ~p: ~w consecutive net ticks missed "
+                        "(tick ~w/~w) -- net_tick_timeout **~n",
+                        [Node, TickIntensity, T, TickIntensity]),
             {error, not_responding};
 
         {ok, R, W1, Pend} ->
             RDiff = R - Read,
+            case RDiff of
+                0 when LogMissed ->
+                    MissedCount = case T - Ticked0 of
+                                      D when D > 0 -> D;
+                                      D -> TickIntensity + D
+                                  end,
+                    warning_msg("** Node ~p: net tick ~w/~w missed "
+                                "(~w consecutive, ~w until timeout) **~n",
+                                [Node, T, TickIntensity,
+                                 MissedCount, TickIntensity - MissedCount]);
+                _ ->
+                    ok
+            end,
             W2 = case need_to_tick(Type, RDiff, W1-Write, Pend) of
                      true ->
                          MFTick(Socket),

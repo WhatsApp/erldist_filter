@@ -12,6 +12,7 @@
 -oncall("whatsapp_clr").
 
 -behaviour(vterm_encode).
+-behaviour(vterm_simplify).
 
 -include_lib("erldist_filter/include/erldist_filter.hrl").
 -include_lib("erldist_filter/include/erldist_filter_erts_external.hrl").
@@ -19,7 +20,8 @@
 %% API
 -export([
     new/6,
-    internal_vterm_to_binary/2
+    internal_vterm_to_binary/2,
+    simplify/1
 ]).
 
 %% Types
@@ -51,6 +53,7 @@ new(NumFields, Exported, Module, Name, FieldNames, Values) when
         NumFields =:= length(FieldNames) andalso
         NumFields =:= length(Values)
 ->
+    true = lists:all(fun(FieldName) -> ?is_vterm_atom_t(FieldName) end, FieldNames),
     #vterm_record_ext{
         num_fields = NumFields,
         exported = Exported,
@@ -84,5 +87,21 @@ internal_vterm_to_binary(
     Name = vterm_encode:internal_vterm_to_binary(Name0, Opts),
     FieldNames = vterm_encode:internal_vterm_elements_to_binary(FieldNames0, Opts),
     Values = vterm_encode:internal_vterm_elements_to_binary(Values0, Opts),
-    <<?RECORD_EXT, NumFields:32, Flags:8, Module/bytes, Name/bytes, FieldNames/bytes,
-        Values/bytes>>.
+    <<?RECORD_EXT, NumFields:32, Flags:8, Module/bytes, Name/bytes, FieldNames/bytes, Values/bytes>>.
+
+-if(?OTP_RELEASE >= 29).
+-spec simplify(T) -> dynamic() when T :: t().
+simplify(#vterm_record_ext{
+    exported = Exported, module = Module, name = Name, field_names = FieldNames, values = Values
+}) ->
+    SimplifiedModule = vterm:simplify(Module),
+    SimplifiedName = vterm:simplify(Name),
+    SimplifiedFieldNames = [vterm:simplify(FieldName) || FieldName <- FieldNames],
+    SimplifiedValues = [vterm:simplify(Value) || Value <- Values],
+    Fields = lists:zip(SimplifiedFieldNames, SimplifiedValues),
+    records:create(SimplifiedModule, SimplifiedName, Fields, #{is_exported => Exported}).
+-else.
+-spec simplify(T) -> no_return() when T :: t().
+simplify(_T) ->
+    erlang:error(notsup).
+-endif.

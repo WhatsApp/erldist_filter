@@ -1,3 +1,4 @@
+// NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-29/erts/emulator/beam/erl_rbtree.h
 // clang-format off
 
 /*
@@ -1381,8 +1382,6 @@ ERTS_RBT_FUNC__(foreach_unordered__)(ERTS_RBT_T **root,
 	x = *root;
 	if (!x)
 	    return reds;
-	if (destroying)
-	    *root = NULL;
     }
 
     while (1) {
@@ -1444,6 +1443,9 @@ ERTS_RBT_FUNC__(foreach_unordered__)(ERTS_RBT_T **root,
 
 	    if (!p) {
                 /* Done */
+                if (destroying) {
+                    *root = NULL;
+                }
 		if (yielding) {
 		    ystate->x = NULL;
 		    ystate->up = 0;
@@ -1503,8 +1505,6 @@ ERTS_RBT_FUNC__(foreach_ordered__)(ERTS_RBT_T **root,
 	x = *root;
 	if (!x)
 	    return reds;
-	if (destroying)
-	    *root = NULL;
     }
 
     while (1) {
@@ -1599,12 +1599,16 @@ ERTS_RBT_FUNC__(foreach_ordered__)(ERTS_RBT_T **root,
 	    }
 
 	    if (!p) {
+                /* Done */
+                if (destroying) {
+                    *root = NULL;
+                }
 		if (yielding) {
 		    ystate->x = NULL;
 		    ystate->up = 0;
                     return reds <= 0 ? 1 : reds;
 		}
-		return 1; /* Done */
+		return 1;
 	    }
 	    x = p;
 	}

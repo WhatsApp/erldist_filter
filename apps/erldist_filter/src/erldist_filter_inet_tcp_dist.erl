@@ -43,12 +43,14 @@
 
 %% Macros
 -ifdef(OTP_RELEASE).
--if(?OTP_RELEASE >= 28).
+-if(?OTP_RELEASE >= 29).
+-define(DELEGATE, erldist_filter_otp_29_inet_tcp_dist).
+-include_lib("erldist_filter/include/erldist_filter_otp_29_net_address.hrl").
+-elif(?OTP_RELEASE >= 28).
 -define(DELEGATE, erldist_filter_otp_28_inet_tcp_dist).
 -include_lib("erldist_filter/include/erldist_filter_otp_28_net_address.hrl").
 -else.
--define(DELEGATE, erldist_filter_otp_27_inet_tcp_dist).
--include_lib("erldist_filter/include/erldist_filter_otp_27_net_address.hrl").
+-error("Erlang/OTP 28 or newer is required.").
 -endif.
 -else.
 -error("Macro OTP_RELEASE must be defined.").

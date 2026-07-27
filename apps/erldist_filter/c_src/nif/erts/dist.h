@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Copyright Ericsson AB 1996-2025. All Rights Reserved.
+ * Copyright Ericsson AB 1996-2026. All Rights Reserved.
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * Copyright (c) WhatsApp LLC
  *
@@ -29,7 +29,7 @@
 extern "C" {
 #endif
 
-/// See [erts/emulator/beam/dist.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/dist.h) in the
+/// See [erts/emulator/beam/dist.h](https://github.com/erlang/otp/blob/maint-29/erts/emulator/beam/dist.h) in the
 /// Erlang/OTP source code.
 
 #define DFLAG_PUBLISHED ((uint64_t)0x01)
@@ -71,6 +71,7 @@ extern "C" {
 #define DFLAG_ALIAS (((uint64_t)0x8) << 32)
 #define DFLAG_LOCAL_EXT (((uint64_t)0x10) << 32) /* internal */
 #define DFLAG_ALTACT_SIG (((uint64_t)0x20) << 32)
+#define DFLAG_NATIVE_RECORDS (((uint64_t)0x40) << 32)
 /*
  * In term_to_binary/2, we will use DFLAG_ATOM_CACHE to mean
  * DFLAG_DETERMINISTIC.
@@ -92,7 +93,8 @@ extern "C" {
  * If remote node (erl_interface) does not support these then we may need
  * to transcode messages enqueued before connection setup was finished.
  */
-#define DFLAG_DIST_HOPEFULLY (DFLAG_DIST_MONITOR | DFLAG_DIST_MONITOR_NAME | DFLAG_SPAWN | DFLAG_ALTACT_SIG | DFLAG_ALIAS)
+#define DFLAG_DIST_HOPEFULLY                                                                                                       \
+    (DFLAG_DIST_MONITOR | DFLAG_DIST_MONITOR_NAME | DFLAG_SPAWN | DFLAG_ALTACT_SIG | DFLAG_ALIAS | DFLAG_NATIVE_RECORDS)
 
 /* Our preferred set of flags. Used for connection setup handshake */
 #define DFLAG_DIST_DEFAULT                                                                                                         \

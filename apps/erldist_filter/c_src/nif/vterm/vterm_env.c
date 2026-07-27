@@ -653,6 +653,13 @@ vterm_env_dist_ext_rewrite_term(vterm_env_dist_ext_rewrite_t *rewrite, unsigned 
             return 0;
         }
         return vterm_env_dist_ext_rewrite_terms(rewrite, u32 * 2, depth + 1);
+    case RECORD_EXT:
+        if (!vterm_env_dist_ext_rewrite_read_u32(rewrite, &u32) || u32 > UINT32_MAX / 2 ||
+            !vterm_env_dist_ext_rewrite_copy(rewrite, 1) || !vterm_env_dist_ext_rewrite_terms(rewrite, 2, depth + 1) ||
+            !vterm_env_dist_ext_rewrite_terms(rewrite, u32, depth + 1)) {
+            return 0;
+        }
+        return vterm_env_dist_ext_rewrite_terms(rewrite, u32, depth + 1);
     case FUN_EXT:
         if (!vterm_env_dist_ext_rewrite_read_u32(rewrite, &u32) || !vterm_env_dist_ext_rewrite_terms(rewrite, 4, depth + 1)) {
             return 0;

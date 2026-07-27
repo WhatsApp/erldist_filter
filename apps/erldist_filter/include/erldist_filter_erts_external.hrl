@@ -1,7 +1,9 @@
 %%% % @format
 %%% %CopyrightBegin%
 %%%
-%%% Copyright Ericsson AB 1996-2022. All Rights Reserved.
+%%% SPDX-License-Identifier: Apache-2.0
+%%%
+%%% Copyright Ericsson AB 1996-2026. All Rights Reserved.
 %%% Copyright (c) Meta Platforms, Inc. and affiliates.
 %%% Copyright (c) WhatsApp LLC
 %%%
@@ -25,7 +27,7 @@
 -define(ERLDIST_FILTER_ERTS_EXTERNAL_HRL, 1).
 
 %%% See
-%%% [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/OTP-25.2.3/erts/emulator/beam/external.h#L31-L82)
+%%% [erts/emulator/beam/external.h](https://github.com/erlang/otp/blob/maint-29/erts/emulator/beam/external.h)
 %%% in the Erlang/OTP source code.
 
 -define(SMALL_INTEGER_EXT, $a).

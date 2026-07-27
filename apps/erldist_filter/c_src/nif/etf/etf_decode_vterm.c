@@ -629,19 +629,31 @@ etf_decode_vterm_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                     vterm_t *entries = NULL;
                     READ_U32(&num_fields);
                     READ_U8(&flags);
+                    if (flags > 1) {
+                        *err_termp =
+                            EXCP_ERROR_F(caller_env, "Call to etf_decode_vterm() failed: RECORD_EXT flags=%u is invalid\n", flags);
+                        return TRAP_ERR(*err_termp);
+                    }
                     n = (size_t)num_fields;
                     // entries: [module, name, field_names[num_fields], values[num_fields]]
                     CHKSIZE(2 + n * 2);
-                    if (trap->limit == 0) {
+                    if (trap->limit == 0 && n > 0) {
                         BACK(1 + 4 + 1);
                         trap->objp = objp;
                         trap->next = next;
                         trap->state = ETF_DECODE_VTERM_TRAP_STATE_DECODE_SKIP;
                         goto next_state;
                     }
-                    *objp = vterm_make_record_ext(vtenv, num_fields, (flags & 1), &entries);
-                    n = 2 + n * 2;
-                    objp = &entries[n - 1];
+                    *objp = vterm_make_record_ext(vtenv, num_fields, flags == 1, &entries);
+                    READ_ATOM(&entries[0]);
+                    READ_ATOM(&entries[1]);
+                    for (size_t i = 0; i < n; i++) {
+                        READ_ATOM(&entries[2 + i]);
+                    }
+                    if (n == 0) {
+                        break;
+                    }
+                    objp = &entries[2 + n * 2 - 1];
                     while (n-- > 0) {
                         objp[0] = (vterm_t)(next);
                         next = objp;

@@ -179,21 +179,12 @@ class StageTarget:
         needle: re.Pattern = re.compile(rb"(?:SignedSource<<(?P<md5>[a-f0-9]{32})>>)|" + re.escape(token))
         with open(self.output_file, "rb+") as f:
             haystack: bytes = f.read()
-            md5: hashlib.md5 = hashlib.md5()
-            index: int = 0
-            for match in needle.finditer(haystack):
-                if match.group(1) is None:
-                    md5.update(haystack[index : match.end()])
-                else:
-                    md5.update(haystack[index : match.end()])
-                    md5.update(token)
-                index = match.end()
-            if index > 0:
-                md5.update(haystack[index:])
-                signature: str = f"SignedSource<<{md5.hexdigest()}>>"
-                for match in needle.finditer(haystack):
-                    f.seek(match.start())
-                    f.write(signature.encode("utf-8"))
+            if needle.search(haystack) is not None:
+                unsigned: bytes = needle.sub(token, haystack)
+                signature: bytes = f"SignedSource<<{hashlib.md5(unsigned).hexdigest()}>>".encode("utf-8")
+                f.seek(0)
+                f.write(needle.sub(signature, haystack))
+                f.truncate()
 
 
 @dataclass

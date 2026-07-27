@@ -139,6 +139,24 @@
 expand(VT) when ?is_vterm_t(VT) ->
     VT;
 expand(T) ->
+    expand_term(T).
+
+-spec expand_term(T) -> VT when T :: dynamic(), VT :: vterm:t().
+-if(?OTP_RELEASE >= 29).
+expand_term(T) ->
+    case erlang:is_record(T) of
+        true ->
+            expand_native_record(T);
+        false ->
+            expand_non_record(T)
+    end.
+-else.
+expand_term(T) ->
+    expand_non_record(T).
+-endif.
+
+-spec expand_non_record(T) -> VT when T :: dynamic(), VT :: vterm:t().
+expand_non_record(T) ->
     case T of
         _ when is_integer(T) andalso ?is_u8(T) ->
             vterm_small_integer_ext:new(T);
@@ -454,6 +472,25 @@ expand_map_pairs(0, Iterator, Pairs) ->
 expand_map_pairs(Arity, Iterator, Pairs) when is_integer(Arity) andalso Arity > 0 ->
     {Key, Value, NextIterator} = maps:next(Iterator),
     expand_map_pairs(Arity - 1, NextIterator, [{expand(Key), expand(Value)} | Pairs]).
+
+-if(?OTP_RELEASE >= 29).
+-spec expand_native_record(Term) -> vterm_record_ext:t() when Term :: dynamic().
+expand_native_record(Term) ->
+    Module = records:get_module(Term),
+    Name = records:get_name(Term),
+    FieldNames = records:get_field_names(Term),
+    Values = [records:get(FieldName, Term) || FieldName <- FieldNames],
+    IsExported = records:is_exported(Term),
+    NumFields = length(FieldNames),
+    vterm_record_ext:new(
+        NumFields,
+        IsExported,
+        expand_atom(Module),
+        expand_atom(Name),
+        [expand_atom(FieldName) || FieldName <- FieldNames],
+        [expand(Value) || Value <- Values]
+    ).
+-endif.
 
 -spec xform_elements(
     Elements,

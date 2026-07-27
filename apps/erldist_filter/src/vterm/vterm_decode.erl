@@ -218,7 +218,7 @@ internal_binary_to_vterm(InternalEncodedTerm) ->
             LazyLimit = ?LAZY_DEC(),
             {ok, Pairs, Rest} = internal_binary_to_vterm_pairs(Arity, InternalEncodedPairs, []),
             ?MAYBE_LAZY(Arity, LazyLimit, vterm_map_ext:new(Arity, Pairs));
-        <<?RECORD_EXT:8, NumFields:32, Flags:8, InternalEncodedModule/bytes>> ->
+        <<?RECORD_EXT:8, NumFields:32, Flags:8, InternalEncodedModule/bytes>> when Flags =< 1 ->
             LazyLimit = ?LAZY_DEC(),
             ?LAZY_PAUSE(),
             {ok, Module, InternalEncodedName} = internal_binary_to_vterm_atom(InternalEncodedModule),
@@ -228,7 +228,7 @@ internal_binary_to_vterm(InternalEncodedTerm) ->
             ),
             ?LAZY_CONTINUE(),
             {ok, Values, Rest} = internal_binary_to_vterm_elements(NumFields, InternalEncodedValues, []),
-            Exported = (Flags band 1) =:= 1,
+            Exported = Flags =:= 1,
             ?MAYBE_LAZY(
                 NumFields, LazyLimit, vterm_record_ext:new(NumFields, Exported, Module, Name, FieldNames, Values)
             );

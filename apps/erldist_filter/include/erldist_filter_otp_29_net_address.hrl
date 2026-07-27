@@ -1,10 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-27/lib/kernel/include/net_address.hrl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-29/lib/kernel/include/net_address.hrl
 %% @oncall whatsapp_clr
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2016. All Rights Reserved.
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1997-2025. All Rights Reserved.
 %%
 %% Licensed under the Apache License, Version 2.0 (the "License");
 %% you may not use this file except in compliance with the License.

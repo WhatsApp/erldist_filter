@@ -152,6 +152,8 @@ dist:
       internal: true
     - key: DFLAG_ALTACT_SIG
       value: 0x2000000000
+    - key: DFLAG_NATIVE_RECORDS
+      value: 0x4000000000
   extra_flags:
     - key: DFLAG_DETERMINISTIC
       values:
@@ -193,6 +195,7 @@ dist:
         - DFLAG_SPAWN
         - DFLAG_ALTACT_SIG
         - DFLAG_ALIAS
+        - DFLAG_NATIVE_RECORDS
       comment: >
         Additional optimistic flags when encoding toward pending connection.
         If remote node (erl_interface) does not support these then we may need

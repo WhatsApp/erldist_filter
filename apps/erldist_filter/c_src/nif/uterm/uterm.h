@@ -46,6 +46,7 @@ static int uterm_is_large_big_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_new_fun_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_export_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_map_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
+static int uterm_is_record_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_atom_utf8_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_small_atom_utf8_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
 static int uterm_is_v4_port_ext(vterm_env_t *vtenv, const vec_reader_t *vr);
@@ -309,6 +310,16 @@ uterm_is_map_ext(vterm_env_t *vtenv, const vec_reader_t *vr)
         return 0;
     }
     return (tag == MAP_EXT);
+}
+
+inline int
+uterm_is_record_ext(vterm_env_t *vtenv, const vec_reader_t *vr)
+{
+    uint8_t tag;
+    if (!vec_reader_peek_u8(vr, &tag)) {
+        return 0;
+    }
+    return (tag == RECORD_EXT);
 }
 
 inline int

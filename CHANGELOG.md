@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.29.0 (2026-07-27)
+
+* Erlang/OTP support
+  * Track OTP 28/29; refresh upstream imports and CI.
+  * Support native records (`DFLAG_NATIVE_RECORDS` and `RECORD_EXT`) [#7](https://github.com/WhatsApp/erldist_filter/pull/7)
+  * Use OTP 29's public atom-cache-index NIF API.
+* Distribution decoding
+  * Restore cached-atom term decoding with property coverage [#6](https://github.com/WhatsApp/erldist_filter/pull/6)
+  * Fix unsafe NIF cleanup for distribution messages without payloads.
+* Testing and maintenance
+  * Add `just sanitizers` for ASan, LSan, UBSan, and cleanup stress.
+  * Add `just cover` for Common Test coverage reports.
+  * Make generated-source signing idempotent.
+  * Add `MAINTENANCE.md` and `AGENTS.md`; refresh ELP and eqwalizer.
+
 ## 1.28.5 (2026-05-11)
 
 * Minor fix: replace deprecated bare `catch Expr` with `try ... catch ... end` [#5](https://github.com/WhatsApp/erldist_filter/pull/5)

@@ -1,10 +1,12 @@
-%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-27/lib/kernel/src/inet_tcp_dist.erl
+%% NOTE: This file is imported from https://raw.githubusercontent.com/erlang/otp/refs/heads/maint-29/lib/kernel/src/inet_tcp_dist.erl
 %% It has been modified to support using the erldist_filter_nif.
 
 %%
 %% %CopyrightBegin%
 %%
-%% Copyright Ericsson AB 1997-2024. All Rights Reserved.
+%% SPDX-License-Identifier: Apache-2.0
+%%
+%% Copyright Ericsson AB 1997-2025. All Rights Reserved.
 %% Copyright (c) Meta Platforms, Inc. and affiliates.
 %% Copyright (c) WhatsApp LLC
 %%
@@ -22,7 +24,7 @@
 %%
 %% %CopyrightEnd%
 %%
--module(erldist_filter_otp_27_inet_tcp_dist).
+-module(erldist_filter_otp_29_inet_tcp_dist).
 -moduledoc false.
 -compile(warn_missing_spec_all).
 -oncall("whatsapp_clr").
@@ -55,10 +57,10 @@
 
 -import(error_logger,[error_msg/2]).
 
--include_lib("erldist_filter/include/erldist_filter_otp_27_net_address.hrl").
+-include_lib("erldist_filter/include/erldist_filter_otp_29_net_address.hrl").
 
-% -include_lib("erldist_filter/include/erldist_filter_otp_27_dist.hrl").
--include_lib("erldist_filter/include/erldist_filter_otp_27_dist_util.hrl").
+% -include_lib("erldist_filter/include/erldist_filter_otp_29_dist.hrl").
+-include_lib("erldist_filter/include/erldist_filter_otp_29_dist_util.hrl").
 
 -define(DRIVER, inet_tcp).
 -define(PROTOCOL, tcp).
@@ -83,7 +85,7 @@ gen_select(Driver, Node) ->
       Family :: inet:address_family(),
       Node :: node().
 fam_select(Family, Node) ->
-    case erldist_filter_otp_27_dist_util:split_node(Node) of
+    case erldist_filter_otp_29_dist_util:split_node(Node) of
         {node, Name, Host} ->
             EpmdMod = net_kernel:epmd_module(),
             case
@@ -480,7 +482,7 @@ accept_connection(AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
 gen_accept_connection(Driver, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
     case spawn_opt(?MODULE, do_accept,
               [Driver, self(), AcceptPid, Socket, MyNode, Allowed, SetupTime],
-              erldist_filter_otp_27_dist_util:net_ticker_spawn_options()) of
+              erldist_filter_otp_29_dist_util:net_ticker_spawn_options()) of
         ConnectionSupervisorPid when is_pid(ConnectionSupervisorPid) ->
             ConnectionSupervisorPid
     end.
@@ -496,7 +498,7 @@ gen_accept_connection(Driver, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
 do_accept(Driver, Kernel, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
     receive
         {AcceptPid, controller} ->
-            Timer = erldist_filter_otp_27_dist_util:start_timer(SetupTime),
+            Timer = erldist_filter_otp_29_dist_util:start_timer(SetupTime),
             case check_ip(Driver, Socket) of
                 true ->
                     Sender = spawn_link(fun() -> sender(Driver) end),
@@ -524,7 +526,7 @@ do_accept(Driver, Kernel, AcceptPid, Socket, MyNode, Allowed, SetupTime) ->
                                       Receiver ! {self(), rep_socket_control, FinSocket},
                                       ok
                               end},
-                    erldist_filter_otp_27_dist_util:handshake_other_started(HSData);
+                    erldist_filter_otp_29_dist_util:handshake_other_started(HSData);
                 {false,IP} ->
                     % elp:ignore W0053 (no_error_logger)
                     error_msg("** Connection attempt from "
@@ -600,7 +602,7 @@ setup(Node, Type, MyNode, LongOrShortNames,SetupTime) ->
 gen_setup(Driver, Node, Type, MyNode, LongOrShortNames, SetupTime) ->
     case spawn_opt(?MODULE, do_setup,
               [Driver, self(), Node, Type, MyNode, LongOrShortNames, SetupTime],
-              erldist_filter_otp_27_dist_util:net_ticker_spawn_options()) of
+              erldist_filter_otp_29_dist_util:net_ticker_spawn_options()) of
         ConnectionSupervisorPid when is_pid(ConnectionSupervisorPid) ->
             ConnectionSupervisorPid
     end.
@@ -615,14 +617,14 @@ gen_setup(Driver, Node, Type, MyNode, LongOrShortNames, SetupTime) ->
       SetupTime :: non_neg_integer().
 do_setup(Driver, Kernel, Node, Type, MyNode, LongOrShortNames, SetupTime) ->
     ?trace("~p~n",[{?MODULE,self(),setup,Node}]),
-    Timer = erldist_filter_otp_27_dist_util:start_timer(SetupTime),
+    Timer = erldist_filter_otp_29_dist_util:start_timer(SetupTime),
     Family = Driver:family(),
     {#net_address{ address = {Ip, TcpPort} } = NetAddress,
      ConnectOptions,
      Version} =
         fam_setup(
           Family, Node, LongOrShortNames, fun Driver:parse_address/1),
-    erldist_filter_otp_27_dist_util:reset_timer(Timer),
+    erldist_filter_otp_29_dist_util:reset_timer(Timer),
     case Driver:connect(Ip, TcpPort, ConnectOptions) of
         {ok, Socket} ->
             Sender = spawn_link(fun() -> sender(Driver) end),
@@ -651,7 +653,7 @@ do_setup(Driver, Kernel, Node, Type, MyNode, LongOrShortNames, SetupTime) ->
                              Receiver ! {self(), rep_socket_control, FinSocket},
                              ok
                     end},
-            erldist_filter_otp_27_dist_util:handshake_we_started(HSData);
+            erldist_filter_otp_29_dist_util:handshake_we_started(HSData);
         _ ->
             %% Other Node may have closed since
             %% discovery !

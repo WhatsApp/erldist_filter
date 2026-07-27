@@ -6,7 +6,7 @@
 
 PROJECT = erldist_filter
 PROJECT_DESCRIPTION = erldist_filter
-PROJECT_VERSION = 1.28.5
+PROJECT_VERSION = 1.29.0
 
 include erlang.mk
 
@@ -33,7 +33,7 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2026-02-27
+ELP_VERSION ?= 2026-06-10
 ELP_OTP_VERSION ?= 28
 
 ELP ?= $(CURDIR)/elp

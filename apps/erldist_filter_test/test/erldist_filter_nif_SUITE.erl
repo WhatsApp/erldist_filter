@@ -500,7 +500,7 @@ vterm_test_vectors() ->
     R0 = vterm_atom_cache_ref:new(0),
     R1 = vterm_atom_cache_ref:new(1),
     R2 = vterm_atom_cache_ref:new(2),
-    erldist_filter_nif_prop:vterm_test_vectors_resolve_atoms([
+    TestVectors = [
         % SMALL_INTEGER_EXT
         {{}, vterm_small_integer_ext:new(0)},
         % INTEGER_EXT
@@ -588,4 +588,25 @@ vterm_test_vectors() ->
         {{'Ω'}, R0},
         {{LongL1Atom}, R0},
         {{LongU8Atom}, R0}
-    ]).
+    ],
+    NativeRecordTestVectors = native_record_test_vectors(A0, A1, A2, R0, R1, R2),
+    erldist_filter_nif_prop:vterm_test_vectors_resolve_atoms(TestVectors ++ NativeRecordTestVectors).
+
+-spec native_record_test_vectors(A0, A1, A2, R0, R1, R2) -> [{tuple(), vterm_record_ext:t()}] when
+    A0 :: vterm:atom_t(),
+    A1 :: vterm:atom_t(),
+    A2 :: vterm:atom_t(),
+    R0 :: vterm:atom_t(),
+    R1 :: vterm:atom_t(),
+    R2 :: vterm:atom_t().
+-if(?OTP_RELEASE >= 29).
+native_record_test_vectors(A0, A1, A2, R0, R1, R2) ->
+    [
+        {{}, vterm_record_ext:new(0, false, A0, A1, [], [])},
+        {{}, vterm_record_ext:new(2, true, A0, A1, [A1, A2], [vterm_nil_ext:new(), A0])},
+        {{a, b, c}, vterm_record_ext:new(2, true, R0, R1, [R1, R2], [vterm_nil_ext:new(), R0])}
+    ].
+-else.
+native_record_test_vectors(_A0, _A1, _A2, _R0, _R1, _R2) ->
+    [].
+-endif.

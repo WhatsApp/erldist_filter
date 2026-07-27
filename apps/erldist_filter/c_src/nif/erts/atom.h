@@ -34,7 +34,7 @@ extern "C" {
 #include "../erl_nif_trampoline.h"
 
 /// See
-/// [erts/emulator/beam/atom.h](https://github.com/erlang/otp/blob/OTP-28.0.2/erts/emulator/beam/atom.h)
+/// [erts/emulator/beam/atom.h](https://github.com/erlang/otp/blob/maint-29/erts/emulator/beam/atom.h)
 /// in the Erlang/OTP source code.
 
 #define MAX_ATOM_CHARACTERS 255

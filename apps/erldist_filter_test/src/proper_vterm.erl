@@ -52,6 +52,8 @@
     vterm_list_ext/1,
     vterm_map_ext/0,
     vterm_map_ext/1,
+    vterm_record_ext/0,
+    vterm_record_ext/1,
     vterm_new_float_ext/0,
     vterm_new_fun_ext/0,
     vterm_new_fun_ext/1,
@@ -170,6 +172,7 @@ vterm(Opts) ->
                     {1, vterm_string_ext()},
                     {1, vterm_v4_port_ext(Opts)}
                 ],
+                otp_29_plus_vterms(Opts),
                 case Opts of
                     #{allow_atom_cache_refs := true} -> [{1, vterm_atom_cache_ref()}];
                     _ -> []
@@ -404,6 +407,42 @@ vterm_map_ext_pairs(Arity, Opts) ->
             SortedPairs
         end
     ).
+
+-spec vterm_record_ext() -> proper_types:type().
+vterm_record_ext() ->
+    vterm_record_ext(#{}).
+
+-spec vterm_record_ext(proper_vterm:options()) -> proper_types:type().
+vterm_record_ext(Opts) ->
+    Module = vterm_small_atom_utf8_ext:new(12, <<"proper_vterm">>),
+    Name = vterm_small_atom_utf8_ext:new(6, <<"sample">>),
+    ?LET(
+        {Arity, Exported, Values},
+        ?LET(Arity, mostly(integer(0, 4), integer(5, 16)), {Arity, boolean(), vector(Arity, vterm(Opts))}),
+        begin
+            FieldNames = vterm_record_ext_field_names(Arity),
+            vterm_record_ext:new(Arity, Exported, Module, Name, FieldNames, Values)
+        end
+    ).
+
+-spec vterm_record_ext_field_names(non_neg_integer()) -> [vterm:atom_t()].
+vterm_record_ext_field_names(Arity) ->
+    [
+        begin
+            Name = <<"field_", (integer_to_binary(Index))/bytes>>,
+            vterm_small_atom_utf8_ext:new(byte_size(Name), Name)
+        end
+     || Index <- lists:seq(1, Arity)
+    ].
+
+-spec otp_29_plus_vterms(proper_vterm:options()) -> [{pos_integer(), proper_types:type()}].
+-if(?OTP_RELEASE >= 29).
+otp_29_plus_vterms(Opts) ->
+    [{1, vterm_record_ext(Opts)}].
+-else.
+otp_29_plus_vterms(_Opts) ->
+    [].
+-endif.
 
 -spec vterm_new_float_ext() -> proper_types:type().
 vterm_new_float_ext() ->
