@@ -175,6 +175,15 @@
     pairs = [] :: [{vterm:t(), vterm:t()}]
 }).
 
+-record(vterm_record_ext, {
+    num_fields = 0 :: vterm:u32(),
+    exported = false :: boolean(),
+    module = #vterm_atom_ext{} :: vterm:atom_t(),
+    name = #vterm_atom_ext{} :: vterm:atom_t(),
+    field_names = [] :: [vterm:atom_t()],
+    values = [] :: [vterm:t()]
+}).
+
 -record(vterm_atom_utf8_ext, {
     len = 0 :: vterm:u16(),
     name = <<>> :: binary()
@@ -313,6 +322,7 @@
         is_record(T, vterm_new_fun_ext) orelse
         is_record(T, vterm_export_ext) orelse
         is_record(T, vterm_map_ext) orelse
+        is_record(T, vterm_record_ext) orelse
         is_record(T, vterm_atom_utf8_ext) orelse
         is_record(T, vterm_small_atom_utf8_ext) orelse
         is_record(T, vterm_v4_port_ext) orelse

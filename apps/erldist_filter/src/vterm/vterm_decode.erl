@@ -23,6 +23,7 @@
     internal_binary_to_term/1,
     internal_binary_to_vterm/1,
     internal_binary_to_vterm_atom/1,
+    internal_binary_to_vterm_atoms/3,
     internal_binary_to_vterm_elements/3,
     internal_binary_to_vterm_fixed_integer/1,
     internal_binary_to_vterm_lazy/2,
@@ -217,6 +218,20 @@ internal_binary_to_vterm(InternalEncodedTerm) ->
             LazyLimit = ?LAZY_DEC(),
             {ok, Pairs, Rest} = internal_binary_to_vterm_pairs(Arity, InternalEncodedPairs, []),
             ?MAYBE_LAZY(Arity, LazyLimit, vterm_map_ext:new(Arity, Pairs));
+        <<?RECORD_EXT:8, NumFields:32, Flags:8, InternalEncodedModule/bytes>> ->
+            LazyLimit = ?LAZY_DEC(),
+            ?LAZY_PAUSE(),
+            {ok, Module, InternalEncodedName} = internal_binary_to_vterm_atom(InternalEncodedModule),
+            {ok, Name, InternalEncodedFieldNames} = internal_binary_to_vterm_atom(InternalEncodedName),
+            {ok, FieldNames, InternalEncodedValues} = internal_binary_to_vterm_atoms(
+                NumFields, InternalEncodedFieldNames, []
+            ),
+            ?LAZY_CONTINUE(),
+            {ok, Values, Rest} = internal_binary_to_vterm_elements(NumFields, InternalEncodedValues, []),
+            Exported = (Flags band 1) =:= 1,
+            ?MAYBE_LAZY(
+                NumFields, LazyLimit, vterm_record_ext:new(NumFields, Exported, Module, Name, FieldNames, Values)
+            );
         <<?ATOM_UTF8_EXT:8, Len:16, Name:Len/bytes, Rest/bytes>> ->
             ?NOT_LAZY(vterm_atom_utf8_ext:new(Len, Name));
         <<?SMALL_ATOM_UTF8_EXT:8, Len:8, Name:Len/bytes, Rest/bytes>> ->
@@ -245,6 +260,23 @@ internal_binary_to_vterm_atom(Binary) when is_binary(Binary) ->
             {ok, vterm_small_atom_utf8_ext:new(Len, Name), Rest};
         <<?ATOM_CACHE_REF:8, Index:8, Rest/bytes>> ->
             {ok, vterm_atom_cache_ref:new(Index), Rest}
+    end.
+
+-spec internal_binary_to_vterm_atoms(Arity, Binary, PrevVTermAtoms) ->
+    {ok, NextVTermAtoms, Rest} | {error, Reason}
+when
+    Arity :: non_neg_integer(),
+    Binary :: binary(),
+    PrevVTermAtoms :: [vterm:atom_t()],
+    NextVTermAtoms :: [vterm:atom_t()],
+    Rest :: bitstring(),
+    Reason :: term().
+internal_binary_to_vterm_atoms(0, Rest, Atoms) ->
+    {ok, lists:reverse(Atoms), Rest};
+internal_binary_to_vterm_atoms(Arity, InternalEncodedAtoms, Atoms) when is_integer(Arity) andalso Arity > 0 ->
+    case internal_binary_to_vterm_atom(InternalEncodedAtoms) of
+        {ok, Atom, Rest} ->
+            internal_binary_to_vterm_atoms(Arity - 1, Rest, [Atom | Atoms])
     end.
 
 -spec internal_binary_to_vterm_elements(Arity, Binary, PrevVTermElements) ->

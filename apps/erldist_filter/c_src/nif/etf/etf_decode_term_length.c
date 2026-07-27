@@ -446,6 +446,40 @@ etf_decode_term_length_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void 
                     trap->heap_size += VTERM_SIZEOF_MAP_EXT(arity);
                     break;
                 }
+                case RECORD_EXT: {
+                    uint32_t num_fields;
+                    READ_U32(&num_fields);
+                    SKIP(1); // Flags
+                    n = (size_t)num_fields;
+#if defined(ARCH_WORD_BITS_64)
+                    if ((n >> 31) != 0) {
+                        /* Avoid overflow by limiting the number of fields in
+                         * a record to 2^31-1 (about 2 billions). */
+                        *err_termp = EXCP_ERROR_F(
+                            caller_env,
+                            "Call to etf_decode_term_length() failed: RECORD_EXT num_fields=%u is greater than 2^31 - 1\n",
+                            num_fields);
+                        return TRAP_ERR(*err_termp);
+                    }
+#else
+                    if ((n >> 30) != 0) {
+                        /* Can't possibly fit in memory on 32-bit machine. */
+                        *err_termp = EXCP_ERROR_F(
+                            caller_env,
+                            "Call to etf_decode_term_length() failed: RECORD_EXT num_fields=%u cannot fit on 32-bit machine\n",
+                            num_fields);
+                        return TRAP_ERR(*err_termp);
+                    }
+#endif
+                    // entries: [module, name, field_names[num_fields], values[num_fields]]
+                    CHKSIZE(2 + n * 2);
+                    /* Count terms in operations that cannot overflow (guarded above). */
+                    ADDTERMS(2);
+                    ADDTERMS(num_fields);
+                    ADDTERMS(num_fields);
+                    trap->heap_size += VTERM_SIZEOF_RECORD_EXT(num_fields);
+                    break;
+                }
                 case ATOM_UTF8_EXT: {
                     uint16_t len;
                     READ_U16(&len);
@@ -817,6 +851,37 @@ etf_fast_skip_terms(ErlNifEnv *caller_env, bool is_external_term, vec_reader_t *
             /* Count terms in two operations to avoid overflow. */
             ADDTERMS(arity);
             ADDTERMS(arity);
+            break;
+        }
+        case RECORD_EXT: {
+            uint32_t num_fields;
+            READ_U32(&num_fields);
+            SKIP(1); // Flags
+            n = (size_t)num_fields;
+#if defined(ARCH_WORD_BITS_64)
+            if ((n >> 31) != 0) {
+                /* Avoid overflow by limiting the number of fields in
+                 * a record to 2^31-1 (about 2 billions). */
+                *err_termp = EXCP_ERROR_F(
+                    caller_env, "Call to etf_decode_term_length() failed: RECORD_EXT num_fields=%u is greater than 2^31 - 1\n",
+                    num_fields);
+                return 0;
+            }
+#else
+            if ((n >> 30) != 0) {
+                /* Can't possibly fit in memory on 32-bit machine. */
+                *err_termp = EXCP_ERROR_F(
+                    caller_env, "Call to etf_decode_term_length() failed: RECORD_EXT num_fields=%u cannot fit on 32-bit machine\n",
+                    num_fields);
+                return 0;
+            }
+#endif
+            // entries: [module, name, field_names[num_fields], values[num_fields]]
+            CHKSIZE(2 + n * 2);
+            /* Count terms in operations that cannot overflow (guarded above). */
+            ADDTERMS(2);
+            ADDTERMS(num_fields);
+            ADDTERMS(num_fields);
             break;
         }
         case ATOM_UTF8_EXT: {

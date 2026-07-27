@@ -57,6 +57,8 @@ extern "C" {
 #define VTERM_SIZEOF_EXPORT_EXT() (sizeof(vterm_tag_t) + sizeof(vterm_data_export_ext_t))
 #define VTERM_SIZEOF_MAP_EXT(arity)                                                                                                \
     (sizeof(vterm_tag_t) + offsetof(vterm_data_map_ext_t, _dynamic) + (sizeof(vterm_t) * (arity * 2)))
+#define VTERM_SIZEOF_RECORD_EXT(num_fields)                                                                                        \
+    (sizeof(vterm_tag_t) + offsetof(vterm_data_record_ext_t, _dynamic) + (sizeof(vterm_t) * (2 + (num_fields) * 2)))
 #define VTERM_SIZEOF_ATOM_UTF8_EXT() (sizeof(vterm_tag_t) + sizeof(vterm_data_atom_utf8_ext_t))
 #define VTERM_SIZEOF_SMALL_ATOM_UTF8_EXT() (sizeof(vterm_tag_t) + sizeof(vterm_data_small_atom_utf8_ext_t))
 #define VTERM_SIZEOF_V4_PORT_EXT() (sizeof(vterm_tag_t) + sizeof(vterm_data_v4_port_ext_t))
@@ -91,6 +93,7 @@ typedef struct vterm_data_large_big_ext_s vterm_data_large_big_ext_t;
 typedef struct vterm_data_new_fun_ext_s vterm_data_new_fun_ext_t;
 typedef struct vterm_data_export_ext_s vterm_data_export_ext_t;
 typedef struct vterm_data_map_ext_s vterm_data_map_ext_t;
+typedef struct vterm_data_record_ext_s vterm_data_record_ext_t;
 typedef struct vterm_data_atom_utf8_ext_s vterm_data_atom_utf8_ext_t;
 typedef struct vterm_data_small_atom_utf8_ext_s vterm_data_small_atom_utf8_ext_t;
 typedef struct vterm_data_v4_port_ext_s vterm_data_v4_port_ext_t;
@@ -257,6 +260,14 @@ struct vterm_data_map_ext_s {
     alignas(vword_t) vword_t _dynamic[1];
 };
 
+struct vterm_data_record_ext_s {
+    uint32_t num_fields;
+    uint8_t exported;
+    // entries layout: [module, name, field_names[num_fields], values[num_fields]]
+    vterm_t *entries; // vterm_t[2 + num_fields * 2]
+    alignas(vword_t) vword_t _dynamic[1];
+};
+
 struct vterm_data_atom_utf8_ext_s {
     uint16_t len;
     uint8_t *name; // uint8_t[len]
@@ -307,6 +318,7 @@ struct __vterm_s {
         vterm_data_new_fun_ext_t new_fun_ext;
         vterm_data_export_ext_t export_ext;
         vterm_data_map_ext_t map_ext;
+        vterm_data_record_ext_t record_ext;
         vterm_data_atom_utf8_ext_t atom_utf8_ext;
         vterm_data_small_atom_utf8_ext_t small_atom_utf8_ext;
         vterm_data_v4_port_ext_t v4_port_ext;
@@ -355,6 +367,7 @@ extern vterm_t vterm_make_new_fun_ext(vterm_env_t *vtenv, uint32_t size, uint8_t
                                       vterm_t **free_vars);
 extern vterm_t vterm_make_export_ext(vterm_env_t *vtenv, vterm_t mod, vterm_t fun, vterm_t arity);
 extern vterm_t vterm_make_map_ext(vterm_env_t *vtenv, uint32_t arity, vterm_t **pairs);
+extern vterm_t vterm_make_record_ext(vterm_env_t *vtenv, uint32_t num_fields, uint8_t exported, vterm_t **entries);
 extern vterm_t vterm_make_atom_utf8_ext(vterm_env_t *vtenv, uint16_t len, uint8_t *name);
 extern vterm_t vterm_make_small_atom_utf8_ext(vterm_env_t *vtenv, uint8_t len, uint8_t *name);
 extern vterm_t vterm_make_v4_port_ext(vterm_env_t *vtenv, vterm_t node, uint64_t id, uint32_t creation);
@@ -389,6 +402,7 @@ static int vterm_is_large_big_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_new_fun_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_export_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_map_ext(vterm_env_t *vtenv, const vterm_t *vtp);
+static int vterm_is_record_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_atom_utf8_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_small_atom_utf8_ext(vterm_env_t *vtenv, const vterm_t *vtp);
 static int vterm_is_v4_port_ext(vterm_env_t *vtenv, const vterm_t *vtp);
@@ -623,6 +637,13 @@ vterm_is_map_ext(vterm_env_t *vtenv, const vterm_t *vtp)
 {
     vterm_tag_t tag;
     return (vterm_read_tag(vtenv, vtp, &tag) && tag == VTERM_TAG_MAP_EXT);
+}
+
+inline int
+vterm_is_record_ext(vterm_env_t *vtenv, const vterm_t *vtp)
+{
+    vterm_tag_t tag;
+    return (vterm_read_tag(vtenv, vtp, &tag) && tag == VTERM_TAG_RECORD_EXT);
 }
 
 inline int

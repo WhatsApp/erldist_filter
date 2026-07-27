@@ -290,6 +290,36 @@ vterm_debug_dump(ErlNifEnv *env, vterm_env_t *vtenv, vterm_t *vtp, ERL_NIF_TERM 
         *term = enif_make_tuple3(env, ATOM(vterm_map_ext), enif_make_uint(env, (unsigned int)(vt->data.map_ext.arity)), pairs_term);
         break;
     }
+    case VTERM_TAG_RECORD_EXT: {
+        ERL_NIF_TERM num_fields_term;
+        ERL_NIF_TERM exported_term;
+        ERL_NIF_TERM module_term;
+        ERL_NIF_TERM name_term;
+        ERL_NIF_TERM *field_names = NULL;
+        ERL_NIF_TERM *values = NULL;
+        ERL_NIF_TERM field_names_term;
+        ERL_NIF_TERM values_term;
+        size_t i;
+        size_t num_fields = (size_t)(vt->data.record_ext.num_fields);
+        // entries: [module, name, field_names[num_fields], values[num_fields]]
+        num_fields_term = enif_make_uint(env, (unsigned int)(vt->data.record_ext.num_fields));
+        exported_term = (vt->data.record_ext.exported) ? ATOM(true) : ATOM(false);
+        MAKE_SUB_TERM(module_term, vt->data.record_ext.entries[0]);
+        MAKE_SUB_TERM(name_term, vt->data.record_ext.entries[1]);
+        field_names = vterm_env_heap_reserve(vtenv, sizeof(ERL_NIF_TERM) * num_fields);
+        values = vterm_env_heap_reserve(vtenv, sizeof(ERL_NIF_TERM) * num_fields);
+        for (i = 0; i < num_fields; i++) {
+            MAKE_SUB_TERM(field_names[i], vt->data.record_ext.entries[2 + i]);
+        }
+        for (i = 0; i < num_fields; i++) {
+            MAKE_SUB_TERM(values[i], vt->data.record_ext.entries[2 + num_fields + i]);
+        }
+        field_names_term = enif_make_list_from_array(env, field_names, (unsigned int)num_fields);
+        values_term = enif_make_list_from_array(env, values, (unsigned int)num_fields);
+        *term = enif_make_tuple(env, 7, ATOM(vterm_record_ext), num_fields_term, exported_term, module_term, name_term,
+                                field_names_term, values_term);
+        break;
+    }
     case VTERM_TAG_ATOM_UTF8_EXT: {
         ERL_NIF_TERM bin_term;
         COPY_BYTES(bin_term, vt->data.atom_utf8_ext.name, (size_t)(vt->data.atom_utf8_ext.len));

@@ -440,6 +440,7 @@ struct erldist_filter_nif_atom_table_s {
     ERL_NIF_TERM ATOM_vterm_nil_ext;
     ERL_NIF_TERM ATOM_vterm_pid_ext;
     ERL_NIF_TERM ATOM_vterm_port_ext;
+    ERL_NIF_TERM ATOM_vterm_record_ext;
     ERL_NIF_TERM ATOM_vterm_reference_ext;
     ERL_NIF_TERM ATOM_vterm_small_atom_ext;
     ERL_NIF_TERM ATOM_vterm_small_atom_utf8_ext;

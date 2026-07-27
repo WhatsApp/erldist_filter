@@ -414,6 +414,20 @@ vterm_make_map_ext(vterm_env_t *vtenv, uint32_t arity, vterm_t **pairs)
 }
 
 vterm_t
+vterm_make_record_ext(vterm_env_t *vtenv, uint32_t num_fields, uint8_t exported, vterm_t **entries)
+{
+    vterm_t vt = vterm_env_heap_reserve_strict(vtenv, VTERM_SIZEOF_RECORD_EXT(num_fields));
+    vterm_data_record_ext_t *dp = &vt->data.record_ext;
+    vt->tag = VTERM_TAG_RECORD_EXT;
+    dp->num_fields = num_fields;
+    dp->exported = exported;
+    // entries layout: [module, name, field_names[num_fields], values[num_fields]]
+    dp->entries = (void *)&dp->_dynamic[0];
+    *entries = dp->entries;
+    return vt;
+}
+
+vterm_t
 vterm_make_atom_utf8_ext(vterm_env_t *vtenv, uint16_t len, uint8_t *name)
 {
     vterm_t vt = vterm_env_heap_reserve_strict(vtenv, VTERM_SIZEOF_ATOM_UTF8_EXT()); // 18
