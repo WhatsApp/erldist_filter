@@ -69,6 +69,11 @@ watch:
     watchexec -w codegen -- just codegen
 
 [group('test')]
+cover:
+    rebar3 ct --cover
+    rebar3 cover
+
+[group('test')]
 sanitizers: sanitizers-docker
 
 [group('test')]

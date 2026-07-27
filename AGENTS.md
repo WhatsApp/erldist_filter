@@ -5,3 +5,4 @@
 - Validate with `just format`, `gmake lint`, `rebar3 ct`, and `git diff --check`.
 - NIF-only build: `gmake -C apps/erldist_filter/c_src` (`make` on Linux).
 - Sanitizers: `just sanitizers` runs ASan, LSan, and UBSan in Docker with an ASan-built OTP; Linux may use `just sanitizers-native` when `beam.asan` is installed.
+- For routine or OTP-version maintenance, follow `MAINTENANCE.md`.
