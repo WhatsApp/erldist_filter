@@ -46,6 +46,10 @@ static int udist_classify_send_to_rex(ErlNifEnv *caller_env, vterm_env_t *vtenv,
                                       slice_t *payload, ERL_NIF_TERM *err_termp);
 static int udist_classify_send_to_otp_name(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted,
                                            bool is_pass_through, slice_t *payload, ERL_NIF_TERM *err_termp);
+static int udist_match_mfa_fields(ErlNifEnv *caller_env, vterm_env_t *vtenv, vec_reader_t *vr, bool *matched,
+                                  ERL_NIF_TERM *err_termp);
+static bool udist_term_is_function(vterm_env_t *vtenv, const vec_reader_t *vr);
+static bool udist_term_is_list(vterm_env_t *vtenv, const vec_reader_t *vr);
 
 int
 udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through, slice_t *payload,
@@ -137,6 +141,38 @@ udist_classify(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untr
     }
 }
 
+static int
+udist_match_mfa_fields(ErlNifEnv *caller_env, vterm_env_t *vtenv, vec_reader_t *vr, bool *matched, ERL_NIF_TERM *err_termp)
+{
+    *matched = false;
+    if (!uterm_is_atom(vtenv, vr)) {
+        return 1;
+    }
+    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+        return 0;
+    }
+    if (!uterm_is_atom(vtenv, vr)) {
+        return 1;
+    }
+    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+        return 0;
+    }
+    *matched = udist_term_is_list(vtenv, vr);
+    return 1;
+}
+
+static bool
+udist_term_is_function(vterm_env_t *vtenv, const vec_reader_t *vr)
+{
+    return (uterm_is_new_fun_ext(vtenv, vr) || uterm_is_export_ext(vtenv, vr));
+}
+
+static bool
+udist_term_is_list(vterm_env_t *vtenv, const vec_reader_t *vr)
+{
+    return (uterm_is_list(vtenv, vr) || uterm_is_string_ext(vtenv, vr));
+}
+
 int
 udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool untrusted, bool is_pass_through, slice_t *payload,
                     ERL_NIF_TERM *err_termp)
@@ -150,6 +186,13 @@ udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool
     //     {'$gen_call', From, {terminate_child, ChildId}}
     //     {'$gen_call', From, {restart_child, ChildId}}
     //     {'$gen_call', From, {delete_child, ChildId}}
+    //     {'$gen_call', From, {spawn, GroupLeaderPid, Module, Function, Args}}
+    //     {'$gen_call', From, {apply_once, {Started, Time, {Module, Function, Args}}}}
+    //     {'$gen_call', From, {apply_interval, {Started, Time, Target, {Module, Function, Args}}}}
+    //     {'$gen_call', From, {apply_repeatedly, {Started, Time, Target, {Module, Function, Args}}}}
+    //     {'$gen_call', From, {dict_insert, {filter, FilterName}, FilterFun}}
+    //     {remote, load_compiled, CompiledEntries}
+    //     {command, ReplyPid, {start, {job, SupervisorPid, TestDescriptor, Options}}}
     //     {io_request, From, ReplyAs, Request}
     //     {io_reply, ReplyAs, Reply}
     //
@@ -227,6 +270,79 @@ udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool
                                 // LOG, DROP or REDIRECT
                                 LOG_DROP_OR_REDIRECT();
                                 return 1;
+                            } else if (arity == 5 && atom == ATOM(spawn) && uterm_is_pid(vtenv, vr)) {
+                                bool matched = false;
+                                if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                                    return 0;
+                                }
+                                if (!udist_match_mfa_fields(caller_env, vtenv, vr, &matched, err_termp)) {
+                                    return 0;
+                                }
+                                if (matched) {
+                                    // LOG, DROP or REDIRECT
+                                    LOG_DROP_OR_REDIRECT();
+                                    return 1;
+                                }
+                            } else if (arity == 2 &&
+                                       (atom == ATOM(apply_once) || atom == ATOM(apply_interval) ||
+                                        atom == ATOM(apply_repeatedly)) &&
+                                       uterm_is_tuple(vtenv, vr)) {
+                                ERL_NIF_TERM request_atom = atom;
+                                uint32_t argument_arity;
+                                uint32_t expected_arity = (request_atom == ATOM(apply_once)) ? 3 : 4;
+                                if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &argument_arity, err_termp)) {
+                                    return 0;
+                                }
+                                if (argument_arity == expected_arity && uterm_is_integer(vtenv, vr)) {
+                                    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                                        return 0;
+                                    }
+                                    if (uterm_is_integer(vtenv, vr)) {
+                                        if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                                            return 0;
+                                        }
+                                        if (expected_arity == 4 && !etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                                            return 0;
+                                        }
+                                        if (uterm_is_tuple(vtenv, vr)) {
+                                            uint32_t action_arity;
+                                            if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &action_arity, err_termp)) {
+                                                return 0;
+                                            }
+                                            if (action_arity == 3) {
+                                                bool matched = false;
+                                                if (!udist_match_mfa_fields(caller_env, vtenv, vr, &matched, err_termp)) {
+                                                    return 0;
+                                                }
+                                                if (matched) {
+                                                    // LOG, DROP or REDIRECT
+                                                    LOG_DROP_OR_REDIRECT();
+                                                    return 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if (arity == 3 && atom == ATOM(dict_insert) && uterm_is_tuple(vtenv, vr)) {
+                                uint32_t key_arity;
+                                if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &key_arity, err_termp)) {
+                                    return 0;
+                                }
+                                if (key_arity == 2 && uterm_is_atom(vtenv, vr)) {
+                                    if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                                        return 0;
+                                    }
+                                    if (atom == ATOM(filter) && uterm_is_atom(vtenv, vr)) {
+                                        if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                                            return 0;
+                                        }
+                                        if (udist_term_is_function(vtenv, vr)) {
+                                            // LOG, DROP or REDIRECT
+                                            LOG_DROP_OR_REDIRECT();
+                                            return 1;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -234,6 +350,51 @@ udist_classify_send(ErlNifEnv *caller_env, vterm_env_t *vtenv, udist_t *up, bool
                     // LOG, DROP or REDIRECT
                     LOG_DROP_OR_REDIRECT();
                     return 1;
+                } else if (atom == ATOM(remote) && uterm_is_atom(vtenv, vr)) {
+                    if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                        return 0;
+                    }
+                    if (atom == ATOM(load_compiled)) {
+                        // LOG, DROP or REDIRECT
+                        LOG_DROP_OR_REDIRECT();
+                        return 1;
+                    }
+                } else if (atom == ATOM(command) && uterm_is_pid(vtenv, vr)) {
+                    if (!etf_fast_skip_terms(caller_env, false, vr, 1, err_termp)) {
+                        return 0;
+                    }
+                    if (uterm_is_tuple(vtenv, vr)) {
+                        uint32_t start_arity;
+                        if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &start_arity, err_termp)) {
+                            return 0;
+                        }
+                        if (start_arity == 2 && uterm_is_atom(vtenv, vr)) {
+                            if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                                return 0;
+                            }
+                            if (atom == ATOM(start) && uterm_is_tuple(vtenv, vr)) {
+                                uint32_t job_arity;
+                                if (!etf_decode_tuple_header(caller_env, vtenv, false, vr, &job_arity, err_termp)) {
+                                    return 0;
+                                }
+                                if (job_arity == 4 && uterm_is_atom(vtenv, vr)) {
+                                    if (!etf_decode_atom_term(caller_env, vtenv, false, vr, &atom, err_termp)) {
+                                        return 0;
+                                    }
+                                    if (atom == ATOM(job) && uterm_is_pid(vtenv, vr)) {
+                                        if (!etf_fast_skip_terms(caller_env, false, vr, 2, err_termp)) {
+                                            return 0;
+                                        }
+                                        if (udist_term_is_list(vtenv, vr)) {
+                                            // LOG, DROP or REDIRECT
+                                            LOG_DROP_OR_REDIRECT();
+                                            return 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             } else if (arity == 4) {
                 if (atom == ATOM(io_request)) {

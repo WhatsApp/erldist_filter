@@ -710,6 +710,67 @@ test:
             payload: PayloadSendSystemCall
           - call: dop_altact_sig_send_noop(14, 0, 0, [prio, token], {some, Token})
             payload: PayloadSendSystemCall
+      - key: dpi_structural_shapes_test
+        setup: >
+          _ = Token,
+          _ = NestedPayload,
+          PayloadPoolSpawn = {'$gen_call', [], {spawn, self(), module_placeholder, function_placeholder, []}},
+          PayloadPoolSpawnNearMiss = {'$gen_call', [], {spawn, not_a_pid, module_placeholder, function_placeholder, []}},
+          PayloadTimerApplyOnce = {'$gen_call', [], {apply_once, {0, 1, {module_placeholder, function_placeholder, []}}}},
+          PayloadTimerApplyOnceNearMiss = {'$gen_call', [], {apply_once, {not_an_integer, 1, {module_placeholder, function_placeholder, []}}}},
+          PayloadTimerApplyInterval = {'$gen_call', [], {apply_interval, {0, 1, self(), {module_placeholder, function_placeholder, []}}}},
+          PayloadTimerApplyIntervalNearMiss = {'$gen_call', [], {apply_interval, {0, 1, self(), {module_placeholder, function_placeholder, not_a_list}}}},
+          PayloadTimerApplyRepeatedly = {'$gen_call', [], {apply_repeatedly, {0, 1, self(), {module_placeholder, function_placeholder, []}}}},
+          PayloadTimerApplyRepeatedlyNearMiss = {'$gen_call', [], {apply_repeatedly, {0, 1, self(), {module_placeholder, 42, []}}}},
+          PayloadCoverLoadCompiled = {remote, load_compiled, []},
+          PayloadCoverLoadCompiledNearMiss = {remote, not_load_compiled, []},
+          PayloadEunitStart = {command, self(), {start, {job, self(), test_descriptor, []}}},
+          PayloadEunitStartNearMiss = {command, not_a_pid, {start, {job, self(), test_descriptor, []}}},
+          PayloadEtFilter = {'$gen_call', [], {dict_insert, {filter, test_filter}, fun(_Event) -> false end}},
+          PayloadEtFilterNearMiss = {'$gen_call', [], {dict_insert, {filter, test_filter}, not_a_fun}},
+        packets:
+          - call: dop_send_noop(0, 0, 0)
+            drop: true
+            payload: PayloadPoolSpawn
+          - call: dop_send_noop(1, 0, 0)
+            payload: PayloadPoolSpawnNearMiss
+            log: false
+          - call: dop_send_noop(2, 0, 0)
+            drop: true
+            payload: PayloadTimerApplyOnce
+          - call: dop_send_noop(3, 0, 0)
+            payload: PayloadTimerApplyOnceNearMiss
+            log: false
+          - call: dop_send_noop(4, 0, 0)
+            drop: true
+            payload: PayloadTimerApplyInterval
+          - call: dop_send_noop(5, 0, 0)
+            payload: PayloadTimerApplyIntervalNearMiss
+            log: false
+          - call: dop_send_noop(6, 0, 0)
+            drop: true
+            payload: PayloadTimerApplyRepeatedly
+          - call: dop_send_noop(7, 0, 0)
+            payload: PayloadTimerApplyRepeatedlyNearMiss
+            log: false
+          - call: dop_send_noop(8, 0, 0)
+            drop: true
+            payload: PayloadCoverLoadCompiled
+          - call: dop_send_noop(9, 0, 0)
+            payload: PayloadCoverLoadCompiledNearMiss
+            log: false
+          - call: dop_send_noop(10, 0, 0)
+            drop: true
+            payload: PayloadEunitStart
+          - call: dop_send_noop(11, 0, 0)
+            payload: PayloadEunitStartNearMiss
+            log: false
+          - call: dop_send_noop(12, 0, 0)
+            drop: true
+            payload: PayloadEtFilter
+          - call: dop_send_noop(13, 0, 0)
+            payload: PayloadEtFilterNearMiss
+            log: false
       - key: dpi_spawn_reply_test
         setup: >
           _ = NestedPayload,
@@ -758,6 +819,7 @@ test:
       - key: send_to_alias
       - key: send_to_name
       - key: send_to_pid
+      - key: structural_shapes
       - key: spawn_reply
       - key: spawn_request
       - key: unlink

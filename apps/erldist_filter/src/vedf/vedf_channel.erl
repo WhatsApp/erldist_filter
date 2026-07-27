@@ -462,6 +462,13 @@ dpi_classify_send(DPI = #dpi{payload = Payload0}) when ?is_vterm_t(Payload0) ->
     %%     {'$gen_call', From, {terminate_child, ChildId}}
     %%     {'$gen_call', From, {restart_child, ChildId}}
     %%     {'$gen_call', From, {delete_child, ChildId}}
+    %%     {'$gen_call', From, {spawn, GroupLeaderPid, Module, Function, Args}}
+    %%     {'$gen_call', From, {apply_once, {Started, Time, {Module, Function, Args}}}}
+    %%     {'$gen_call', From, {apply_interval, {Started, Time, Target, {Module, Function, Args}}}}
+    %%     {'$gen_call', From, {apply_repeatedly, {Started, Time, Target, {Module, Function, Args}}}}
+    %%     {'$gen_call', From, {dict_insert, {filter, FilterName}, FilterFun}}
+    %%     {remote, load_compiled, CompiledEntries}
+    %%     {command, ReplyPid, {start, {job, SupervisorPid, TestDescriptor, Options}}}
     %%     {io_request, From, ReplyAs, Request}
     %%     {io_reply, ReplyAs, Reply}
     %%
@@ -480,11 +487,44 @@ dpi_classify_send(DPI = #dpi{payload = Payload0}) when ?is_vterm_t(Payload0) ->
         {'$gen_call', _From, Request} ->
             Hint =
                 case Request of
-                    {start_child, _ChildSpec} -> drop;
-                    {terminate_child, _ChildId} -> drop;
-                    {restart_child, _ChildId} -> drop;
-                    {delete_child, _ChildId} -> drop;
-                    _ -> unsafe
+                    {start_child, _ChildSpec} ->
+                        drop;
+                    {terminate_child, _ChildId} ->
+                        drop;
+                    {restart_child, _ChildId} ->
+                        drop;
+                    {delete_child, _ChildId} ->
+                        drop;
+                    {spawn, GroupLeaderPid, Module, Function, Args} when
+                        is_pid(GroupLeaderPid),
+                        is_atom(Module),
+                        is_atom(Function),
+                        is_list(Args)
+                    ->
+                        drop;
+                    {apply_once, {Started, Time, {Module, Function, Args}}} when
+                        is_integer(Started),
+                        is_integer(Time),
+                        is_atom(Module),
+                        is_atom(Function),
+                        is_list(Args)
+                    ->
+                        drop;
+                    {ApplyKind, {Started, Time, _Target, {Module, Function, Args}}} when
+                        (ApplyKind =:= apply_interval orelse ApplyKind =:= apply_repeatedly),
+                        is_integer(Started),
+                        is_integer(Time),
+                        is_atom(Module),
+                        is_atom(Function),
+                        is_list(Args)
+                    ->
+                        drop;
+                    {dict_insert, {filter, FilterName}, FilterFun} when
+                        is_atom(FilterName), is_function(FilterFun)
+                    ->
+                        drop;
+                    _ ->
+                        unsafe
                 end,
             case Hint of
                 drop ->
@@ -498,6 +538,14 @@ dpi_classify_send(DPI = #dpi{payload = Payload0}) when ?is_vterm_t(Payload0) ->
             % LOG, DROP or REDIRECT
             dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1);
         {io_reply, _ReplyAs, _Reply} ->
+            % LOG, DROP or REDIRECT
+            dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1);
+        {remote, load_compiled, _CompiledEntries} ->
+            % LOG, DROP or REDIRECT
+            dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1);
+        {command, ReplyPid, {start, {job, SupervisorPid, _TestDescriptor, Options}}} when
+            is_pid(ReplyPid), is_pid(SupervisorPid), is_list(Options)
+        ->
             % LOG, DROP or REDIRECT
             dpi_maybe_log_event(DPI, fun dpi_drop_or_redirect/1);
         _ ->

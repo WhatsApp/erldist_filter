@@ -21,5 +21,7 @@ Keep only the two newest OTP majors. Run from the repository root.
 
 ## Defensive Review
 
-- On each OTP major upgrade, statically audit registered OTP handlers for `dpi.otp_name_blocklist` candidates and re-audit `udist.c` for destination-independent message shapes; never construct payloads or perform runtime exploit validation.
-- Create `IMPROVE_SECURITY.md` with confirmed, defense-in-depth, and rejected candidates. For each, record source/function, behavior, coverage gap, proposed control, compatibility risk, and confidence.
+- For each OTP major, record the upstream revision and statically review registered/global handlers for code loading, OS processes, callbacks, file writes, and runtime control. Do not build payloads or runtime-test attacks.
+- Classify candidates as confirmed, defense-in-depth, or rejected. Record the minimal selector, OTP source/function, behavior and coverage gap, control, compatibility risk, and confidence.
+- Add names through `codegen/config.yaml`; account for aliases and global-name-to-PID resolution. Implement exact structural matches in both `udist.c` and `vedf_channel.erl`.
+- Add positive and near-miss generator tests; regenerate, clean-rebuild after atom changes, and exercise every traffic/action mode. Run routine checks and update `CHANGELOG.md`.

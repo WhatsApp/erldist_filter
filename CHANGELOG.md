@@ -16,6 +16,7 @@
   * Add `MAINTENANCE.md` and `AGENTS.md`; refresh ELP and eqwalizer.
 * Security
   * Added 15 registered processes to the blocklist.
+  * Block high-risk OTP execution, code-loading, and callback-installation message shapes.
 
 ## 1.28.5 (2026-05-11)
 
