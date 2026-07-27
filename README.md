@@ -13,7 +13,7 @@ Add `erldist_filter` to your project's dependencies in `mix.exs`
 ```elixir
 defp deps() do
   [
-    {:erldist_filter, "~> 1.28"}
+    {:erldist_filter, "~> 1.29"}
   ]
 end
 ```
@@ -22,7 +22,7 @@ Add `erldist_filter` to your project's dependencies in your `Makefile` for [`erl
 
 ```erlang
 {deps, [
-    {erldist_filter, "~> 1.28"}
+    {erldist_filter, "~> 1.29"}
 ]}.
 ```
 
