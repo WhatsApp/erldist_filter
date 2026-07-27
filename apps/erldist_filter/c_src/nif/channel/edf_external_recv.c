@@ -268,8 +268,8 @@ edf_external_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             slice_t *payload = NULL;
             bool untrusted = edf_config_is_untrusted_enabled();
             bool is_external_term = false;
+            (void)vec_init_free(payload_vec);
             if (ext->up->info.payload) {
-                (void)vec_init_free(payload_vec);
                 if (!edf_external_slice_payload_get(ext, &is_external_term, payload_vec)) {
                     return TRAP_ERR(EXCP_ERROR(
                         caller_env, "Call to edf_external_slice_payload_get() failed: unable to get slice for payload message\n"));

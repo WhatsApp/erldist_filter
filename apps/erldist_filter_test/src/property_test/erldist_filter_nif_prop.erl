@@ -145,6 +145,16 @@ prop_dist_ext_to_vterm_2(_Config) ->
                 allow_atom_cache_refs => true
             }),
             conjunction([
+                {native_term_without_atom_cache_refs,
+                    ?VTERM_EQUALS(
+                        erts_debug:dist_ext_to_term({}, VTermExternalBinary),
+                        erldist_filter_nif:dist_ext_to_term({}, VTermExternalBinary)
+                    )},
+                {native_term_with_atom_cache_refs,
+                    ?VTERM_EQUALS(
+                        erts_debug:dist_ext_to_term(Atoms, VTermWithAtomCacheRefsExternalBinary),
+                        erldist_filter_nif:dist_ext_to_term(Atoms, VTermWithAtomCacheRefsExternalBinary)
+                    )},
                 {term_without_atom_cache_refs,
                     ?VTERM_EQUALS(
                         erts_debug:dist_ext_to_term({}, VTermExternalBinary),

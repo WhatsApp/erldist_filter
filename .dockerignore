@@ -1,0 +1,17 @@
+.git
+.elixir_ls
+**/_build
+**/deps
+**/doc
+**/*.beam
+**/*.o
+**/c_src/env.mk
+apps/erldist_filter/priv/*.dll
+apps/erldist_filter/priv/*.dylib
+apps/erldist_filter/priv/*.so
+codegen/.venv
+cover
+elp
+erlfmt
+erl_crash.dump
+rebar3.crashdump

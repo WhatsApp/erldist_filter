@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE.md file in the root directory of this source tree.
 
+sanitizers_image := "erldist-filter-sanitizers"
+
 [linux]
 [working-directory: '/project/codegen']
 codegen: poetry-install format
@@ -65,3 +67,19 @@ sign: docker-sign
 [macos]
 watch:
     watchexec -w codegen -- just codegen
+
+[group('test')]
+sanitizers: sanitizers-docker
+
+[group('test')]
+[linux]
+sanitizers-native:
+    bash "{{justfile_directory()}}/justfiles/sanitizers/run.sh" "{{justfile_directory()}}"
+
+[group('test')]
+sanitizers-docker: sanitizers-docker-build
+    docker run --rm {{sanitizers_image}}
+
+[group('docker')]
+sanitizers-docker-build:
+    docker build --file justfiles/sanitizers/Dockerfile --tag {{sanitizers_image}} .

@@ -36,6 +36,8 @@
 
 %% Test Cases
 -export([
+    dist_ext_to_term_2/0,
+    dist_ext_to_term_2/1,
     dist_ext_to_vdist_2/0,
     dist_ext_to_vdist_2/1,
     dist_ext_to_vterm_2/0,
@@ -74,6 +76,7 @@ all() ->
 groups() ->
     [
         {vedf, [parallel], [
+            dist_ext_to_term_2,
             dist_ext_to_vdist_2,
             dist_ext_to_vterm_2,
             dist_ext_to_vterm_3,
@@ -90,6 +93,10 @@ groups() ->
     ].
 
 init_per_suite(Config) ->
+    case os:getenv("ERLDIST_FILTER_REQUIRE_ASAN") of
+        "1" -> ?assertEqual(asan, erlang:system_info(emu_type));
+        _ -> ok
+    end,
     Config.
 
 end_per_suite(_Config) ->
@@ -110,6 +117,24 @@ end_per_testcase(_TestCase, _Config) ->
 %%%=============================================================================
 %%% Test Cases
 %%%=============================================================================
+
+dist_ext_to_term_2() ->
+    [
+        {doc, "Loads the `erldist_filter_nif' and verifies that `dist_ext_to_term/2' functions as expected."},
+        {timetrap, {seconds, 60}}
+    ].
+
+dist_ext_to_term_2(Config) ->
+    dist_ext_to_term_2(Config, vterm_test_vectors()).
+
+%% @private
+dist_ext_to_term_2(Config, [{Atoms, VTermInput, _VTermOutput} | TestVectors]) ->
+    ExternalBinary = vterm_encode:external_vterm_to_binary(VTermInput, #{allow_atom_cache_refs => true}),
+    Expected = erts_debug:dist_ext_to_term(Atoms, ExternalBinary),
+    ?assertEqual(Expected, erldist_filter_nif:dist_ext_to_term(Atoms, ExternalBinary)),
+    dist_ext_to_term_2(Config, TestVectors);
+dist_ext_to_term_2(_Config, []) ->
+    ok.
 
 dist_ext_to_vdist_2() ->
     [
