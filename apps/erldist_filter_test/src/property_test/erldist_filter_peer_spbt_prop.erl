@@ -29,26 +29,48 @@
 %%% Properties
 %%%=============================================================================
 
+%% The peers are reused across PropEr trials. Each trial starts connected and must leave the connection intact.
+
 -spec prop_serial_statem(ct_suite:ct_config()) -> proper:test().
 prop_serial_statem(Config) ->
-    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
+    P2P = find_p2p(Config),
     ?FORALL(
         Commands,
         commands(?STATEM, ?MODEL:initial_state(#{p2p => P2P})),
         begin
+            ok = erldist_filter_peer_spbt_shim:ensure_connected(P2P),
             RunResult = {_History, _State, _Result} = run_commands(?STATEM, Commands),
-            erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)
+            PresentResult = erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config),
+            case erldist_filter_peer_spbt_shim:is_connected(P2P) of
+                true -> PresentResult;
+                false -> false
+            end
         end
     ).
 
 -spec prop_parallel_statem(ct_suite:ct_config()) -> proper:test().
 prop_parallel_statem(Config) ->
-    {p2p, P2P} = lists:keyfind(p2p, 1, Config),
+    P2P = find_p2p(Config),
     ?FORALL(
         Commands,
         parallel_commands(?STATEM, ?MODEL:initial_state(#{p2p => P2P})),
         begin
+            ok = erldist_filter_peer_spbt_shim:ensure_connected(P2P),
             RunResult = {_History, _State, _Result} = run_parallel_commands(?STATEM, Commands),
-            erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config)
+            PresentResult = erldist_filter_proper:present_result(?MODULE, Commands, RunResult, Config),
+            case erldist_filter_peer_spbt_shim:is_connected(P2P) of
+                true -> PresentResult;
+                false -> false
+            end
         end
     ).
+
+%%%-----------------------------------------------------------------------------
+%%% Internal functions
+%%%-----------------------------------------------------------------------------
+
+-spec find_p2p(ct_suite:ct_config()) -> erldist_filter_peer_spbt_shim:p2p().
+find_p2p(Config) ->
+    case lists:keyfind(p2p, 1, Config) of
+        {p2p, P2P} when is_pid(P2P) -> P2P
+    end.

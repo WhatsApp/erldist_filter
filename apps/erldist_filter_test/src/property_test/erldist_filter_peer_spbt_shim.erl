@@ -19,6 +19,8 @@
 -export([
     noop/0,
     open_p2p/1,
+    ensure_connected/1,
+    is_connected/1,
     ping/1,
     alias_priority_send/2,
     alias_send/2,
@@ -74,6 +76,19 @@ noop() ->
 open_p2p(Label) ->
     P2P = erldist_filter_test_p2p:open(Label),
     {ok, P2P}.
+
+-spec ensure_connected(P2P) -> ok when P2P :: p2p().
+ensure_connected(P2P) ->
+    #{upeer := U = {UNode, _}, vpeer := V = {VNode, _}} = erldist_filter_test_p2p:peers(P2P),
+    true = rpc(U, net_kernel, connect_node, [VNode]),
+    true = rpc(V, net_kernel, connect_node, [UNode]),
+    ok.
+
+-spec is_connected(P2P) -> boolean() when P2P :: p2p().
+is_connected(P2P) ->
+    #{upeer := U = {UNode, _}, vpeer := V = {VNode, _}} = erldist_filter_test_p2p:peers(P2P),
+    lists:member(VNode, rpc(U, erlang, nodes, [connected])) andalso
+        lists:member(UNode, rpc(V, erlang, nodes, [connected])).
 
 -spec ping(P2P) -> pong | pang when P2P :: p2p().
 ping(P2P) ->
