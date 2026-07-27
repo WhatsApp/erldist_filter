@@ -14,6 +14,8 @@
   * Add `just cover` for Common Test coverage reports.
   * Make generated-source signing idempotent.
   * Add `MAINTENANCE.md` and `AGENTS.md`; refresh ELP and eqwalizer.
+* Security
+  * Added 15 registered processes to the blocklist.
 
 ## 1.28.5 (2026-05-11)
 

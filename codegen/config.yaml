@@ -336,8 +336,10 @@ dpi:
     - boot_server
     - code_server
     - compl_pid
+    - cover_server
     - cpu_sup
     - crashdump_viewer
+    - crashdump_viewer_server
     - ct_config_server
     - ct_default_gl
     - ct_event
@@ -350,6 +352,7 @@ dpi:
     - cth_log_redirect
     - dbg
     - dbg_iserver
+    - dbg_wx_mon
     - dbg_wx_winman
     - dets_server
     - dets_sup
@@ -387,14 +390,19 @@ dpi:
     - erl_signal_server
     - error_logger
     - erts_code_purger
+    - et_collector
+    - eunit_server
     - file_server
     - file_server_2
+    - fprof_server
     - ftp_sup
     - global
     - global_group
     - global_group_check
     - global_name_server
     - group
+    - heart
+    - heart_port
     - httpc_handler_sup
     - httpc_manager
     - httpc_profile_sup
@@ -419,6 +427,7 @@ dpi:
     - logger_simple_h
     - logger_std_h_default
     - logger_sup
+    - megaco_config
     - megaco_misc_sup
     - megaco_monitor
     - megaco_sup
@@ -442,13 +451,16 @@ dpi:
     - mnesia_tm
     - net_sup
     - nteventlog
+    - observer
     - odbc_sup
     - os_mon_sup
     - os_mon_sysinfo
     - os_sup_server
     - peer_supervision
+    - pool_master
     - rb_server
     - release_handler
+    - rex_proxy_user
     - runtime_tools_sup
     - sasl_safe_sup
     - sasl_sup
@@ -467,6 +479,8 @@ dpi:
     - snmpm_config
     - snmpm_misc_sup
     - snmpm_server
+    - snmpm_server_cbproxy
+    - snmpm_server_nis
     - snmpm_server_sup
     - snmpm_supervisor
     - ssh_dbg
@@ -508,6 +522,7 @@ dpi:
     - tls_server_sup
     - tls_sup
     - tprof
+    - ttb
     - user
     - user_drv
     - user_drv_reader
