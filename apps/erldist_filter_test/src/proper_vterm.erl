@@ -52,8 +52,6 @@
     vterm_list_ext/1,
     vterm_map_ext/0,
     vterm_map_ext/1,
-    vterm_record_ext/0,
-    vterm_record_ext/1,
     vterm_new_float_ext/0,
     vterm_new_fun_ext/0,
     vterm_new_fun_ext/1,
@@ -75,6 +73,8 @@
     vterm_proper_list/0,
     vterm_proper_list/1,
     vterm_proper_list/2,
+    vterm_record_ext/0,
+    vterm_record_ext/1,
     vterm_reference/0,
     vterm_reference/1,
     vterm_reference_ext/0,
@@ -90,13 +90,19 @@
     check_for_map_bug/1
 ]).
 
+-type map_order() :: undefined | ordered | reversed.
 -type options() :: #{
     allow_atom_cache_refs => boolean(),
-    large_binaries => boolean()
+    large_binaries => boolean(),
+    map_order => map_order(),
+    record_order => record_order()
 }.
+-type record_order() :: undefined | ordered | reversed.
 
 -export_type([
-    options/0
+    map_order/0,
+    options/0,
+    record_order/0
 ]).
 
 %%%=============================================================================
@@ -384,65 +390,37 @@ vterm_map_ext(Opts) ->
         vterm_map_ext:new(Arity, Pairs)
     ).
 
+-spec vterm_map_ext_pair(proper_vterm:options()) -> proper_types:type().
+vterm_map_ext_pair(Opts) ->
+    ?LET(Key, vterm(Opts), {simplify_map_key(Key), {Key, vterm(Opts)}}).
+
 -spec vterm_map_ext_pairs(non_neg_integer(), proper_vterm:options()) -> proper_types:type().
 vterm_map_ext_pairs(Arity, Opts) ->
-    %% Sort the keys (easier for humans to read when debugging failures)
     ?LET(
         UnsortedPairs,
         %% No duplicate keys allowed in a map
         ?SUCHTHAT(
             UnsortedPairs,
-            vector(Arity, {vterm(Opts), vterm(Opts)}),
+            vector(Arity, vterm_map_ext_pair(Opts)),
             begin
-                SetOfKeys = sets:from_list([simplify_map_key(Key) || {Key, _Value} <- UnsortedPairs], [{version, 2}]),
-                sets:size(SetOfKeys) =:= Arity
+                maps:size(#{SortKey => [] || {SortKey, _Pair} <- UnsortedPairs}) =:= Arity
             end
         ),
         begin
-            WrapSorted = lists:sort([
-                {simplify_map_key(Key), {Key, Value}}
-             || {Key, Value} <- UnsortedPairs
-            ]),
-            SortedPairs = [Pair || {_SortKey, Pair} <- WrapSorted],
-            SortedPairs
+            %% Optionally sort the keys (easier for humans to read when debugging failures)
+            Pairs1 =
+                case Opts of
+                    #{map_order := ordered} ->
+                        lists:sort(UnsortedPairs);
+                    #{map_order := reversed} ->
+                        lists:reverse(lists:sort(UnsortedPairs));
+                    _ ->
+                        UnsortedPairs
+                end,
+            Pairs2 = [Pair || {_SortKey, Pair} <- Pairs1],
+            Pairs2
         end
     ).
-
--spec vterm_record_ext() -> proper_types:type().
-vterm_record_ext() ->
-    vterm_record_ext(#{}).
-
--spec vterm_record_ext(proper_vterm:options()) -> proper_types:type().
-vterm_record_ext(Opts) ->
-    Module = vterm_small_atom_utf8_ext:new(12, <<"proper_vterm">>),
-    Name = vterm_small_atom_utf8_ext:new(6, <<"sample">>),
-    ?LET(
-        {Arity, Exported, Values},
-        ?LET(Arity, mostly(integer(0, 4), integer(5, 16)), {Arity, boolean(), vector(Arity, vterm(Opts))}),
-        begin
-            FieldNames = vterm_record_ext_field_names(Arity),
-            vterm_record_ext:new(Arity, Exported, Module, Name, FieldNames, Values)
-        end
-    ).
-
--spec vterm_record_ext_field_names(non_neg_integer()) -> [vterm:atom_t()].
-vterm_record_ext_field_names(Arity) ->
-    [
-        begin
-            Name = <<"field_", (integer_to_binary(Index))/bytes>>,
-            vterm_small_atom_utf8_ext:new(byte_size(Name), Name)
-        end
-     || Index <- lists:seq(1, Arity)
-    ].
-
--spec otp_29_plus_vterms(proper_vterm:options()) -> [{pos_integer(), proper_types:type()}].
--if(?OTP_RELEASE >= 29).
-otp_29_plus_vterms(Opts) ->
-    [{1, vterm_record_ext(Opts)}].
--else.
-otp_29_plus_vterms(_Opts) ->
-    [].
--endif.
 
 -spec vterm_new_float_ext() -> proper_types:type().
 vterm_new_float_ext() ->
@@ -575,6 +553,57 @@ vterm_proper_list(Len, Opts) when is_integer(Len) andalso Len > 0 ->
         vterm_list_ext:new(Len, Elements, Tail)
     ).
 
+-spec vterm_record_ext() -> proper_types:type().
+vterm_record_ext() ->
+    vterm_record_ext(#{}).
+
+-spec vterm_record_ext(proper_vterm:options()) -> proper_types:type().
+vterm_record_ext(Opts) ->
+    ?LET(
+        {NumFields, Exported, Module, Name, Fields},
+        ?LET(
+            {NumFields, Exported, Module, Name},
+            {mostly(integer(0, 4), integer(5, 33)), boolean(), vterm_atom(Opts), vterm_atom(Opts)},
+            {NumFields, Exported, Module, Name, vterm_record_ext_fields(NumFields, Opts)}
+        ),
+        begin
+            {FieldNames, Values} = lists:unzip(Fields),
+            vterm_record_ext:new(NumFields, Exported, Module, Name, FieldNames, Values)
+        end
+    ).
+
+-spec vterm_record_ext_field(proper_vterm:options()) -> proper_types:type().
+vterm_record_ext_field(Opts) ->
+    ?LET(FieldName, vterm_atom(Opts), {simplify_record_field_name(FieldName), {FieldName, vterm(Opts)}}).
+
+-spec vterm_record_ext_fields(non_neg_integer(), proper_vterm:options()) -> proper_types:type().
+vterm_record_ext_fields(NumFields, Opts) ->
+    ?LET(
+        UnsortedFields,
+        %% No duplicate field names allowed in a record
+        ?SUCHTHAT(
+            UnsortedFields,
+            vector(NumFields, vterm_record_ext_field(Opts)),
+            begin
+                maps:size(#{SortFieldName => [] || {SortFieldName, _Field} <- UnsortedFields}) =:= NumFields
+            end
+        ),
+        begin
+            %% Optionally sort the fields (easier for humans to read when debugging failures)
+            Fields1 =
+                case Opts of
+                    #{record_order := ordered} ->
+                        lists:sort(UnsortedFields);
+                    #{record_order := reversed} ->
+                        lists:reverse(lists:sort(UnsortedFields));
+                    _ ->
+                        UnsortedFields
+                end,
+            Fields2 = [Field || {_SortFieldName, Field} <- Fields1],
+            Fields2
+        end
+    ).
+
 -spec vterm_reference() -> proper_types:type().
 vterm_reference() ->
     vterm_reference(#{}).
@@ -690,6 +719,19 @@ check_for_map_bug([K | Ks], M) ->
             false
     end.
 
+%%%-----------------------------------------------------------------------------
+%%% Internal functions
+%%%-----------------------------------------------------------------------------
+
+-spec otp_29_plus_vterms(proper_vterm:options()) -> [{pos_integer(), proper_types:type()}].
+-if(?OTP_RELEASE >= 29).
+otp_29_plus_vterms(Opts) ->
+    [{1, vterm_record_ext(Opts)}].
+-else.
+otp_29_plus_vterms(_Opts) ->
+    [].
+-endif.
+
 -spec simplify_map_key(vterm:t()) -> vterm:t().
 simplify_map_key(VT0) ->
     {VT1, undefined} = vterm:xform(VT0, undefined, fun simplify_map_key/2),
@@ -700,4 +742,16 @@ simplify_map_key(#vterm_atom_cache_ref{index = Index}, Acc) ->
     IndexAtom = erlang:list_to_atom("ATOM_CACHE_REF:" ++ erlang:integer_to_list(Index)),
     {cont, vterm:expand(IndexAtom), Acc};
 simplify_map_key(_VTerm, _Acc) ->
+    cont.
+
+-spec simplify_record_field_name(vterm:t()) -> vterm:t().
+simplify_record_field_name(VT0) ->
+    {VT1, undefined} = vterm:xform(VT0, undefined, fun simplify_record_field_name/2),
+    vterm:simplify(VT1).
+
+-spec simplify_record_field_name(vterm:t(), undefined) -> vterm:xform_result(vterm:t(), undefined).
+simplify_record_field_name(#vterm_atom_cache_ref{index = Index}, Acc) ->
+    IndexAtom = erlang:list_to_atom("ATOM_CACHE_REF:" ++ erlang:integer_to_list(Index)),
+    {cont, vterm:expand(IndexAtom), Acc};
+simplify_record_field_name(_VTerm, _Acc) ->
     cont.
