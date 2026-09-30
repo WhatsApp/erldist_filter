@@ -122,7 +122,6 @@ vterm_resolved_table_destroy(__vterm_env_t *vtenv, vterm_resolved_table_t *table
 
     if (table->hm != NULL) {
         // (void)enif_fprintf(stderr, "RESOLVED TABLE SIZE IS %d\n", kh_size(table->hm));
-        // (void)fflush(stderr);
         for (i = 0; i != kh_end(table->hm); i++) {
             if (!kh_exist(table->hm, i)) {
                 continue;
@@ -130,7 +129,6 @@ vterm_resolved_table_destroy(__vterm_env_t *vtenv, vterm_resolved_table_t *table
             key = &(kh_key(table->hm, i));
             val = &(kh_val(table->hm, i));
             // (void)enif_fprintf(stderr, "RESOLVED TABLE CONTAINS %T\n", val->term);
-            // (void)fflush(stderr);
             (void)vterm_resolved_hm_val_destroy(vtenv, table, key, val);
         }
         (void)vterm_resolved_hm_destroy(table->hm);
@@ -377,7 +375,6 @@ vterm_env_heap_reserve_strict(vterm_env_t *super, size_t size)
     }
 
     (void)enif_fprintf(stderr, "Attempted to reserve %llu bytes which is not allowed in strict mode.\n", size);
-    (void)fflush(stderr);
     abort();
 }
 

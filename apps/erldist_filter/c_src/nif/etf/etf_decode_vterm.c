@@ -1090,7 +1090,6 @@ decode_term_length_callback(ErlNifEnv *caller_env, etf_decode_term_length_trap_t
             "THIS SHOULD NEVER HAPPEN: child->head[0] = %c, child->heap_size = %llu, while VTERM_SIZEOF_LAZY_TERM() = %llu\n",
             (char)(child->head[0]), child->heap_size, VTERM_SIZEOF_LAZY_TERM());
         (void)vterm_env_dump_mem(child->head, term_length);
-        (void)fflush(stderr);
         abort();
     }
 

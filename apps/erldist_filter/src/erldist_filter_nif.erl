@@ -97,6 +97,9 @@
     router_info/0,
     router_name/1,
     spawn_flags/0,
+    test_hook_arm/3,
+    test_hook_disarm/0,
+    test_hook_open/0,
     version/0,
     world_stats_get/0
 ]).

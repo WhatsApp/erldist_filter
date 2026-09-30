@@ -310,6 +310,13 @@ erldist_filter_nif_load(ErlNifEnv *env, void **priv_data, ERL_NIF_TERM load_info
     (void)priv_data;
     (void)load_info;
 
+#ifdef EDF_TEST_HOOKS
+    retval = edf_channel_test_hook_load();
+    if (retval != 0) {
+        return retval;
+    }
+#endif
+
     erldist_filter_nif_instances++;
 
     return retval;
@@ -360,6 +367,13 @@ erldist_filter_nif_upgrade(ErlNifEnv *env, void **new_priv_data, void **old_priv
     (void)old_priv_data;
     (void)load_info;
 
+#ifdef EDF_TEST_HOOKS
+    retval = edf_channel_test_hook_load();
+    if (retval != 0) {
+        return retval;
+    }
+#endif
+
     erldist_filter_nif_instances++;
 
     return retval;
@@ -380,6 +394,9 @@ erldist_filter_nif_unload(ErlNifEnv *env, void *priv_data)
     if (erldist_filter_nif_instances == 1) {
         /* Destroy private data. */
         (void)priv_data;
+#ifdef EDF_TEST_HOOKS
+        (void)edf_channel_test_hook_unload();
+#endif
     }
 
     erldist_filter_nif_instances--;

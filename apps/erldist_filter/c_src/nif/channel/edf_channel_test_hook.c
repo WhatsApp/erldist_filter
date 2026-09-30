@@ -11,7 +11,7 @@
 #ifdef EDF_TEST_HOOKS
 
 #include <inttypes.h>
-#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 
 typedef enum edf_channel_test_hook_barrier_t {
@@ -20,13 +20,38 @@ typedef enum edf_channel_test_hook_barrier_t {
     EDF_CHANNEL_TEST_HOOK_BARRIER_OPEN,
 } edf_channel_test_hook_barrier_t;
 
-static pthread_mutex_t test_hook_mutex = PTHREAD_MUTEX_INITIALIZER;
-static bool test_hook_armed = false;
+static ErlNifMutex *test_hook_mutex = NULL;
+static atomic_bool test_hook_armed = false;
 static ErlNifPid test_hook_notify_pid;
 static const edf_channel_resource_t *test_hook_resource = NULL;
 static uint64_t test_hook_barrier_fragment_id = 0;
 static edf_channel_test_hook_barrier_t test_hook_barrier = EDF_CHANNEL_TEST_HOOK_BARRIER_IDLE;
 static uint64_t test_hook_event_count = 0;
+
+int
+edf_channel_test_hook_load(void)
+{
+    if (test_hook_mutex == NULL) {
+        test_hook_mutex = enif_mutex_create("erldist_filter.channel_test_hook_mutex");
+        if (test_hook_mutex == NULL) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+void
+edf_channel_test_hook_unload(void)
+{
+    // Called only when the last NIF module instance unloads.
+    if (test_hook_mutex != NULL) {
+        (void)atomic_store_explicit(&test_hook_armed, false, memory_order_release);
+        test_hook_resource = NULL;
+        (void)enif_mutex_destroy(test_hook_mutex);
+        test_hook_mutex = NULL;
+    }
+    return;
+}
 
 static ERL_NIF_TERM
 test_hook_pointer_term(ErlNifEnv *env, const void *pointer)
@@ -55,19 +80,18 @@ edf_channel_test_hook_event(const char *name, const edf_channel_resource_t *reso
     ERL_NIF_TERM details;
     uint64_t count;
 
-    if (!__atomic_load_n(&test_hook_armed, __ATOMIC_ACQUIRE)) {
+    if (!atomic_load_explicit(&test_hook_armed, memory_order_acquire)) {
         return;
     }
-    (void)pthread_mutex_lock(&test_hook_mutex);
-    if (!test_hook_armed || resource == NULL || resource != test_hook_resource) {
-        (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_mutex_lock(test_hook_mutex);
+    if (!atomic_load_explicit(&test_hook_armed, memory_order_relaxed) || resource == NULL || resource != test_hook_resource) {
+        (void)enif_mutex_unlock(test_hook_mutex);
         return;
     }
     count = ++test_hook_event_count;
     // Pointers are only printed; `external' may already be freed and must never be dereferenced here.
-    (void)fprintf(stderr, "[edf_test_hook] event=%" PRIu64 " name=%s resource=%p trap=%p external=%p\n", count, name,
-                  (const void *)resource, trap, external);
-    (void)fflush(stderr);
+    (void)enif_fprintf(stderr, "[edf_test_hook] event=%" PRIu64 " name=%s resource=%p trap=%p external=%p\n", count, name,
+                       (const void *)resource, trap, external);
     msg_env = enif_alloc_env();
     if (msg_env != NULL) {
         keys[0] = enif_make_atom(msg_env, "trap");
@@ -80,7 +104,7 @@ edf_channel_test_hook_event(const char *name, const edf_channel_resource_t *reso
         (void)test_hook_notify(msg_env, count, name, details);
         (void)enif_free_env(msg_env);
     }
-    (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_mutex_unlock(test_hook_mutex);
     return;
 }
 
@@ -96,20 +120,20 @@ edf_channel_test_hook_recv_barrier(const edf_channel_resource_t *resource, const
     bool linked;
     int should_yield = 0;
 
-    if (external == NULL || !__atomic_load_n(&test_hook_armed, __ATOMIC_ACQUIRE)) {
+    if (external == NULL || !atomic_load_explicit(&test_hook_armed, memory_order_acquire)) {
         return 0;
     }
 
-    (void)pthread_mutex_lock(&test_hook_mutex);
-    if (!test_hook_armed || resource == NULL || resource != test_hook_resource || test_hook_barrier_fragment_id == 0 ||
-        test_hook_barrier == EDF_CHANNEL_TEST_HOOK_BARRIER_OPEN) {
-        (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_mutex_lock(test_hook_mutex);
+    if (!atomic_load_explicit(&test_hook_armed, memory_order_relaxed) || resource == NULL || resource != test_hook_resource ||
+        test_hook_barrier_fragment_id == 0 || test_hook_barrier == EDF_CHANNEL_TEST_HOOK_BARRIER_OPEN) {
+        (void)enif_mutex_unlock(test_hook_mutex);
         return 0;
     }
     // FragmentId of the most recently received fragment of the in-flight external.
     fragment_id = external->fragment_id_next + 1;
     if (fragment_id != test_hook_barrier_fragment_id) {
-        (void)pthread_mutex_unlock(&test_hook_mutex);
+        (void)enif_mutex_unlock(test_hook_mutex);
         return 0;
     }
     should_yield = 1;
@@ -117,12 +141,12 @@ edf_channel_test_hook_recv_barrier(const edf_channel_resource_t *resource, const
         test_hook_barrier = EDF_CHANNEL_TEST_HOOK_BARRIER_WAITING;
         count = ++test_hook_event_count;
         linked = edf_external_sequence_is_linked(external);
-        (void)fprintf(stderr,
-                      "[edf_test_hook] event=%" PRIu64 " name=recv_barrier resource=%p trap=%p external=%p sequence_id=%" PRIu64
-                      " fragment_id=%" PRIu64 " fragment_count=%" PRIu64 " linked_in_rx_sequences=%s\n",
-                      count, (const void *)resource, trap, (void *)external, external->sequence_id, fragment_id,
-                      external->fragment_count, (linked) ? "true" : "false");
-        (void)fflush(stderr);
+        (void)enif_fprintf(stderr,
+                           "[edf_test_hook] event=%" PRIu64
+                           " name=recv_barrier resource=%p trap=%p external=%p sequence_id=%" PRIu64 " fragment_id=%" PRIu64
+                           " fragment_count=%" PRIu64 " linked_in_rx_sequences=%s\n",
+                           count, (const void *)resource, trap, (void *)external, external->sequence_id, fragment_id,
+                           external->fragment_count, (linked) ? "true" : "false");
         msg_env = enif_alloc_env();
         if (msg_env != NULL) {
             keys[0] = enif_make_atom(msg_env, "trap");
@@ -144,7 +168,7 @@ edf_channel_test_hook_recv_barrier(const edf_channel_resource_t *resource, const
             (void)enif_free_env(msg_env);
         }
     }
-    (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_mutex_unlock(test_hook_mutex);
     return should_yield;
 }
 
@@ -168,17 +192,16 @@ erldist_filter_nif_test_hook_arm_3(ErlNifEnv *env, int argc, const ERL_NIF_TERM 
         return EXCP_BADARG(env, "BarrierFragmentId must be a non-negative integer (0 disables the barrier)");
     }
 
-    (void)pthread_mutex_lock(&test_hook_mutex);
+    (void)enif_mutex_lock(test_hook_mutex);
     test_hook_notify_pid = notify_pid;
     test_hook_resource = resource;
     test_hook_barrier_fragment_id = (uint64_t)barrier_fragment_id;
     test_hook_barrier = EDF_CHANNEL_TEST_HOOK_BARRIER_IDLE;
     test_hook_event_count = 0;
-    (void)__atomic_store_n(&test_hook_armed, true, __ATOMIC_RELEASE);
-    (void)fprintf(stderr, "[edf_test_hook] armed resource=%p barrier_fragment_id=%" PRIu64 "\n", (void *)resource,
-                  (uint64_t)barrier_fragment_id);
-    (void)fflush(stderr);
-    (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)atomic_store_explicit(&test_hook_armed, true, memory_order_release);
+    (void)enif_fprintf(stderr, "[edf_test_hook] armed resource=%p barrier_fragment_id=%" PRIu64 "\n", (void *)resource,
+                       (uint64_t)barrier_fragment_id);
+    (void)enif_mutex_unlock(test_hook_mutex);
 
     return ATOM(ok);
 }
@@ -192,11 +215,10 @@ erldist_filter_nif_test_hook_open_0(ErlNifEnv *env, int argc, const ERL_NIF_TERM
         return EXCP_BADARG(env, "argc must be 0");
     }
 
-    (void)pthread_mutex_lock(&test_hook_mutex);
+    (void)enif_mutex_lock(test_hook_mutex);
     test_hook_barrier = EDF_CHANNEL_TEST_HOOK_BARRIER_OPEN;
-    (void)fprintf(stderr, "[edf_test_hook] barrier opened resource=%p\n", (const void *)test_hook_resource);
-    (void)fflush(stderr);
-    (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_fprintf(stderr, "[edf_test_hook] barrier opened resource=%p\n", (const void *)test_hook_resource);
+    (void)enif_mutex_unlock(test_hook_mutex);
 
     return ATOM(ok);
 }
@@ -210,12 +232,12 @@ erldist_filter_nif_test_hook_disarm_0(ErlNifEnv *env, int argc, const ERL_NIF_TE
         return EXCP_BADARG(env, "argc must be 0");
     }
 
-    (void)pthread_mutex_lock(&test_hook_mutex);
-    (void)__atomic_store_n(&test_hook_armed, false, __ATOMIC_RELEASE);
+    (void)enif_mutex_lock(test_hook_mutex);
+    (void)atomic_store_explicit(&test_hook_armed, false, memory_order_release);
     test_hook_resource = NULL;
     test_hook_barrier_fragment_id = 0;
     test_hook_barrier = EDF_CHANNEL_TEST_HOOK_BARRIER_IDLE;
-    (void)pthread_mutex_unlock(&test_hook_mutex);
+    (void)enif_mutex_unlock(test_hook_mutex);
 
     return ATOM(ok);
 }

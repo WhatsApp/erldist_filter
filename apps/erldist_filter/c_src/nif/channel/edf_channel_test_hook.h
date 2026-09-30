@@ -30,6 +30,9 @@ extern "C" {
 
 #ifdef EDF_TEST_HOOKS
 
+extern int edf_channel_test_hook_load(void);
+extern void edf_channel_test_hook_unload(void);
+
 extern void edf_channel_test_hook_event(const char *name, const edf_channel_resource_t *resource, const void *trap,
                                         const void *external);
 extern int edf_channel_test_hook_recv_barrier(const edf_channel_resource_t *resource, const void *trap, edf_external_t *external);

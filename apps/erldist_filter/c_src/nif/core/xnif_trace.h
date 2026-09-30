@@ -40,13 +40,11 @@ extern "C" {
 #ifdef XNIF_TRACE
 #define XNIF_TRACE_C(c)                                                                                                            \
     do {                                                                                                                           \
-        putchar(c);                                                                                                                \
-        fflush(stdout);                                                                                                            \
+        enif_fprintf(stdout, "%c", (c));                                                                                           \
     } while (0)
 #define XNIF_TRACE_S(s)                                                                                                            \
     do {                                                                                                                           \
-        fputs((s), stdout);                                                                                                        \
-        fflush(stdout);                                                                                                            \
+        enif_fprintf(stdout, "%s", (s));                                                                                           \
     } while (0)
 #define XNIF_TRACE_F(...)                                                                                                          \
     do {                                                                                                                           \
@@ -155,7 +153,6 @@ xnif_trace_dump_backtrace(void)
     for (i = 0; i < size; i++) {
         XNIF_BACKTRACE_F("\t%s\n", strings[i]);
     }
-    (void)fflush(stderr);
     (void)free(strings);
     return;
 #undef XNIF_TRACE_CALLER_DEPTH
