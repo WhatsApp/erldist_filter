@@ -68,12 +68,15 @@ The suite is skipped when the NIF is built without test hooks, unless
     error_cleanup_out_of_order_fragment/0,
     error_cleanup_out_of_order_fragment/1,
     error_cleanup_duplicate_fragment_header/0,
-    error_cleanup_duplicate_fragment_header/1
+    error_cleanup_duplicate_fragment_header/1,
+    error_cleanup_in_flight_external/0,
+    error_cleanup_in_flight_external/1
 ]).
 
 %% Macros
 -define(PACKET_SIZE, 4).
 -define(TIMEOUT, 10000).
+-define(DIST_HEADER, 68).
 -define(DIST_FRAG_HEADER, 69).
 
 %%%=============================================================================
@@ -91,7 +94,8 @@ all() ->
         channel_close_with_parked_fragments,
         normal_completion_through_barrier,
         error_cleanup_out_of_order_fragment,
-        error_cleanup_duplicate_fragment_header
+        error_cleanup_duplicate_fragment_header,
+        error_cleanup_in_flight_external
     ].
 
 -spec init_per_suite(Config :: ct_suite:ct_config()) -> erldist_filter_test:init_per_suite().
@@ -170,7 +174,7 @@ receiver_death_during_fragment_continuation(_Config) ->
     ok = erldist_filter_nif:test_hook_arm(self(), Channel, FragmentCount - 1),
     % The header fragment is received and parked without hitting the barrier. Replies may carry the atom cache
     % commit emitted for the header fragment, so the parked-fragment receives only check the reply shape.
-    ?assertMatch({ok, _}, owner_recv(Owner, split_packet(PHead))),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, split_packet(PHead))),
     _Tag = owner_recv_async(Owner, split_packet(PCont)),
     ExpectedFragmentId = FragmentCount - 1,
     {BarrierSeq, #{trap := Trap, fragment_id := ExpectedFragmentId, linked_in_rx_sequences := Linked}} = await_event(
@@ -212,8 +216,8 @@ receiver_death_with_parked_fragments(_Config) ->
     {PHead, [PCont | _], _FragmentCount, _Actions} = fragmented_message(),
     {Owner, MonitorRef, Channel} = start_owner(),
     ok = erldist_filter_nif:test_hook_arm(self(), Channel, 0),
-    ?assertMatch({ok, _}, owner_recv(Owner, [PHead])),
-    ?assertMatch({ok, _}, owner_recv(Owner, [PCont])),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, [PHead])),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, [PCont])),
     true = exit(Owner, kill),
     ok = await_down(Owner, MonitorRef, killed),
     {OwnerDownSeq, _} = await_event(owner_down),
@@ -233,11 +237,12 @@ channel_close_with_parked_fragments(_Config) ->
     {PHead, [PCont | _], _FragmentCount, _Actions} = fragmented_message(),
     {Owner, MonitorRef, Channel} = start_owner(),
     ok = erldist_filter_nif:test_hook_arm(self(), Channel, 0),
-    ?assertMatch({ok, _}, owner_recv(Owner, split_packet(PHead))),
-    ?assertMatch({ok, _}, owner_recv(Owner, split_packet(PCont))),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, split_packet(PHead))),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, split_packet(PCont))),
     ?assertEqual(ok, owner_close(Owner)),
     {_, _} = await_event(channel_destroy),
-    ?assertMatch({error, _}, owner_recv(Owner, [PCont])),
+    % channel_recv/2 returns (does not raise) {error, closed} once the channel is destroyed.
+    ?assertEqual({ok, {error, closed}}, owner_recv(Owner, [PCont])),
     ok = stop_owner(Owner, MonitorRef).
 
 -spec normal_completion_through_barrier() -> erldist_filter_test:testcase_info().
@@ -274,12 +279,12 @@ error_cleanup_out_of_order_fragment(_Config) ->
     {PHead, [PCont, PSkipped | _], _FragmentCount, _Actions} = fragmented_message(),
     {Owner, MonitorRef, Channel} = start_owner(),
     ok = erldist_filter_nif:test_hook_arm(self(), Channel, 0),
-    ?assertMatch({ok, _}, owner_recv(Owner, split_packet(PHead))),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, split_packet(PHead))),
     ?assertMatch({error, _}, owner_recv(Owner, split_packet(PSkipped))),
     {ErrorSeq, _} = await_event(recv_trap_error),
     {ChannelDestroySeq, _} = await_event(channel_destroy),
     ?assert(ErrorSeq < ChannelDestroySeq),
-    ?assertMatch({error, _}, owner_recv(Owner, split_packet(PCont))),
+    ?assertEqual({ok, {error, closed}}, owner_recv(Owner, split_packet(PCont))),
     ok = stop_owner(Owner, MonitorRef).
 
 -spec error_cleanup_duplicate_fragment_header() -> erldist_filter_test:testcase_info().
@@ -294,11 +299,32 @@ error_cleanup_duplicate_fragment_header(_Config) ->
     {PHead, _PTail, _FragmentCount, _Actions} = fragmented_message(),
     {Owner, MonitorRef, Channel} = start_owner(),
     ok = erldist_filter_nif:test_hook_arm(self(), Channel, 0),
-    ?assertMatch({ok, _}, owner_recv(Owner, split_packet(PHead))),
+    ?assertMatch({ok, Actions} when is_list(Actions), owner_recv(Owner, split_packet(PHead))),
     ?assertMatch({error, _}, owner_recv(Owner, split_packet(PHead))),
     {ErrorSeq, _} = await_event(recv_trap_error),
     {ChannelDestroySeq, _} = await_event(channel_destroy),
     ?assert(ErrorSeq < ChannelDestroySeq),
+    ok = stop_owner(Owner, MonitorRef).
+
+-spec error_cleanup_in_flight_external() -> erldist_filter_test:testcase_info().
+error_cleanup_in_flight_external() ->
+    [
+        {doc, "A control message decode error while the receive trap holds an in-flight external closes the channel"},
+        {timetrap, {seconds, 60}}
+    ].
+
+-spec error_cleanup_in_flight_external(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
+error_cleanup_in_flight_external(_Config) ->
+    % An empty DIST_HEADER followed by an invalid term tag: the external is created for the Dist Frame before the
+    % control message fails to decode.
+    Packet = <<4:?PACKET_SIZE/unit:8, 131, ?DIST_HEADER, 0, 255>>,
+    {Owner, MonitorRef, Channel} = start_owner(),
+    ok = erldist_filter_nif:test_hook_arm(self(), Channel, 0),
+    ?assertMatch({error, _}, owner_recv(Owner, split_packet(Packet))),
+    {ErrorSeq, _} = await_event(recv_trap_error),
+    {ChannelDestroySeq, _} = await_event(channel_destroy),
+    ?assert(ErrorSeq < ChannelDestroySeq),
+    ?assertEqual({ok, {error, closed}}, owner_recv(Owner, split_packet(Packet))),
     ok = stop_owner(Owner, MonitorRef).
 
 %%%-----------------------------------------------------------------------------
