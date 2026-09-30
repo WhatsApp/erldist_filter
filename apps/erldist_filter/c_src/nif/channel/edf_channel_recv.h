@@ -30,7 +30,6 @@ struct edf_channel_recv_trap_s {
     edf_channel_resource_t *resource;
     edf_channel_t *channel;
     avec_t actions;
-    edf_external_t *external;
     size_t fragment_index;
     size_t packet_count;
 };

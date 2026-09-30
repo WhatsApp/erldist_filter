@@ -73,6 +73,11 @@ struct edf_channel_s {
         ioq_t ioq;
         vec_t vec;
         edf_atom_cache_t *cache;
+        // The channel exclusively owns every receive-path external. Each one is in exactly one place: either
+        // `external' (the single external being processed by a receive trap, never linked in `sequences') or
+        // `sequences' (incomplete fragmented externals parked between receive calls). Receive traps only borrow
+        // them while holding the channel lock, and edf_channel_destroy() frees both.
+        edf_external_t *external;
         edf_external_t *sequences;
         edf_channel_stats_t stats;
     } rx;
