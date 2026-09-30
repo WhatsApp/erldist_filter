@@ -16,6 +16,7 @@
 #include "blocklist/edf_otp_name_blocklist.h"
 #include "channel/edf_atom_text.h"
 #include "channel/edf_channel_impl.h"
+#include "channel/edf_channel_test_hook.h"
 #include "config/edf_config_impl.h"
 #include "erts/edf_erts_dist_impl.h"
 #include "logger/edf_logger_impl.h"
@@ -224,6 +225,11 @@ static ErlNifFunc erldist_filter_nif_funcs[] = {
     {"router_info", 0, erldist_filter_nif_router_info_0, ERL_NIF_NORMAL_JOB_BOUND},
     {"router_name", 1, erldist_filter_nif_router_name_1, ERL_NIF_NORMAL_JOB_BOUND},
     {"spawn_flags", 0, erldist_filter_nif_spawn_flags_0, ERL_NIF_NORMAL_JOB_BOUND},
+#ifdef EDF_TEST_HOOKS
+    {"test_hook_arm", 3, erldist_filter_nif_test_hook_arm_3, ERL_NIF_NORMAL_JOB_BOUND},
+    {"test_hook_disarm", 0, erldist_filter_nif_test_hook_disarm_0, ERL_NIF_NORMAL_JOB_BOUND},
+    {"test_hook_open", 0, erldist_filter_nif_test_hook_open_0, ERL_NIF_NORMAL_JOB_BOUND},
+#endif
     {"version", 0, erldist_filter_nif_version_0, ERL_NIF_NORMAL_JOB_BOUND},
     {"world_stats_get", 0, erldist_filter_nif_world_stats_get_0, ERL_NIF_NORMAL_JOB_BOUND},
 };

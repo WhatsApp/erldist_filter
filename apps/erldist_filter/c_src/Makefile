@@ -250,6 +250,11 @@ ifneq ($(SANITIZE),)
 	CXXFLASG += $(CXXFLAGS_SANITIZE)
 endif
 
+# Test-only instrumentation used by erldist_filter_channel_teardown_SUITE.
+ifneq ($(EDF_TEST_HOOKS),)
+	CFLAGS += -DEDF_TEST_HOOKS=1
+endif
+
 ifneq ($(WARNINGS_AS_ERRORS),)
 	CFLAGS += -Werror
 	CXXFLASG += -Werror

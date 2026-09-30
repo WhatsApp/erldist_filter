@@ -10,6 +10,7 @@
 #include "edf_channel_recv.h"
 #undef ERLDIST_FILTER_NIF_INTERNAL_API
 #include "edf_external_recv.h"
+#include "edf_channel_test_hook.h"
 #include "../config/edf_config.h"
 #include "../logger/edf_logger.h"
 #include "../vterm/vterm_env.h"
@@ -117,6 +118,7 @@ edf_channel_recv_trap_dtor(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
     edf_channel_recv_trap_t *trap = (void *)arg;
 
     XNIF_TRACE_F("%s:%d [edf_channel_recv_trap] dtor callback\n", __FILE__, __LINE__);
+    EDF_CHANNEL_TEST_HOOK_EVENT("recv_trap_dtor", trap->resource, trap, trap->external);
 
     (void)caller_env;
     (void)super;
@@ -143,6 +145,7 @@ edf_channel_recv_trap_edit(ErlNifEnv *caller_env, edf_trap_t *super, void *arg, 
     if (result->tag == EDF_TRAP_RESULT_TAG_ERR) {
         // Any exception raised should close the channel, even if the exception is caught by the Erlang process.
         XNIF_TRACE_F("%s:%d [trap] error callback\n", __FILE__, __LINE__);
+        EDF_CHANNEL_TEST_HOOK_EVENT("recv_trap_error", resource, trap, trap->external);
 
         if (resource != NULL && edf_channel_resource_acquire_direct(caller_env, resource, &channel, NULL, flags)) {
             if (trap->external != NULL) {
@@ -178,6 +181,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 #define TRAP_ACTIONS() trap_actions(caller_env, trap)
 
     do {
+        // Test-only receive barrier (compiled out unless EDF_TEST_HOOKS): yield without progress while it is armed.
+        if (EDF_CHANNEL_TEST_HOOK_RECV_BARRIER(trap->resource, trap, trap->external)) {
+            return TRAP_YIELD();
+        }
+
         edf_channel_rx_state_t curr_state = trap->channel->rx.state;
 
         switch (curr_state) {

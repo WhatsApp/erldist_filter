@@ -7,6 +7,7 @@
  */
 
 #include "edf_channel.h"
+#include "edf_channel_test_hook.h"
 #include "../world/edf_world.h"
 
 #include "../erts/dist.h"
@@ -150,6 +151,7 @@ edf_channel_resource_type_down(ErlNifEnv *env, void *obj, ErlNifPid *pid, ErlNif
     }
     if (enif_compare_monitors(&channel->owner.monitor, mon) == 0) {
         // Owner is down, close channel.
+        EDF_CHANNEL_TEST_HOOK_EVENT("owner_down", resource, NULL, NULL);
         (void)xnif_monitor_set_undefined(&channel->owner);
         resource->inner = NULL;
         channel->resource = NULL;
@@ -246,6 +248,7 @@ void
 edf_channel_destroy(ErlNifEnv *env, edf_channel_resource_t *resource, edf_channel_t *channel)
 {
     XNIF_TRACE_F("%s:%d edf_channel_destroy()\n", __FILE__, __LINE__);
+    EDF_CHANNEL_TEST_HOOK_EVENT("channel_destroy", resource, NULL, (channel != NULL) ? channel->rx.sequences : NULL);
     if (channel == NULL) {
         resource->inner = NULL;
         return;

@@ -97,8 +97,18 @@
     router_info/0,
     router_name/1,
     spawn_flags/0,
+    test_hook_arm/3,
+    test_hook_disarm/0,
+    test_hook_open/0,
     version/0,
     world_stats_get/0
+]).
+
+%% Test Hook API (only implemented when the NIF is built with EDF_TEST_HOOKS=1)
+-export([
+    test_hook_arm/3,
+    test_hook_disarm/0,
+    test_hook_open/0
 ]).
 
 %% Internal API
@@ -394,6 +404,24 @@ router_name(_Sysname) ->
 
 -spec spawn_flags() -> erldist_filter_nif_types:spawn_flags().
 spawn_flags() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-doc false.
+-spec test_hook_arm(NotifyPid, Channel, BarrierFragmentId) -> ok when
+    NotifyPid :: pid(),
+    Channel :: channel(),
+    BarrierFragmentId :: non_neg_integer().
+test_hook_arm(_NotifyPid, _Channel, _BarrierFragmentId) ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-doc false.
+-spec test_hook_disarm() -> ok.
+test_hook_disarm() ->
+    erlang:nif_error({nif_not_loaded, ?MODULE}).
+
+-doc false.
+-spec test_hook_open() -> ok.
+test_hook_open() ->
     erlang:nif_error({nif_not_loaded, ?MODULE}).
 
 -spec version() -> non_neg_integer().
