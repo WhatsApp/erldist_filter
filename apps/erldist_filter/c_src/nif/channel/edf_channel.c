@@ -7,6 +7,7 @@
  */
 
 #include "edf_channel.h"
+#include "edf_channel_test_hook.h"
 #include "../world/edf_world.h"
 
 #include "../erts/dist.h"
@@ -150,6 +151,7 @@ edf_channel_resource_type_down(ErlNifEnv *env, void *obj, ErlNifPid *pid, ErlNif
     }
     if (enif_compare_monitors(&channel->owner.monitor, mon) == 0) {
         // Owner is down, close channel.
+        EDF_CHANNEL_TEST_HOOK_EVENT("owner_down", resource, NULL, NULL);
         (void)xnif_monitor_set_undefined(&channel->owner);
         resource->inner = NULL;
         channel->resource = NULL;
@@ -191,6 +193,7 @@ edf_channel_create(ErlNifEnv *env, size_t packet_size, ERL_NIF_TERM sysname, uin
     (void)ioq_init_free(&channel->rx.ioq);
     (void)vec_init_free(&channel->rx.vec);
     channel->rx.cache = NULL;
+    channel->rx.external = NULL;
     channel->rx.sequences = NULL;
     (void)edf_channel_stats_init_empty(&channel->rx.stats);
 
@@ -246,6 +249,7 @@ void
 edf_channel_destroy(ErlNifEnv *env, edf_channel_resource_t *resource, edf_channel_t *channel)
 {
     XNIF_TRACE_F("%s:%d edf_channel_destroy()\n", __FILE__, __LINE__);
+    EDF_CHANNEL_TEST_HOOK_EVENT("channel_destroy", resource, NULL, (channel != NULL) ? channel->rx.external : NULL);
     if (channel == NULL) {
         resource->inner = NULL;
         return;
@@ -261,6 +265,11 @@ edf_channel_destroy(ErlNifEnv *env, edf_channel_resource_t *resource, edf_channe
         (void)edf_atom_cache_destroy(channel->rx.cache);
         (void)enif_free((void *)channel->rx.cache);
         channel->rx.cache = NULL;
+    }
+    // A receive trap suspended mid-message never owns these, so it must not (and does not) free them later.
+    if (channel->rx.external != NULL) {
+        (void)edf_external_destroy(channel->rx.external);
+        channel->rx.external = NULL;
     }
     if (channel->rx.sequences != NULL) {
         (void)edf_external_sequence_destroy_all(&(channel->rx.sequences));

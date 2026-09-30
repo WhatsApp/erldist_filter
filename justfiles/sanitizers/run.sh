@@ -7,11 +7,23 @@ c_src_dir="${project_root}/apps/erldist_filter/c_src"
 restore_build="${SANITIZERS_RESTORE_BUILD:-1}"
 stress_iterations="${SANITIZERS_STRESS_ITERATIONS:-10000}"
 sanitizer_color="${SANITIZERS_COLOR:-always}"
+test_hooks="${SANITIZERS_TEST_HOOKS:-1}"
+# Extra `rebar3 ct' arguments, split on whitespace (e.g. "--suite=... --case=...").
+read -r -a ct_args <<< "${SANITIZERS_CT_ARGS:-}"
 
 case "${sanitizer_color}" in
 auto | always | never) ;;
 *)
     echo "SANITIZERS_COLOR must be auto, always, or never" >&2
+    exit 2
+    ;;
+esac
+
+case "${test_hooks}" in
+0) edf_test_hooks="" ;;
+1) edf_test_hooks=1 ;;
+*)
+    echo "SANITIZERS_TEST_HOOKS must be 0 or 1" >&2
     exit 2
     ;;
 esac
@@ -99,6 +111,7 @@ sanitize_ldflags="-fsanitize=address ${ubsan_lib} -Wl,-rpath,${ubsan_dir}"
 make -C "${c_src_dir}" clean CC=clang CXX=clang++
 make -C "${c_src_dir}" \
     SANITIZE=1 \
+    "EDF_TEST_HOOKS=${edf_test_hooks}" \
     CC=clang \
     CXX=clang++ \
     CFLAGS_SANITIZE="${sanitize_flags}" \
@@ -127,13 +140,15 @@ echo "[sanitizers] running Common Test with the ASan emulator"
     "${sanitizer_env[@]}" \
         "ERL_AFLAGS=${erl_aflags}" \
         ERLDIST_FILTER_REQUIRE_ASAN=1 \
+        "ERLDIST_FILTER_REQUIRE_TEST_HOOKS=${test_hooks}" \
         SANITIZE=1 \
+        "EDF_TEST_HOOKS=${edf_test_hooks}" \
         CC=clang \
         CXX=clang++ \
         "CFLAGS_SANITIZE=${sanitize_flags}" \
         "CXXFLAGS_SANITIZE=${sanitize_flags}" \
         "LDFLAGS=${sanitize_ldflags}" \
-        rebar3 ct
+        rebar3 ct ${ct_args[@]+"${ct_args[@]}"}
 )
 
 code_paths=()

@@ -10,6 +10,7 @@
 #include "edf_channel_recv.h"
 #undef ERLDIST_FILTER_NIF_INTERNAL_API
 #include "edf_external_recv.h"
+#include "edf_channel_test_hook.h"
 #include "../config/edf_config.h"
 #include "../logger/edf_logger.h"
 #include "../vterm/vterm_env.h"
@@ -53,7 +54,6 @@ edf_channel_recv_trap_open(ErlNifEnv *env, edf_channel_resource_t *resource, edf
     trap->channel = channel;
     (void)avec_init_free(&trap->actions);
     (void)avec_create_fixed(&trap->actions);
-    trap->external = NULL;
     trap->fragment_index = 0;
     trap->packet_count = 0;
 
@@ -117,17 +117,16 @@ edf_channel_recv_trap_dtor(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
     edf_channel_recv_trap_t *trap = (void *)arg;
 
     XNIF_TRACE_F("%s:%d [edf_channel_recv_trap] dtor callback\n", __FILE__, __LINE__);
+    EDF_CHANNEL_TEST_HOOK_EVENT("recv_trap_dtor", trap->resource, trap, NULL);
 
     (void)caller_env;
     (void)super;
 
+    // The trap owns no externals (see channel->rx.external) and must not touch the channel here: the dtor may run
+    // long after the channel was destroyed, e.g. when the owner died while this trap was suspended.
     trap->resource = NULL;
     trap->channel = NULL;
     (void)avec_destroy(&trap->actions);
-    if (trap->external != NULL) {
-        (void)edf_external_destroy(trap->external);
-        trap->external = NULL;
-    }
 
     return;
 }
@@ -143,22 +142,13 @@ edf_channel_recv_trap_edit(ErlNifEnv *caller_env, edf_trap_t *super, void *arg, 
     if (result->tag == EDF_TRAP_RESULT_TAG_ERR) {
         // Any exception raised should close the channel, even if the exception is caught by the Erlang process.
         XNIF_TRACE_F("%s:%d [trap] error callback\n", __FILE__, __LINE__);
+        EDF_CHANNEL_TEST_HOOK_EVENT("recv_trap_error", resource, trap, NULL);
 
+        // Destroying the channel frees channel->rx.external and channel->rx.sequences; the trap has nothing to free.
         if (resource != NULL && edf_channel_resource_acquire_direct(caller_env, resource, &channel, NULL, flags)) {
-            if (trap->external != NULL) {
-                if (!edf_external_sequence_is_linked(trap->external)) {
-                    (void)edf_external_destroy(trap->external);
-                }
-                trap->external = NULL;
-            }
             (void)edf_channel_destroy(caller_env, resource, channel);
             trap->channel = NULL;
             (void)edf_channel_resource_release(&resource, &channel, flags);
-        }
-        if (trap->external != NULL) {
-            trap->external->channel = NULL;
-            (void)edf_external_destroy(trap->external);
-            trap->external = NULL;
         }
     }
 
@@ -166,6 +156,7 @@ edf_channel_recv_trap_edit(ErlNifEnv *caller_env, edf_trap_t *super, void *arg, 
 }
 
 static int get_packet_length(edf_channel_recv_trap_t *trap, ioq_reader_t *ir, size_t *szp);
+static int park_external(edf_channel_t *channel);
 static edf_trap_result_t trap_actions(ErlNifEnv *caller_env, edf_channel_recv_trap_t *trap);
 static void decode_control_length_callback(ErlNifEnv *caller_env, etf_decode_term_length_trap_t *child, void *arg,
                                            edf_trap_result_t *result);
@@ -178,6 +169,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 #define TRAP_ACTIONS() trap_actions(caller_env, trap)
 
     do {
+        // Test-only receive barrier (compiled out unless EDF_TEST_HOOKS): yield without progress while it is armed.
+        if (EDF_CHANNEL_TEST_HOOK_RECV_BARRIER(trap->resource, trap, trap->channel->rx.external)) {
+            return TRAP_YIELD();
+        }
+
         edf_channel_rx_state_t curr_state = trap->channel->rx.state;
 
         switch (curr_state) {
@@ -283,11 +279,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             ERL_NIF_TERM err_term = THE_NON_VALUE;
             action_t action;
 
-            if (!vec_is_slice(&trap->external->slices.headers.vec)) {
-                return TRAP_ERR(EXCP_ERROR(caller_env, "Fatal error: trap->external->slices.headers.vec must be a slice\n"));
+            if (!vec_is_slice(&trap->channel->rx.external->slices.headers.vec)) {
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Fatal error: channel->rx.external->slices.headers.vec must be a slice\n"));
             }
 
-            dist_header_size = vec_len(&trap->external->slices.headers.vec);
+            dist_header_size = vec_len(&trap->channel->rx.external->slices.headers.vec);
 
             (void)vec_init_free(ev);
             if (!vec_create_owned(ev, 1 + 1 + 8 + 8 + dist_header_size + sizeof(reg_send_noop))) {
@@ -316,9 +312,9 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 return TRAP_ERR(err_term);
             }
             TRAP_REDUCE(trap, 1);
-            if (!vec_writer_write_u64(vw, trap->external->sequence_id)) {
+            if (!vec_writer_write_u64(vw, trap->channel->rx.external->sequence_id)) {
                 TRAP_PREP_ERR(EXCP_ERROR_F(caller_env, "Call to vec_writer_write_u64() failed: unable to write SequenceId=%u\n",
-                                           trap->external->sequence_id));
+                                           trap->channel->rx.external->sequence_id));
                 return TRAP_ERR(err_term);
             }
             TRAP_REDUCE(trap, 8);
@@ -327,7 +323,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 return TRAP_ERR(err_term);
             }
             TRAP_REDUCE(trap, 8);
-            if (!vec_writer_write_exact(vw, vec_buf(&trap->external->slices.headers.vec), dist_header_size)) {
+            if (!vec_writer_write_exact(vw, vec_buf(&trap->channel->rx.external->slices.headers.vec), dist_header_size)) {
                 TRAP_PREP_ERR(EXCP_ERROR_F(
                     caller_env, "Call to vec_writer_write_exact() failed: unable to write Dist Header of size %u-bytes\n",
                     dist_header_size));
@@ -360,7 +356,10 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
             CHANNEL_RX_STATS_COUNT(trap->channel, emit_count, 1);
 
-            trap->external = NULL;
+            if (!park_external(trap->channel)) {
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Call to park_external() failed: unable to park fragmented external in "
+                                                       "channel->rx.sequences\n"));
+            }
             goto transition_to_packet_header;
 
 #undef TRAP_PREP_ERR
@@ -370,7 +369,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             if (!edf_trap_has_child(&trap->super)) {
                 ERL_NIF_TERM child_trap_term;
                 etf_rewrite_fragment_header_trap_t *child_trap = NULL;
-                child_trap_term = etf_rewrite_fragment_header_trap_open(caller_env, trap->external, &child_trap);
+                child_trap_term = etf_rewrite_fragment_header_trap_open(caller_env, trap->channel->rx.external, &child_trap);
                 if (child_trap == NULL || enif_is_exception(caller_env, child_trap_term)) {
                     return TRAP_ERR(child_trap_term);
                 }
@@ -401,7 +400,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             if (!edf_trap_has_child(&trap->super)) {
                 ERL_NIF_TERM child_trap_term;
                 edf_external_recv_trap_t *child_trap = NULL;
-                child_trap_term = edf_external_recv_trap_open(caller_env, trap->external, &child_trap);
+                child_trap_term = edf_external_recv_trap_open(caller_env, trap->channel->rx.external, &child_trap);
                 if (child_trap == NULL || enif_is_exception(caller_env, child_trap_term)) {
                     return TRAP_ERR(child_trap_term);
                 }
@@ -413,7 +412,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             switch (child_result.tag) {
             case EDF_TRAP_RESULT_TAG_OK: {
                 (void)edf_trap_detach_child(&trap->super);
-                if (!trap->external->emit) {
+                if (!trap->channel->rx.external->emit) {
                     goto transition_to_external_drop;
                 }
                 goto transition_to_external_emit;
@@ -432,12 +431,12 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             }
         }
         case EDF_CHANNEL_RX_STATE_EXTERNAL_EMIT: {
-            edf_external_t *ext = trap->external;
+            edf_external_t *ext = trap->channel->rx.external;
             edf_fragment_t *frag = NULL;
             action_t action;
 
             if (ext == NULL) {
-                return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted trap->external state: must not be NULL\n"));
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted channel->rx.external state: must not be NULL\n"));
             }
 
             while ((ext->fragments_compacted && trap->fragment_index == 0) ||
@@ -465,11 +464,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
             (void)channel_rx_stats_dop_emit(ext);
 
-            if ((trap->external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_ROLLBACK) != 0) {
+            if ((trap->channel->rx.external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_ROLLBACK) != 0) {
                 goto transition_to_rollback_atom_cache;
             }
 
-            trap->external = NULL;
+            trap->channel->rx.external = NULL;
             trap->fragment_index = 0;
             XNIF_TRACE_F("%s:%d EDF_CHANNEL_RX_STATE_EMIT_EXTERNAL edf_external_destroy()\n", __FILE__, __LINE__);
             (void)edf_external_destroy(ext);
@@ -477,13 +476,13 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_packet_header;
         }
         case EDF_CHANNEL_RX_STATE_EXTERNAL_DROP: {
-            edf_external_t *ext = trap->external;
+            edf_external_t *ext = trap->channel->rx.external;
             edf_fragment_t *frag = NULL;
             action_t action;
             ERL_NIF_TERM err_term = THE_NON_VALUE;
 
             if (ext == NULL) {
-                return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted trap->external state: must not be NULL\n"));
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted channel->rx.external state: must not be NULL\n"));
             }
 
             if (edf_external_is_pass_through(ext)) {
@@ -521,11 +520,11 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
             (void)channel_rx_stats_dop_drop(ext);
 
-            if ((trap->external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_ROLLBACK) != 0) {
+            if ((trap->channel->rx.external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_ROLLBACK) != 0) {
                 goto transition_to_rollback_atom_cache;
             }
 
-            trap->external = NULL;
+            trap->channel->rx.external = NULL;
             trap->fragment_index = 0;
             XNIF_TRACE_F("%s:%d EDF_CHANNEL_RX_STATE_EMIT_EXTERNAL edf_external_destroy()\n", __FILE__, __LINE__);
             (void)edf_external_destroy(ext);
@@ -533,12 +532,12 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             goto transition_to_packet_header;
         }
         case EDF_CHANNEL_RX_STATE_ROLLBACK_ATOM_CACHE: {
-            edf_external_t *ext = trap->external;
+            edf_external_t *ext = trap->channel->rx.external;
             edf_trap_result_t child_result;
             if (!edf_trap_has_child(&trap->super)) {
                 ERL_NIF_TERM child_trap_term;
                 etf_rollback_atom_cache_trap_t *child_trap = NULL;
-                child_trap_term = etf_rollback_atom_cache_trap_open(caller_env, trap->external, &child_trap);
+                child_trap_term = etf_rollback_atom_cache_trap_open(caller_env, trap->channel->rx.external, &child_trap);
                 if (child_trap == NULL || enif_is_exception(caller_env, child_trap_term)) {
                     return TRAP_ERR(child_trap_term);
                 }
@@ -562,7 +561,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                     }
                     CHANNEL_RX_STATS_COUNT(trap->channel, emit_count, 1);
                 }
-                trap->external = NULL;
+                trap->channel->rx.external = NULL;
                 trap->fragment_index = 0;
                 XNIF_TRACE_F("%s:%d EDF_CHANNEL_RX_STATE_ROLLBACK_ATOM_CACHE edf_external_destroy()\n", __FILE__, __LINE__);
                 (void)edf_external_destroy(ext);
@@ -592,6 +591,12 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
 
             if (vec_is_writable(rx_vec)) {
                 return TRAP_ERR(EXCP_ERROR(caller_env, "Corrupted channel->rx.vec state: Dist Frame vec must not be writable\n"));
+            }
+
+            // The previous external must have been destroyed or parked in channel->rx.sequences.
+            if (trap->channel->rx.external != NULL) {
+                return TRAP_ERR(
+                    EXCP_ERROR(caller_env, "Corrupted channel->rx.external state: must be NULL for a new Dist Frame\n"));
             }
 
             if (!vec_reader_create(vr, rx_vec, 0)) {
@@ -629,7 +634,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                     return TRAP_ERR(err_term);
                 }
                 if (!edf_external_create(trap->channel, EDF_EXTERNAL_MODE_PASS_THROUGH, 0, 1, rx_vec, vec_reader_offset(vr),
-                                         &trap->external)) {
+                                         &trap->channel->rx.external)) {
                     TRAP_PREP_ERR(EXCP_ERROR(caller_env, "Call to edf_external_create() failed: Dist Frame in pass-through mode "
                                                          "failed to allocate external structure\n"));
                     return TRAP_ERR(err_term);
@@ -677,7 +682,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                         return TRAP_ERR(err_term);
                     }
                     if (!edf_external_create(trap->channel, EDF_EXTERNAL_MODE_NORMAL, 0, 1, rx_vec, vec_reader_offset(vr),
-                                             &trap->external)) {
+                                             &trap->channel->rx.external)) {
                         TRAP_PREP_ERR(EXCP_ERROR(caller_env, "Call to edf_external_create() failed: Dist Frame tagged with "
                                                              "'DIST_HEADER' failed to allocate external structure\n"));
                         return TRAP_ERR(err_term);
@@ -716,23 +721,20 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                                                    fragment_id));
                         return TRAP_ERR(err_term);
                     }
-                    if (!edf_external_create(trap->channel, EDF_EXTERNAL_MODE_FRAGMENT, sequence_id, fragment_id, rx_vec,
-                                             vec_reader_offset(vr), &trap->external)) {
-                        TRAP_PREP_ERR(EXCP_ERROR(caller_env, "Call to edf_external_create() failed: Dist Frame tagged with "
-                                                             "'DIST_FRAG_HEADER' failed to allocate external structure\n"));
+                    ext = edf_external_sequence_lookup(trap->channel->rx.sequences, sequence_id);
+                    if (ext != NULL) {
+                        TRAP_PREP_ERR(
+                            EXCP_ERROR_F(caller_env,
+                                         "Call to edf_external_sequence_lookup() failed: Dist Frame tagged with 'DIST_FRAG_HEADER' "
+                                         "found invalid reference to existing sequence for SequenceId=%u, FragmentId=%u\n",
+                                         sequence_id, fragment_id));
                         return TRAP_ERR(err_term);
                     }
-                    ext = edf_external_sequence_lookup_insert(&(trap->channel->rx.sequences), trap->external);
-                    if (ext == NULL) {
-                        // returns NULL when it has successfully inserted the external sequence
-                        ext = trap->external;
-                    }
-                    if (ext != trap->external) {
-                        TRAP_PREP_ERR(EXCP_ERROR_F(
-                            caller_env,
-                            "Call to edf_external_sequence_lookup_insert() failed: Dist Frame tagged with 'DIST_FRAG_HEADER' "
-                            "found invalid reference to existing sequence for SequenceId=%u, FragmentId=%u\n",
-                            sequence_id, fragment_id));
+                    // Not linked in channel->rx.sequences until it is parked after this fragment has been processed.
+                    if (!edf_external_create(trap->channel, EDF_EXTERNAL_MODE_FRAGMENT, sequence_id, fragment_id, rx_vec,
+                                             vec_reader_offset(vr), &trap->channel->rx.external)) {
+                        TRAP_PREP_ERR(EXCP_ERROR(caller_env, "Call to edf_external_create() failed: Dist Frame tagged with "
+                                                             "'DIST_FRAG_HEADER' failed to allocate external structure\n"));
                         return TRAP_ERR(err_term);
                     }
                     TRAP_REDUCE(trap, vec_reader_offset(vr));
@@ -786,22 +788,25 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                                          sequence_id, fragment_id));
                         return TRAP_ERR(err_term);
                     }
-                    trap->external = ext;
-                    if (trap->external->mode != EDF_EXTERNAL_MODE_FRAGMENT) {
+                    if (ext->mode != EDF_EXTERNAL_MODE_FRAGMENT) {
                         TRAP_PREP_ERR(EXCP_ERROR_F(caller_env,
                                                    "Dist Frame tagged with 'DIST_FRAG_CONT' found invalid mode sequence for "
                                                    "SequenceId=%u, FragmentId=%u, expected Mode=%d (was Mode=%d)\n",
-                                                   sequence_id, fragment_id, EDF_EXTERNAL_MODE_FRAGMENT, trap->external->mode));
+                                                   sequence_id, fragment_id, EDF_EXTERNAL_MODE_FRAGMENT, ext->mode));
                         return TRAP_ERR(err_term);
                     }
-                    if (trap->external->fragment_id_next != fragment_id) {
+                    if (ext->fragment_id_next != fragment_id) {
                         TRAP_PREP_ERR(EXCP_ERROR_F(caller_env,
                                                    "Dist Frame tagged with 'DIST_FRAG_CONT' received out-of-order fragment for "
                                                    "SequenceId=%u, expected FragmentId=%u (was FragmentId=%u)\n",
-                                                   sequence_id, trap->external->fragment_id_next, fragment_id));
+                                                   sequence_id, ext->fragment_id_next, fragment_id));
                         return TRAP_ERR(err_term);
                     }
-                    if (!edf_external_add_fragment(trap->external, fragment_id, rx_vec, vec_reader_offset(vr))) {
+                    // Move the parked external out of channel->rx.sequences while this fragment is processed.
+                    (void)edf_external_sequence_unlink(&(trap->channel->rx.sequences), ext);
+                    (void)edf_external_sequence_init_empty(ext);
+                    trap->channel->rx.external = ext;
+                    if (!edf_external_add_fragment(trap->channel->rx.external, fragment_id, rx_vec, vec_reader_offset(vr))) {
                         TRAP_PREP_ERR(EXCP_ERROR(caller_env, "Call to edf_external_add_fragment() failed: Dist Frame tagged with "
                                                              "'DIST_FRAG_CONT' failed to allocate vec structure\n"));
                         return TRAP_ERR(err_term);
@@ -823,7 +828,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             if (!edf_trap_has_child(&trap->super)) {
                 ERL_NIF_TERM child_trap_term;
                 etf_decode_dist_header_trap_t *child_trap = NULL;
-                child_trap_term = etf_decode_dist_header_trap_open(caller_env, trap->external, &child_trap);
+                child_trap_term = etf_decode_dist_header_trap_open(caller_env, trap->channel->rx.external, &child_trap);
                 if (child_trap == NULL || enif_is_exception(caller_env, child_trap_term)) {
                     return TRAP_ERR(child_trap_term);
                 }
@@ -835,9 +840,9 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             switch (child_result.tag) {
             case EDF_TRAP_RESULT_TAG_OK:
                 (void)edf_trap_detach_child(&trap->super);
-                if (trap->external->mode == EDF_EXTERNAL_MODE_NORMAL ||
-                    (trap->external->mode == EDF_EXTERNAL_MODE_FRAGMENT &&
-                     trap->external->fragment_id_next + 1 == trap->external->fragment_count)) {
+                if (trap->channel->rx.external->mode == EDF_EXTERNAL_MODE_NORMAL ||
+                    (trap->channel->rx.external->mode == EDF_EXTERNAL_MODE_FRAGMENT &&
+                     trap->channel->rx.external->fragment_id_next + 1 == trap->channel->rx.external->fragment_count)) {
                     goto transition_to_decode_control_length;
                 }
                 goto transition_to_fragment_continuation;
@@ -855,23 +860,26 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             }
         }
         case EDF_CHANNEL_RX_STATE_FRAGMENT_CONTINUATION: {
-            if (!edf_external_sequence_is_linked(trap->external)) {
-                return TRAP_ERR(EXCP_ERROR(caller_env,
-                                           "Fatal error: corrupted external state for fragment mode in state "
-                                           "EDF_CHANNEL_RX_STATE_FRAGMENT_CONTINUATION (trap->external is not linked)\n"));
+            if (trap->channel->rx.external == NULL || edf_external_sequence_is_linked(trap->channel->rx.external)) {
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Fatal error: corrupted external state for fragment mode in state "
+                                                       "EDF_CHANNEL_RX_STATE_FRAGMENT_CONTINUATION (channel->rx.external must "
+                                                       "not be NULL or linked in channel->rx.sequences)\n"));
             }
-            if (trap->external->fragment_id_next == 0) {
-                if (trap->external->fragment_count > 1) {
+            if (trap->channel->rx.external->fragment_id_next == 0) {
+                if (trap->channel->rx.external->fragment_count > 1) {
                     goto transition_to_rewrite_fragment_header;
                 }
                 goto transition_to_external_recv;
             }
-            if (trap->external->fragment_id_next + 1 == trap->external->fragment_count &&
-                (trap->external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_WRITE) != 0) {
-                trap->external->flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_COMMIT;
+            if (trap->channel->rx.external->fragment_id_next + 1 == trap->channel->rx.external->fragment_count &&
+                (trap->channel->rx.external->flags & EDF_EXTERNAL_FLAG_ATOM_CACHE_WRITE) != 0) {
+                trap->channel->rx.external->flags |= EDF_EXTERNAL_FLAG_ATOM_CACHE_NEED_COMMIT;
                 goto transition_to_emit_atom_cache_commit;
             }
-            trap->external = NULL;
+            if (!park_external(trap->channel)) {
+                return TRAP_ERR(EXCP_ERROR(caller_env, "Call to park_external() failed: unable to park fragmented external in "
+                                                       "channel->rx.sequences\n"));
+            }
             goto transition_to_packet_header;
         }
         case EDF_CHANNEL_RX_STATE_DECODE_CONTROL_LENGTH: {
@@ -882,7 +890,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
                 bool is_external_term = false;
                 vec_t control_slice;
                 (void)vec_init_free(&control_slice);
-                if (!edf_external_slice_control_get(trap->external, &is_external_term, &control_slice)) {
+                if (!edf_external_slice_control_get(trap->channel->rx.external, &is_external_term, &control_slice)) {
                     return TRAP_ERR(EXCP_ERROR(
                         caller_env, "Call to edf_external_slice_control_get() failed: unable to get slice for control message\n"));
                 }
@@ -900,7 +908,7 @@ edf_channel_recv_trap_next(ErlNifEnv *caller_env, edf_trap_t *super, void *arg)
             switch (child_result.tag) {
             case EDF_TRAP_RESULT_TAG_OK:
                 (void)edf_trap_detach_child(&trap->super);
-                if (trap->external->mode == EDF_EXTERNAL_MODE_FRAGMENT) {
+                if (trap->channel->rx.external->mode == EDF_EXTERNAL_MODE_FRAGMENT) {
                     goto transition_to_fragment_continuation;
                 }
                 goto transition_to_external_recv;
@@ -1056,6 +1064,24 @@ get_packet_length(edf_channel_recv_trap_t *trap, ioq_reader_t *ir, size_t *szp)
     return 1;
 }
 
+// Moves the incomplete fragmented external from channel->rx.external into channel->rx.sequences.
+// On failure the external stays in channel->rx.external, which is still owned (and freed) by the channel.
+inline int
+park_external(edf_channel_t *channel)
+{
+    edf_external_t *ext = channel->rx.external;
+
+    if (ext == NULL || ext->mode != EDF_EXTERNAL_MODE_FRAGMENT || edf_external_sequence_is_linked(ext)) {
+        return 0;
+    }
+    // Returns NULL when it has successfully inserted the external sequence.
+    if (edf_external_sequence_lookup_insert(&(channel->rx.sequences), ext) != NULL) {
+        return 0;
+    }
+    channel->rx.external = NULL;
+    return 1;
+}
+
 edf_trap_result_t
 trap_actions(ErlNifEnv *caller_env, edf_channel_recv_trap_t *trap)
 {
@@ -1072,7 +1098,7 @@ void
 decode_control_length_callback(ErlNifEnv *caller_env, etf_decode_term_length_trap_t *child, void *arg, edf_trap_result_t *result)
 {
     edf_channel_recv_trap_t *parent = (void *)arg;
-    edf_external_t *ext = parent->external;
+    edf_external_t *ext = parent->channel->rx.external;
     ERL_NIF_TERM err_term = THE_NON_VALUE;
     vec_t slice[1];
 
@@ -1119,9 +1145,9 @@ decode_control_length_callback(ErlNifEnv *caller_env, etf_decode_term_length_tra
 
     (void)vec_destroy(slice);
 
-    parent->external->control_heap_size = child->heap_size;
+    parent->channel->rx.external->control_heap_size = child->heap_size;
 
-    (void)channel_rx_stats_dop_seen(parent->external);
+    (void)channel_rx_stats_dop_seen(parent->channel->rx.external);
 
     return;
 }
