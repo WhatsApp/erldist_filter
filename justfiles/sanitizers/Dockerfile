@@ -8,7 +8,7 @@
 
 FROM buildpack-deps:trixie AS otp-build
 
-ARG OTP_VERSION="29.0.4"
+ARG OTP_VERSION="29.1.1"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -20,7 +20,7 @@ RUN apt-get update \
 
 RUN set -eux; \
     OTP_DOWNLOAD_URL="https://github.com/erlang/otp/releases/download/OTP-${OTP_VERSION}/otp_src_${OTP_VERSION}.tar.gz"; \
-    OTP_DOWNLOAD_SHA256="67426425f0eed0dbd6c8cd3d500de4c47bbf1bbe337be0e2c13fc8f8f3e4997a"; \
+    OTP_DOWNLOAD_SHA256="054e0143e39c780e091107fc9b345792a9c1a55f6bac1eca1c1101510fc06bf6"; \
     curl -fSL -o otp-src.tar.gz "$OTP_DOWNLOAD_URL"; \
     echo "$OTP_DOWNLOAD_SHA256  otp-src.tar.gz" | sha256sum -c -; \
     mkdir -p /usr/src/otp; \
@@ -53,7 +53,7 @@ RUN set -eux; \
 
 FROM buildpack-deps:trixie
 
-ENV OTP_VERSION="29.0.4" \
+ENV OTP_VERSION="29.1.1" \
     REBAR3_VERSION="3.27.0"
 
 LABEL org.opencontainers.image.version=$OTP_VERSION
