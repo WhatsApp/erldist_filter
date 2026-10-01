@@ -54,7 +54,7 @@ RUN set -eux; \
 FROM buildpack-deps:trixie
 
 ENV OTP_VERSION="29.1.1" \
-    REBAR3_VERSION="3.27.0"
+    REBAR3_VERSION="3.27.1"
 
 LABEL org.opencontainers.image.version=$OTP_VERSION
 
@@ -74,14 +74,14 @@ RUN ASAN_OPTIONS=detect_leaks=0 erl -emu_type asan -noshell \
 
 RUN set -eux; \
     REBAR_DOWNLOAD_URL="https://github.com/erlang/rebar3/archive/${REBAR3_VERSION}.tar.gz"; \
-    REBAR_DOWNLOAD_SHA256="985cae6e957334cfa549190b9f5efb9185c184a18fc181c87b8dde096ba79f38"; \
+    REBAR_DOWNLOAD_SHA256="e34cf5e8f25fc7e59b2ff5c56fed507cf1378d4eef2a4aa7957b3c7e80812d64"; \
     mkdir -p /usr/src/rebar3-src; \
     curl -fSL -o rebar3-src.tar.gz "$REBAR_DOWNLOAD_URL"; \
     echo "$REBAR_DOWNLOAD_SHA256  rebar3-src.tar.gz" | sha256sum -c -; \
     tar -xzf rebar3-src.tar.gz -C /usr/src/rebar3-src --strip-components=1; \
     rm rebar3-src.tar.gz; \
     cd /usr/src/rebar3-src; \
-    HOME=$PWD ./bootstrap; \
+    ./bootstrap; \
     install -m 0755 rebar3 /usr/local/bin/rebar3; \
     rm -rf /usr/src/rebar3-src
 

@@ -18,13 +18,13 @@ setup-python:
     poetry self add poetry-plugin-shell
 
 [linux]
-[working-directory: '/project/codegen']
+[working-directory: justfile_directory() / 'codegen']
 poetry-install:
     poetry install --no-interaction
 
 [linux]
-[working-directory: '/project/codegen']
+[working-directory: justfile_directory() / 'codegen']
 poetry-lock:
-    poetry lock --no-interaction
+    poetry lock --regenerate --no-interaction
     poetry install --no-interaction
-    (poetry export --no-interaction --without-hashes --without-urls --format=requirements.txt | awk '{ print $1 }' FS=';' | awk '{$1=$1};1') > requirements.txt
+    poetry export --no-interaction --without-hashes --without-urls --format=requirements.txt --output=requirements.txt

@@ -509,7 +509,7 @@ convert_old_hsdata(OldHsData) ->
     OHSDL = tuple_to_list(OldHsData),
     NoMissing = tuple_size(#hs_data{}) - tuple_size(OldHsData),
     true = NoMissing > 0,
-    list_to_tuple(OHSDL ++ lists:duplicate(NoMissing, undefined)).
+    #hs_data{} = list_to_tuple(OHSDL ++ lists:duplicate(NoMissing, undefined)).
 
 -spec convert_flags(Flags | term()) -> Flags when Flags :: integer().
 convert_flags(Flags) when is_integer(Flags) ->

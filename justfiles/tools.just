@@ -7,10 +7,10 @@
 sanitizers_image := "erldist-filter-sanitizers"
 
 [linux]
-[working-directory: '/project/codegen']
+[working-directory: justfile_directory() / 'codegen']
 codegen: poetry-install format
-    poetry run erlang_edf_codegen json-schema /project/codegen/schema.json
-    poetry run erlang_edf_codegen generate /project/codegen/config.yaml /project /project/codegen/templates0 /project/codegen/templates1
+    poetry run erlang_edf_codegen json-schema schema.json
+    poetry run erlang_edf_codegen generate config.yaml .. templates0 templates1
     just format-c-targets
 
 [macos]
@@ -19,28 +19,30 @@ codegen: docker-codegen
     just sign
 
 [linux]
-format: format-c-targets format-c-templates format-python-src
+format: poetry-install format-c-targets format-c-templates format-python-src
 
 [linux]
+[working-directory: justfile_directory() / 'codegen']
 format-c-targets:
     #!/usr/bin/env bash
-    files=$(find /project/apps/erldist_filter/c_src \( -type l -o -type f \) \( -name '*.c' -o -name '*.C' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.c.h' -o -name '*.hpp' \) | grep -v " ")
-    # set -x
-    clang-format --version
-    exec clang-format --style="file:/project/apps/erldist_filter/c_src/.clang-format" -i ${files}
+    set -euo pipefail
+    poetry run clang-format --version
+    find ../apps/erldist_filter/c_src \( -type l -o -type f \) \( -name '*.c' -o -name '*.C' -o -name '*.cc' -o -name '*.cpp' -o -name '*.h' -o -name '*.c.h' -o -name '*.hpp' \) -print0 | \
+        xargs -0 poetry run clang-format --style="file:../apps/erldist_filter/c_src/.clang-format" -i
 
 [linux]
+[working-directory: justfile_directory() / 'codegen']
 format-c-templates:
     #!/usr/bin/env bash
-    files=$(find /project/codegen/{templates0,templates1} \( -type l -o -type f \) \( -name '*.c.j2' -o -name '*.C.j2' -o -name '*.cc.j2' -o -name '*.cpp.j2' -o -name '*.h.j2' -o -name '*.c.h.j2' -o -name '*.hpp.j2' \) | grep -v " ")
-    # set -x
-    clang-format --version
-    exec clang-format --style="file:/project/apps/erldist_filter/c_src/.clang-format" -i ${files}
+    set -euo pipefail
+    poetry run clang-format --version
+    find templates0 templates1 \( -type l -o -type f \) \( -name '*.c.j2' -o -name '*.C.j2' -o -name '*.cc.j2' -o -name '*.cpp.j2' -o -name '*.h.j2' -o -name '*.c.h.j2' -o -name '*.hpp.j2' \) -print0 | \
+        xargs -0 poetry run clang-format --style="file:../apps/erldist_filter/c_src/.clang-format" -i
 
 [linux]
-[working-directory: '/project/codegen']
+[working-directory: justfile_directory() / 'codegen']
 format-python-src:
-    poetry run black /project/codegen/src/
+    poetry run black src/ tests/
 
 [macos]
 format: docker-format
@@ -57,9 +59,9 @@ lock: docker-lock
 shell: docker-shell
 
 [linux]
-[working-directory: '/project/codegen']
+[working-directory: justfile_directory() / 'codegen']
 sign: poetry-install
-    poetry run erlang_edf_codegen sign /project/codegen/config.yaml /project /project/codegen/templates0 /project/codegen/templates1
+    poetry run erlang_edf_codegen sign config.yaml .. templates0 templates1
 
 [macos]
 sign: docker-sign

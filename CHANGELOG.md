@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.29.1 (2026-10-01)
+
+* Distribution
+  * Keep TCP sockets passive until the receiver owns them, preventing connection loss during handoff.
+  * Make the channel the sole owner of receive-path externals and safely handle teardown during receives [#8](https://github.com/WhatsApp/erldist_filter/pull/8).
+* Testing and maintenance
+  * Test the latest OTP 28/29 releases, 28.5.0.7 and 29.1.1; use OTP 29.1.1 for sanitizers.
+  * Refresh Elixir/Mix, Rebar3, ELP/eqwalizer, elixir_make, Erlang.mk, and Python dependencies.
+  * Preserve configuration field types and validate distribution-operation fields with the current eqwalizer; reuse constructor validation and test raw/record round trips.
+  * Make eqwalizer type errors fail CI.
+  * Pin PropEr's upstream OTP 29 fixes and remove deprecated Mix configuration warnings.
+  * Expand map and record generators and add receive-teardown, connection-handoff, and priority-message regressions.
+  * Restore Erlang/C formatting checks in CI with clang-format 22.1.8, preserving the existing label layout; regenerate and format sources.
+  * Make Linux codegen recipes work from any checkout and preserve Python dependency environment markers.
+  * Fix C++ warning and sanitizer flag propagation.
+
 ## 1.29.0 (2026-07-27)
 
 * Erlang/OTP support

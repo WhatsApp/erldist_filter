@@ -50,7 +50,9 @@
     otp_name_blocklist => boolean(),
     redirect_dist_operations => boolean(),
     sysname => undefined | erldist_filter_nif:sysname(),
-    untrusted => boolean()
+    untrusted => boolean(),
+    %% Map comprehensions infer this finite key union instead of individual fields.
+    erldist_filter_nif_types:config_key() => boolean()
 }.
 -type dpi() :: #dpi{}.
 -type dpi_result() :: #dpi_result{}.

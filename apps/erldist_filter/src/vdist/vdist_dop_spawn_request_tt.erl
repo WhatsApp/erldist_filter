@@ -45,12 +45,23 @@
     OptList :: [vterm:t()],
     Token :: vterm:t(),
     T :: t().
-new(ReqId, From, GroupLeader, Module, Function, Arity, OptList, Token) when
-    ?is_vterm_reference_t(ReqId) andalso ?is_vterm_pid_t(From) andalso ?is_vterm_pid_t(GroupLeader) andalso
-        ?is_vterm_atom_t(Module) andalso ?is_vterm_atom_t(Function) andalso ?is_vterm_fixed_integer_t(Arity) andalso
-        is_list(OptList) andalso length(OptList) >= 0 andalso
-        ?is_vterm_t(Token)
-->
+new(ReqId, From, GroupLeader, Module, Function, Arity, OptList, Token) ->
+    Request = vdist_dop_spawn_request:new(ReqId, From, GroupLeader, Module, Function, Arity, OptList),
+    new(Request, Token).
+
+-spec new(vdist_dop_spawn_request:t(), vterm:t()) -> t().
+new(
+    #vdist_dop_spawn_request{
+        req_id = ReqId,
+        from = From,
+        group_leader = GroupLeader,
+        module = Module,
+        function = Function,
+        arity = Arity,
+        opt_list = OptList
+    },
+    Token
+) when ?is_vterm_t(Token) ->
     #vdist_dop_spawn_request_tt{
         req_id = ReqId,
         from = From,

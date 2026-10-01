@@ -17,13 +17,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - elixir: 1.20.2
+          - elixir: 1.20.4
             otp: 29.1.1
-            rebar3: 3.27.0
+            rebar3: 3.27.1
 
-          - elixir: 1.20.2
+          - elixir: 1.20.4
             otp: 28.5.0.7
-            rebar3: 3.27.0
+            rebar3: 3.27.1
             lint: true
 
     steps:
@@ -36,11 +36,13 @@ jobs:
           otp-version: ${{ matrix.otp }}
           rebar3-version: ${{ matrix.rebar3 }}
 
-      # - name: (Erlang) Check Formatting
-      #   if: ${{ matrix.lint }}
-      #   run: |
-      #     clang-format --version
-      #     make lint-format
+      - name: (Erlang) Check Formatting
+        if: ${{ matrix.lint }}
+        run: |
+          pipx install --force clang-format==22.1.8
+          export PATH="$HOME/.local/bin:$PATH"
+          clang-format --version
+          make lint-format
 
       - name: (Erlang) eqWAlizer
         if: ${{ matrix.lint }}
@@ -58,6 +60,11 @@ jobs:
         run: |
           rebar3 ct
 
+      - name: (Elixir) Install Mix Tools
+        run: |
+          mix local.rebar rebar3 "$(command -v rebar3)" --force
+          mix local.hex 2.5.1 --force
+
       - name: (Elixir) Retrieve Mix Dependencies Cache
         uses: actions/cache@v6
         id: mix-cache
@@ -66,10 +73,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
 
       - name: (Elixir) Install Mix Dependencies
-        if: steps.mix-cache.outputs.cache-hit != 'true'
         run: |
-          mix local.rebar --force
-          mix local.hex --force
           mix deps.get
 
       - name: (Elixir) Check Formatting

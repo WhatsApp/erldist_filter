@@ -341,7 +341,7 @@ merge_options(Opts) ->
     lists:foldr(
       fun (Opt, Acc) ->
               case expand_option(Opt) of
-                  {OptName, OptVal} ->
+                  {OptName, OptVal} when is_atom(OptName) ->
                       Acc#{OptName => OptVal};
                   _ ->
                       Acc

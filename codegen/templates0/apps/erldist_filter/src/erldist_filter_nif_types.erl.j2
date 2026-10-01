@@ -41,10 +41,11 @@
     ~J{ endfor }.
 }.
 -type config_map_set() :: #{
-    ~J{ set config_map_joiner = joiner(",") }.
     ~J{ for field in ctx.config.fields_list }.
-    ~J< config_map_joiner() >.~J< ctx.erlang_atom(field.key) >. => boolean()
+    ~J< ctx.erlang_atom(field.key) >. => boolean(),
     ~J{ endfor }.
+    %% Map comprehensions infer this finite key union instead of individual fields.
+    config_key() => boolean()
 }.
 -type distribution_flags() :: #{
     ~J{ set distribution_flags_joiner = joiner(",") }.

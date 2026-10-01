@@ -10,7 +10,7 @@
 FROM python:3.14-alpine
 
 # Install apk dependencies.
-RUN apk add --no-cache bash clang-extra-tools
+RUN apk add --no-cache bash
 RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/edge/community just
 
 # Set the working directory.

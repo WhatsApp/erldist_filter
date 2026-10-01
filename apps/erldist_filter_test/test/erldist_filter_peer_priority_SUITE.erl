@@ -100,6 +100,7 @@ alias_priority_send_fragmented() ->
 -spec alias_priority_send_fragmented(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
 alias_priority_send_fragmented(Config) ->
     {p2p, P2P} = lists:keyfind(p2p, 1, Config),
+    true = is_pid(P2P),
     ok = ?PEER_SPBT_SHIM:ensure_connected(P2P),
     % 1 MiB always spans several distribution fragments.
     Term = binary:copy(<<0>>, 1 bsl 20),

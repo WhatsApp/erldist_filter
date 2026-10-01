@@ -1,4 +1,4 @@
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 #
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@
 ERLANG_MK_FILENAME := $(realpath $(lastword $(MAKEFILE_LIST)))
 export ERLANG_MK_FILENAME
 
-ERLANG_MK_VERSION = 973ccc3
+ERLANG_MK_VERSION = 2022.05.31-206-gbd4e137
 ERLANG_MK_WITHOUT = 
 
 # Make 3.81 and 3.82 are deprecated.
@@ -128,7 +128,7 @@ distclean-tmp:
 help::
 	$(verbose) printf "%s\n" \
 		"erlang.mk (version $(ERLANG_MK_VERSION)) is distributed under the terms of the ISC License." \
-		"Copyright (c) 2013-2016 Loïc Hoguin <essen@ninenines.eu>" \
+		"Copyright (c) Loïc Hoguin <essen@ninenines.eu>" \
 		"" \
 		"Usage: [V=1] $(MAKE) [target]..." \
 		"" \
@@ -192,8 +192,27 @@ core_lc = $(subst A,a,$(subst B,b,$(subst C,c,$(subst D,d,$(subst E,e,$(subst F,
 
 core_ls = $(filter-out $1,$(shell echo $1))
 
-# @todo Use a solution that does not require using perl.
-core_relpath = $(shell perl -e 'use File::Spec; print File::Spec->abs2rel(@ARGV) . "\n"' $1 $2)
+define core_relpath.erl
+	Drop = fun D([A|T], [A|F]) -> D(T, F); D(T, F) -> {T, F} end,
+	To0 = "$(call core_native_path,$1)",
+	To = filename:split(filename:absname(To0)),
+	From0 = "$(call core_native_path,$2)",
+	From = filename:split(filename:absname(From0)),
+	Rel = case {To, From} of
+		{[H|_], [H|_]} ->
+			{T1, F1} = Drop(To, From),
+			case lists:duplicate(length(F1), "..") ++ T1 of
+				[] -> ".";
+				P -> filename:join(P)
+			end;
+		_ ->
+			filename:absname(To0)
+	end,
+	io:format("~s", [Rel]),
+	halt()
+endef
+
+core_relpath = $(shell $(call erlang,$(call core_relpath.erl,$1,$2)))
 
 define core_render
 	printf -- '$(subst $(newline),\n,$(subst %,%%,$(subst ','\'',$(subst $(tab),$(WS),$(call $1)))))\n' > $2
@@ -223,7 +242,7 @@ endif
 # The erlang.mk package index is bundled in the default erlang.mk build.
 # Search for the string "copyright" to skip to the rest of the code.
 
-# Copyright (c) 2015-2017, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: distclean-kerl
@@ -341,7 +360,7 @@ pkg_gpb_commit = master
 
 PACKAGES += gun
 pkg_gun_name = gun
-pkg_gun_description = Asynchronous SPDY, HTTP and Websocket client written in Erlang.
+pkg_gun_description = HTTP/1.1, HTTP/2, Websocket client (and more) for Erlang/OTP.
 pkg_gun_homepage = http//ninenines.eu
 pkg_gun_fetch = git
 pkg_gun_repo = https://github.com/ninenines/gun
@@ -354,7 +373,7 @@ pkg_hex_core_homepage = https://github.com/hexpm/hex_core
 pkg_hex_core_fetch = git
 HEX_CORE_GIT ?= https://github.com/hexpm/hex_core
 pkg_hex_core_repo = $(HEX_CORE_GIT)
-pkg_hex_core_commit = e57b4fb15cde710b3ae09b1d18f148f6999a63cc
+pkg_hex_core_commit = v0.19.0
 
 PACKAGES += proper
 pkg_proper_name = proper
@@ -388,7 +407,7 @@ pkg_triq_fetch = git
 pkg_triq_repo = https://gitlab.com/triq/triq.git
 pkg_triq_commit = master
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: search
@@ -415,7 +434,7 @@ else
 	$(foreach p,$(PACKAGES),$(call pkg_print,$p))
 endif
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: distclean-deps clean-tmp-deps.log
@@ -441,7 +460,7 @@ export REBAR_DEPS_DIR
 # When testing Erlang.mk and updating these, make sure
 # to delete test/test_rebar_git before running tests again.
 REBAR3_GIT ?= https://github.com/erlang/rebar3
-REBAR3_COMMIT ?= bde4b54248d16280b2c70a244aca3bb7566e2033 # 3.23.0
+REBAR3_COMMIT ?= 619df55d9dab109cbd1b5d9ed1d45c93f5450e24 # 3.27.0
 
 CACHE_DEPS ?= 0
 
@@ -548,11 +567,20 @@ ALL_APPS_DIRS := $(filter-out $(APPS_DIR)/$(notdir $(CURDIR)),$(ALL_APPS_DIRS))
 endif
 endif
 
-ifeq ($(filter $(APPS_DIR) $(DEPS_DIR),$(subst :, ,$(ERL_LIBS))),)
-ifeq ($(ERL_LIBS),)
-	ERL_LIBS = $(APPS_DIR):$(DEPS_DIR)
+ifeq ($(PLATFORM),msys2)
+ERL_LIBS_SEP = ;
 else
-	ERL_LIBS := $(ERL_LIBS):$(APPS_DIR):$(DEPS_DIR)
+ERL_LIBS_SEP = :
+endif
+
+APPS_DIR_N := $(call core_native_path,$(APPS_DIR))
+DEPS_DIR_N := $(call core_native_path,$(DEPS_DIR))
+
+ifeq ($(filter $(APPS_DIR_N) $(DEPS_DIR_N),$(subst $(ERL_LIBS_SEP), ,$(ERL_LIBS))),)
+ifeq ($(ERL_LIBS),)
+	ERL_LIBS = $(APPS_DIR_N)$(ERL_LIBS_SEP)$(DEPS_DIR_N)
+else
+	ERL_LIBS := $(ERL_LIBS)$(ERL_LIBS_SEP)$(APPS_DIR_N)$(ERL_LIBS_SEP)$(DEPS_DIR_N)
 endif
 endif
 export ERL_LIBS
@@ -572,14 +600,6 @@ export ELIXIR
 dep_verbose_0 = @echo " DEP    $1 ($(call query_version,$1))";
 dep_verbose_2 = set -x;
 dep_verbose = $(dep_verbose_$(V))
-
-# Optimization: don't recompile deps unless truly necessary.
-
-ifndef IS_DEP
-ifneq ($(MAKELEVEL),0)
-$(shell rm -f ebin/dep_built)
-endif
-endif
 
 # Core targets.
 
@@ -634,26 +654,29 @@ endef
 endif
 endif
 
+$(ERLANG_MK_TMP)/dep_built:
+	$(verbose) mkdir -p $(ERLANG_MK_TMP)/dep_built
+
 ifneq ($(SKIP_DEPS),)
 deps::
 else
 ALL_DEPS_DIRS_TO_BUILD = $(if $(filter-out $(DEPS_DIR)/elixir,$(ALL_DEPS_DIRS)),$(filter-out $(DEPS_DIR)/elixir,$(ALL_DEPS_DIRS)),$(ALL_DEPS_DIRS))
 
-deps:: $(ALL_DEPS_DIRS_TO_BUILD) apps clean-tmp-deps.log | $(ERLANG_MK_TMP)
+deps:: $(ALL_DEPS_DIRS_TO_BUILD) apps clean-tmp-deps.log | $(ERLANG_MK_TMP)/dep_built
 ifneq ($(ALL_DEPS_DIRS_TO_BUILD),)
 	$(verbose) set -e; for dep in $(ALL_DEPS_DIRS_TO_BUILD); do \
 		if grep -qs ^$$dep$$ $(ERLANG_MK_TMP)/deps.log; then \
 			:; \
 		else \
 			echo $$dep >> $(ERLANG_MK_TMP)/deps.log; \
-			if [ -z "$(strip $(FULL))" ] $(if $(force_rebuild_dep),&& ! ($(call force_rebuild_dep,$$dep)),) && [ ! -L $$dep ] && [ -f $$dep/ebin/dep_built ]; then \
+			if [ -z "$(strip $(FULL))" ] $(if $(force_rebuild_dep),&& ! ($(call force_rebuild_dep,$$dep)),) && [ ! -L $$dep ] && [ -f $(ERLANG_MK_TMP)/dep_built/`basename $$dep` ]; then \
 				:; \
 			elif [ "$$dep" = "$(DEPS_DIR)/hut" -a "$(HUT_PATCH)" ]; then \
 				$(MAKE) -C $$dep app IS_DEP=1; \
-				if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $$dep/ebin/dep_built; fi; \
+				if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $(ERLANG_MK_TMP)/dep_built/`basename $$dep`; fi; \
 			elif [ -f $$dep/GNUmakefile ] || [ -f $$dep/makefile ] || [ -f $$dep/Makefile ]; then \
 				$(MAKE) -C $$dep IS_DEP=1; \
-				if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $$dep/ebin/dep_built; fi; \
+				if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $(ERLANG_MK_TMP)/dep_built/`basename $$dep`; fi; \
 			else \
 				echo "Error: No Makefile to build dependency $$dep." >&2; \
 				exit 2; \
@@ -735,7 +758,7 @@ define maybe_flock
 	if command -v flock >/dev/null; then \
 		flock $1 sh -c "$2"; \
 	elif command -v lockf >/dev/null; then \
-		lockf $1 sh -c "$2"; \
+		lockf -k $1 sh -c "$2"; \
 	else \
 		$2; \
 	fi
@@ -936,22 +959,38 @@ define dep_autopatch_rebar.erl
 		case lists:keyfind(erl_first_files, 1, Conf) of
 			false -> ok;
 			{_, Files0} ->
+				FixSlashes = fun(P) ->
+					[if C =:= 92 -> $$/; true -> C end || C <- P]
+				end,
+				SrcDir = FixSlashes("$(call core_native_path,$(DEPS_DIR)/$1/src/)"),
 				Files = [begin
-					hd(filelib:wildcard("$(call core_native_path,$(DEPS_DIR)/$1/src/)**/" ++ filename:rootname(F) ++ ".*rl"))
+					case filelib:wildcard(SrcDir ++ "**/" ++ filename:rootname(F) ++ ".*rl") of
+						[Found|_] -> FixSlashes(Found);
+						[] -> SrcDir ++ F
+					end
 				end || "src/" ++ F <- Files0],
-				Names = [[" ", case lists:reverse(F) of
-					"lre." ++ Elif -> lists:reverse(Elif);
-					"lrx." ++ Elif -> lists:reverse(Elif);
-					"lry." ++ Elif -> lists:reverse(Elif);
-					Elif -> lists:reverse(Elif)
-				end] || "$(call core_native_path,$(DEPS_DIR)/$1/src/)" ++ F <- Files],
+				RelName = fun(Full) ->
+					Rel = case lists:prefix(SrcDir, Full)
+							orelse lists:prefix(string:to_lower(SrcDir), string:to_lower(Full)) of
+						true -> lists:nthtail(length(SrcDir), Full);
+						false -> filename:basename(Full)
+					end,
+					case lists:reverse(Rel) of
+						"lre." ++ Elif -> lists:reverse(Elif);
+						"lrx." ++ Elif -> lists:reverse(Elif);
+						"lry." ++ Elif -> lists:reverse(Elif);
+						Elif -> lists:reverse(Elif)
+					end
+				end,
+				Names = [[" ", RelName(Full)] || Full <- Files],
 				Write(io_lib:format("COMPILE_FIRST +=~s\n", [Names]))
 		end
 	end(),
-	Write("\n\nrebar_dep: preprocess pre-deps deps pre-app app\n"),
+	Write("\n\nrebar_dep: preprocess pre-deps deps pre-app app post-app\n"),
 	Write("\npreprocess::\n"),
 	Write("\npre-deps::\n"),
 	Write("\npre-app::\n"),
+	Write("\npost-app::\n"),
 	PatchHook = fun(Cmd) ->
 		Cmd2 = re:replace(Cmd, "^([g]?make)(.*)( -C.*)", "\\\\1\\\\3\\\\2", [{return, list}]),
 		case Cmd2 of
@@ -976,6 +1015,24 @@ define dep_autopatch_rebar.erl
 					{Regex, compile, Cmd} ->
 						case rebar_utils:is_arch(Regex) of
 							true -> Write("\npre-app::\n\tCC=$$\(CC) " ++ PatchHook(Cmd) ++ "\n");
+							false -> ok
+						end;
+					_ -> ok
+				end || H <- Hooks]
+		end
+	end(),
+	fun() ->
+		case lists:keyfind(post_hooks, 1, Conf) of
+			false -> ok;
+			{_, Hooks} ->
+				[case H of
+					{compile, Cmd} ->
+						Write("\npost-app::\n\tCC=$$\(CC) " ++ PatchHook(Cmd) ++ "\n");
+					{{pc, compile}, Cmd} ->
+						Write("\npost-app::\n\tCC=$$\(CC) " ++ PatchHook(Cmd) ++ "\n");
+					{Regex, compile, Cmd} ->
+						case rebar_utils:is_arch(Regex) of
+							true -> Write("\npost-app::\n\tCC=$$\(CC) " ++ PatchHook(Cmd) ++ "\n");
 							false -> ok
 						end;
 					_ -> ok
@@ -1160,9 +1217,14 @@ define dep_autopatch_appsrc.erl
 		true ->
 			{ok, [{application, $1, L0}]} = file:consult(AppSrcIn),
 			L1 = lists:keystore(modules, 1, L0, {modules, []}),
+			GitDescribe = fun() -> lists:droplast(os:cmd("git -C $(DEPS_DIR)/$1 describe --dirty --tags --always")) end,
 			L2 = case lists:keyfind(vsn, 1, L1) of
-				{_, git} -> lists:keyreplace(vsn, 1, L1, {vsn, lists:droplast(os:cmd("git -C $(DEPS_DIR)/$1 describe --dirty --tags --always"))});
+				{_, Vsn} when Vsn =:= git; Vsn =:= semver ->
+					lists:keyreplace(vsn, 1, L1, {vsn, GitDescribe()});
+				{_, {Vcs, _}} when Vcs =:= git; Vcs =:= semver ->
+					lists:keyreplace(vsn, 1, L1, {vsn, GitDescribe()});
 				{_, {cmd, _}} -> lists:keyreplace(vsn, 1, L1, {vsn, "cmd"});
+				{_, {file, _}} -> lists:keyreplace(vsn, 1, L1, {vsn, "file"});
 				_ -> L1
 			end,
 			L3 = case lists:keyfind(registered, 1, L2) of false -> [{registered, []}|L2]; _ -> L2 end,
@@ -1241,13 +1303,16 @@ define dep_fetch_ln
 	ln -s $(call query_repo_ln,$1) $(DEPS_DIR)/$(call query_name,$1);
 endef
 
+NATIVE_ERLANG_MK_TMP = $(eval NATIVE_ERLANG_MK_TMP := $$(call core_native_path,$(ERLANG_MK_TMP)))$(NATIVE_ERLANG_MK_TMP)
+NATIVE_CACHE_DIR = $(eval NATIVE_CACHE_DIR := $$(call core_native_path,$(CACHE_DIR)))$(NATIVE_CACHE_DIR)
+
 define hex_get_tarball.erl
 	{ok, _} = application:ensure_all_started(ssl),
 	{ok, _} = application:ensure_all_started(inets),
 	Config = $(hex_config.erl),
 	case hex_repo:get_tarball(Config, <<"$1">>, <<"$(strip $2)">>) of
 		{ok, {200, _, Tarball}} ->
-			ok = file:write_file("$(call core_native_path,$3)", Tarball),
+			ok = file:write_file("$3", Tarball),
 			halt(0);
 		{ok, {Status, _, Errors}} ->
 			io:format("Error ~b: ~0p~n", [Status, Errors]),
@@ -1263,7 +1328,7 @@ define dep_fetch_hex
 	$(eval hex_pkg_name := $(if $(word 3,$(dep_$1)),$(word 3,$(dep_$1)),$1)) \
 	$(eval hex_tar_name := $(hex_pkg_name)-$(strip $(word 2,$(dep_$1))).tar) \
 	$(if $(wildcard $(CACHE_DIR)/hex/$(hex_tar_name)),,\
-		$(call erlang,$(call hex_get_tarball.erl,$(hex_pkg_name),$(word 2,$(dep_$1)),$(CACHE_DIR)/hex/$(hex_tar_name)));) \
+		$(call erlang,$(call hex_get_tarball.erl,$(hex_pkg_name),$(word 2,$(dep_$1)),$(NATIVE_CACHE_DIR)/hex/$(hex_tar_name)));) \
 	tar -xOf $(CACHE_DIR)/hex/$(hex_tar_name) contents.tar.gz | tar -C $(DEPS_DIR)/$1 -xzf -;
 endef
 
@@ -1272,7 +1337,7 @@ else
 # Hex only has a package version. No need to look in the Erlang.mk packages.
 define dep_fetch_hex
 	mkdir -p $(ERLANG_MK_TMP)/hex $(DEPS_DIR)/$1; \
-	$(call erlang,$(call hex_get_tarball.erl,$(if $(word 3,$(dep_$1)),$(word 3,$(dep_$1)),$1),$(word 2,$(dep_$1)),$(ERLANG_MK_TMP)/hex/$1.tar)); \
+	$(call erlang,$(call hex_get_tarball.erl,$(if $(word 3,$(dep_$1)),$(word 3,$(dep_$1)),$1),$(word 2,$(dep_$1)),$(NATIVE_ERLANG_MK_TMP)/hex/$1.tar)); \
 	tar -xOf $(ERLANG_MK_TMP)/hex/$1.tar contents.tar.gz | tar -C $(DEPS_DIR)/$1 -xzf -;
 endef
 
@@ -1284,7 +1349,7 @@ define dep_fetch_fail
 endef
 
 define dep_target
-$(DEPS_DIR)/$(call query_name,$1): $(if $(filter elixir,$(BUILD_DEPS) $(DEPS)),$(if $(filter-out elixir,$1),$(DEPS_DIR)/elixir/ebin/dep_built)) $(if $(filter hex,$(call query_fetch_method,$1)),$(if $(wildcard $(DEPS_DIR)/$(call query_name,$1)),,$(DEPS_DIR)/hex_core/ebin/dep_built)) | $(ERLANG_MK_TMP)
+$(DEPS_DIR)/$(call query_name,$1): $(if $(filter elixir,$(BUILD_DEPS) $(DEPS)),$(if $(filter-out elixir,$1),$(ERLANG_MK_TMP)/dep_built/elixir)) $(if $(filter hex,$(call query_fetch_method,$1)),$(if $(wildcard $(DEPS_DIR)/$(call query_name,$1)),,$(ERLANG_MK_TMP)/dep_built/hex_core)) | $(ERLANG_MK_TMP)
 	$(eval DEP_NAME := $(call query_name,$1))
 	$(eval DEP_STR := $(if $(filter $1,$(DEP_NAME)),$1,"$1 ($(DEP_NAME))"))
 	$(verbose) if test -d $(APPS_DIR)/$(DEP_NAME); then \
@@ -1315,6 +1380,7 @@ endif
 
 ifeq ($1,elixir)
 autopatch-elixir::
+	$$(verbose) mkdir -p $(DEPS_DIR)/elixir/lib/elixir/ebin
 	$$(verbose) ln -s lib/elixir/ebin $(DEPS_DIR)/elixir/
 else
 autopatch-$(call query_name,$1)::
@@ -1326,20 +1392,22 @@ endef
 $(if $(filter hex_core,$(DEPS) $(BUILD_DEPS) $(DOC_DEPS) $(REL_DEPS) $(TEST_DEPS)),,\
 	$(eval $(call dep_target,hex_core)))
 
-$(DEPS_DIR)/hex_core/ebin/dep_built: | $(ERLANG_MK_TMP)
+$(ERLANG_MK_TMP)/dep_built/hex_core: | $(ERLANG_MK_TMP)
 	$(verbose) $(call maybe_flock,$(ERLANG_MK_TMP)/hex_core.lock,\
-		if [ ! -e $(DEPS_DIR)/hex_core/ebin/dep_built ]; then \
+		if [ ! -e $(ERLANG_MK_TMP)/dep_built/hex_core ]; then \
 			$(MAKE) $(DEPS_DIR)/hex_core; \
 			$(MAKE) -C $(DEPS_DIR)/hex_core IS_DEP=1; \
-			touch $(DEPS_DIR)/hex_core/ebin/dep_built; \
+			mkdir -p $(ERLANG_MK_TMP)/dep_built; \
+			touch $(ERLANG_MK_TMP)/dep_built/hex_core; \
 		fi)
 
-$(DEPS_DIR)/elixir/ebin/dep_built: | $(ERLANG_MK_TMP)
+$(ERLANG_MK_TMP)/dep_built/elixir: | $(ERLANG_MK_TMP)
 	$(verbose) $(call maybe_flock,$(ERLANG_MK_TMP)/elixir.lock,\
-		if [ ! -e $(DEPS_DIR)/elixir/ebin/dep_built ]; then \
+		if [ ! -e $(ERLANG_MK_TMP)/dep_built/elixir ]; then \
 			$(MAKE) $(DEPS_DIR)/elixir; \
 			$(MAKE) -C $(DEPS_DIR)/elixir; \
-			touch $(DEPS_DIR)/elixir/ebin/dep_built; \
+			mkdir -p $(ERLANG_MK_TMP)/dep_built; \
+			touch $(ERLANG_MK_TMP)/dep_built/elixir; \
 		fi)
 
 $(foreach dep,$(BUILD_DEPS) $(DEPS),$(eval $(call dep_target,$(dep))))
@@ -1392,7 +1460,7 @@ ERLANG_MK_QUERY_REL_DEPS_FILE = $(ERLANG_MK_TMP)/query-rel-deps.log
 ERLANG_MK_QUERY_TEST_DEPS_FILE = $(ERLANG_MK_TMP)/query-test-deps.log
 ERLANG_MK_QUERY_SHELL_DEPS_FILE = $(ERLANG_MK_TMP)/query-shell-deps.log
 
-# Copyright (c) 2024, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: beam-cache-restore-app beam-cache-restore-test clean-beam-cache distclean-beam-cache
@@ -1423,6 +1491,7 @@ ifneq ($(wildcard $(PROJECT_BEAM_CACHE_DIR)/ebin-app),)
 else
 	$(verbose) $(MAKE) --no-print-directory clean-app
 endif
+	$(verbose) rm $(ERLANG_MK_TMP)/$(PROJECT).test
 
 beam-cache-restore-test: | $(PROJECT_BEAM_CACHE_DIR)
 	$(verbose) rm -rf $(PROJECT_BEAM_CACHE_DIR)/ebin-app
@@ -1435,7 +1504,7 @@ else
 	$(verbose) $(MAKE) --no-print-directory clean-app
 endif
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: clean-app
@@ -1490,7 +1559,7 @@ ifneq ($(wildcard src/)$(wildcard lib/),)
 
 # Targets.
 
-app:: $(if $(wildcard ebin/test),beam-cache-restore-app) deps
+app:: $(if $(wildcard $(ERLANG_MK_TMP)/$(PROJECT).test),beam-cache-restore-app) deps
 	$(verbose) $(MAKE) --no-print-directory $(PROJECT).d
 	$(verbose) $(MAKE) --no-print-directory app-build
 
@@ -1699,6 +1768,12 @@ endef
 
 ifeq ($(if $(NO_MAKEDEP),$(wildcard $(PROJECT).d),),)
 $(PROJECT).d:: $(ERL_FILES) $(EX_FILES) $(call core_find,include/,*.hrl) $(MAKEFILE_LIST)
+# Rebuild everything when the .d file does not exist.
+# We touch $@ to make sure the command doesn't fail in empty projects.
+# The file will be generated with content immediately after.
+	$(verbose) if ! test -e $@; then \
+		touch $@ $(ERL_FILES) $(CORE_FILES) $(ASN1_FILES) $(MIB_FILES) $(XRL_FILES) $(YRL_FILES); \
+	fi
 	$(makedep_verbose) $(call erlang,$(call makedep.erl,$@))
 endif
 
@@ -1748,7 +1823,7 @@ ebin/$(PROJECT).app:: $(ERL_FILES) $(CORE_FILES) $(wildcard src/$(PROJECT).app.s
 	$(verbose) if $(ELIXIR_COMP_FAILED); then exit 1; fi
 	$(eval GITDESCRIBE := $(shell git describe --dirty --abbrev=7 --tags --always --first-parent 2>/dev/null \
 		|| git describe --dirty --abbrev=7 --tags --always 2>/dev/null || true))
-	$(eval MODULES := $(MODULES) $(patsubst %,'%',$(sort $(notdir $(basename \
+	$(eval MODULES := $(sort $(MODULES) $(patsubst %,'%',$(notdir $(basename \
 		$(filter-out $(ERLC_EXCLUDE_PATHS),$(ERL_FILES) $(CORE_FILES) $(BEAM_FILES)))))))
 ifeq ($(wildcard src/$(PROJECT).app.src),)
 	$(app_verbose) printf '$(subst %,%%,$(subst $(newline),\n,$(subst ','\'',$(call app_file,$(GITDESCRIBE),$(MODULES)))))' \
@@ -1783,7 +1858,7 @@ clean-app:
 endif
 
 # Copyright (c) 2024, Tyler Hughes <tyler@tylerhughes.dev>
-# Copyright (c) 2024, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifeq ($(ELIXIR),system)
@@ -1796,10 +1871,10 @@ ELIXIR_LIBS = $(abspath $(shell elixir -e 'IO.puts(:code.lib_dir(:elixir))')/../
 endif
 ELIXIR_LIBS := $(ELIXIR_LIBS)
 export ELIXIR_LIBS
-ERL_LIBS := $(ERL_LIBS):$(ELIXIR_LIBS)
+ERL_LIBS := $(ERL_LIBS)$(ERL_LIBS_SEP)$(call core_native_path,$(ELIXIR_LIBS))
 else
 ifeq ($(ELIXIR),dep)
-ERL_LIBS := $(ERL_LIBS):$(DEPS_DIR)/elixir/lib/
+ERL_LIBS := $(ERL_LIBS)$(ERL_LIBS_SEP)$(call core_native_path,$(DEPS_DIR)/elixir/lib/)
 endif
 endif
 
@@ -1848,6 +1923,8 @@ define dep_autopatch_mix.erl
 	{ok, _} = application:ensure_all_started(elixir),
 	{ok, _} = application:ensure_all_started(mix),
 	MixFile = <<"$(call core_native_path,$(DEPS_DIR)/$1/mix.exs)">>,
+	{ok, OldCwd} = file:get_cwd(),
+	ok = file:set_cwd("$(call core_native_path,$(DEPS_DIR)/$1)"),
 	{Mod, Bin} =
 		case elixir_compiler:file(MixFile, fun(_File, _LexerPid) -> ok end) of
 			[{T = {_, _}, _CheckerPid}] -> T;
@@ -1856,6 +1933,7 @@ define dep_autopatch_mix.erl
 	{module, Mod} = code:load_binary(Mod, binary_to_list(MixFile), Bin),
 	Project = Mod:project(),
 	Application = try Mod:application() catch error:undef -> [] end,
+	ok = file:set_cwd(OldCwd),
 	StartMod = case lists:keyfind(mod, 1, Application) of
 		{mod, {StartMod0, _StartArgs}} ->
 			atom_to_list(StartMod0);
@@ -1930,7 +2008,8 @@ define dep_autopatch_mix.erl
 			MakeCwd = MakeVal(make_cwd, Project, undefined, <<".">>),
 			MakeTargets = MakeVal(make_targets, Project, [], []),
 			MakeArgs = MakeVal(make_args, Project, undefined, []),
-			case file:rename("$(DEPS_DIR)/$1/" ++ MakeMakefile, "$(DEPS_DIR)/$1/elixir_make.mk") of
+			case file:rename("$(call core_native_path,$(DEPS_DIR)/$1)/" ++ MakeMakefile,
+					"$(call core_native_path,$(DEPS_DIR)/$1)/elixir_make.mk") of
 				ok -> ok;
 				Err = {error, _} ->
 					io:format(standard_error, "Failed to copy Makefile with error ~p~n", [Err]),
@@ -1956,7 +2035,7 @@ endef
 define dep_autopatch_mix
 	sed 's|\(defmodule.*do\)|\1\n  try do\n    Code.compiler_options(on_undefined_variable: :warn)\n    rescue _ -> :ok\n  end\n|g' $(DEPS_DIR)/$(1)/mix.exs > $(DEPS_DIR)/$(1)/mix.exs.new; \
 	mv $(DEPS_DIR)/$(1)/mix.exs.new $(DEPS_DIR)/$(1)/mix.exs; \
-	$(MAKE) $(DEPS_DIR)/hex_core/ebin/dep_built; \
+	$(MAKE) $(ERLANG_MK_TMP)/dep_built/hex_core; \
 	MIX_ENV="$(if $(MIX_ENV),$(strip $(MIX_ENV)),prod)" \
 		$(call erlang,$(call dep_autopatch_mix.erl,$1))
 endef
@@ -1985,7 +2064,7 @@ define compile_ex.erl
 	end)
 endef
 
-# Copyright (c) 2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2015, Viktor Söderqvist <viktor@zuiderkwast.se>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
@@ -2006,7 +2085,7 @@ doc-deps: $(ALL_DOC_DEPS_DIRS)
 	$(verbose) set -e; for dep in $(ALL_DOC_DEPS_DIRS) ; do $(MAKE) -C $$dep IS_DEP=1; done
 endif
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: rel-deps
@@ -2026,7 +2105,7 @@ rel-deps: $(ALL_REL_DEPS_DIRS)
 	$(verbose) set -e; for dep in $(ALL_REL_DEPS_DIRS) ; do $(MAKE) -C $$dep; done
 endif
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: test-deps test-dir test-build clean-test-dir
@@ -2047,13 +2126,13 @@ $(foreach dep,$(TEST_DEPS),$(eval $(call dep_target,$(dep))))
 ifneq ($(SKIP_DEPS),)
 test-deps:
 else
-test-deps: $(ALL_TEST_DEPS_DIRS)
+test-deps: $(ALL_TEST_DEPS_DIRS) | $(ERLANG_MK_TMP)/dep_built
 	$(verbose) set -e; for dep in $(ALL_TEST_DEPS_DIRS) ; do \
-		if [ -z "$(strip $(FULL))" ] && [ ! -L $$dep ] && [ -f $$dep/ebin/dep_built ]; then \
+		if [ -z "$(strip $(FULL))" ] && [ ! -L $$dep ] && [ -f $(ERLANG_MK_TMP)/dep_built/`basename $$dep` ]; then \
 			:; \
 		else \
 			$(MAKE) -C $$dep IS_DEP=1; \
-			if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $$dep/ebin/dep_built; fi; \
+			if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $(ERLANG_MK_TMP)/dep_built/`basename $$dep`; fi; \
 		fi \
 	done
 endif
@@ -2083,13 +2162,13 @@ endif
 
 test-build:: IS_TEST=1
 test-build:: ERLC_OPTS=$(TEST_ERLC_OPTS)
-test-build:: $(if $(wildcard src),$(if $(wildcard ebin/test),,beam-cache-restore-test)) $(if $(IS_APP),,deps test-deps)
+test-build:: $(if $(wildcard src),$(if $(wildcard $(ERLANG_MK_TMP)/$(PROJECT).test),,beam-cache-restore-test)) $(if $(IS_APP),,deps test-deps)
 # We already compiled everything when IS_APP=1.
 ifndef IS_APP
 ifneq ($(wildcard src),)
 	$(verbose) $(MAKE) --no-print-directory $(PROJECT).d ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
 	$(verbose) $(MAKE) --no-print-directory app-build ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
-	$(gen_verbose) touch ebin/test
+	$(gen_verbose) touch $(ERLANG_MK_TMP)/$(PROJECT).test
 endif
 ifneq ($(wildcard $(TEST_DIR)),)
 	$(verbose) $(MAKE) --no-print-directory test-dir ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
@@ -2104,7 +2183,7 @@ test-build-app:: deps test-deps
 ifneq ($(wildcard src),)
 	$(verbose) $(MAKE) --no-print-directory $(PROJECT).d ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
 	$(verbose) $(MAKE) --no-print-directory app-build ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
-	$(gen_verbose) touch ebin/test
+	$(gen_verbose) touch $(ERLANG_MK_TMP)/$(PROJECT).test
 endif
 ifneq ($(wildcard $(TEST_DIR)),)
 	$(verbose) $(MAKE) --no-print-directory test-dir ERLC_OPTS="$(call escape_dquotes,$(TEST_ERLC_OPTS))"
@@ -2118,7 +2197,7 @@ ifneq ($(wildcard $(TEST_DIR)/*.beam),)
 	$(gen_verbose) rm -f $(TEST_DIR)/*.beam $(ERLANG_MK_TMP)/$(PROJECT).last-testdir-build
 endif
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: rebar.config
@@ -2524,7 +2603,7 @@ define tpl_vm.args
 endef
 
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifeq ($(filter asciideck,$(DEPS) $(DOC_DEPS)),asciideck)
@@ -2566,7 +2645,7 @@ else
 
 MAN_INSTALL_PATH ?= /usr/local/share/man
 MAN_SECTIONS ?= 3 7
-MAN_PROJECT ?= $(shell echo $(PROJECT) | sed 's/^./\U&\E/')
+MAN_PROJECT ?= $(shell echo $(PROJECT) | awk '{ print toupper(substr($$0,1,1)) substr($$0,2) }')
 MAN_VERSION ?= $(PROJECT_VERSION)
 
 # Plugin-specific targets.
@@ -2607,7 +2686,7 @@ distclean-asciidoc-manual:
 endif
 endif
 
-# Copyright (c) 2014-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: bootstrap bootstrap-lib bootstrap-rel new list-templates
@@ -2648,7 +2727,6 @@ else
 template_sp =
 endif
 
-# @todo Additional template placeholders could be added.
 subst_template = $(subst rel_root_dir,$(call core_relpath,$(dir $(ERLANG_MK_FILENAME)),$(APPS_DIR)/app),$(subst rel_deps_dir,$(call core_relpath,$(DEPS_DIR),$(APPS_DIR)/app),$(subst template_sp,$(template_sp),$(subst project_name,$p,$(subst template_name,$n,$1)))))
 
 define core_render_template
@@ -2657,6 +2735,9 @@ define core_render_template
 endef
 
 bootstrap:
+ifneq ($(wildcard Makefile),)
+	$(error Error: Makefile already exists)
+endif
 ifneq ($(wildcard src/),)
 	$(error Error: src/ directory already exists)
 endif
@@ -2673,6 +2754,9 @@ endif
 	$(verbose) $(call core_render_template,supervisor,src/$(PROJECT)_sup.erl)
 
 bootstrap-lib:
+ifneq ($(wildcard Makefile),)
+	$(error Error: Makefile already exists)
+endif
 ifneq ($(wildcard src/),)
 	$(error Error: src/ directory already exists)
 endif
@@ -2765,7 +2849,7 @@ list-templates:
 	$(verbose) @echo Available templates:
 	$(verbose) printf "    %s\n" $(sort $(filter-out $(BOOTSTRAP_TEMPLATES),$(patsubst tpl_%,%,$(filter tpl_%,$(.VARIABLES)))))
 
-# Copyright (c) 2014-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: clean-c_src distclean-c_src-env
@@ -3039,7 +3123,7 @@ else
 	$(verbose) $(call core_render,bs_erl_nif,src/$n.erl)
 endif
 
-# Copyright (c) 2015-2017, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: ci ci-prepare ci-setup
@@ -3092,7 +3176,7 @@ help::
 
 endif
 
-# Copyright (c) 2020, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifdef CONCUERROR_TESTS
@@ -3160,7 +3244,7 @@ distclean-concuerror:
 
 endif
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: ct apps-ct distclean-ct
@@ -3250,7 +3334,7 @@ $(foreach test,$(CT_SUITES),$(eval $(call ct_suite_target,$(test))))
 distclean-ct:
 	$(gen_verbose) rm -rf $(CT_LOGS_DIR)
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: plt distclean-plt dialyze
@@ -3325,7 +3409,7 @@ endif
 		-eval "$(subst $(newline),,$(call escape_dquotes,$(call filter_opts.erl)))" \
 		-extra $(ERLC_OPTS)` $(DIALYZER_DIRS) $(DIALYZER_OPTS) $(if $(wildcard ebin/),-pa ebin/)
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: distclean-edoc edoc
@@ -3365,7 +3449,7 @@ edoc: distclean-edoc doc-deps
 distclean-edoc:
 	$(gen_verbose) rm -f $(EDOC_OUTPUT)/*.css $(EDOC_OUTPUT)/*.html $(EDOC_OUTPUT)/*.png $(EDOC_OUTPUT)/edoc-info
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 # Configuration.
@@ -3388,7 +3472,7 @@ DTL_FILES := $(sort $(call core_find,$(DTL_PATH),*.dtl))
 
 ifneq ($(DTL_FILES),)
 
-DTL_NAMES   = $(addprefix $(DTL_PREFIX),$(addsuffix $(DTL_SUFFIX),$(DTL_FILES:$(DTL_PATH)/%.dtl=%)))
+DTL_NAMES   = $(addprefix $(DTL_PREFIX),$(addsuffix $(DTL_SUFFIX),$(DTL_FILES:$(subst %,\%,$(DTL_PATH))/%.dtl=%)))
 DTL_MODULES = $(if $(DTL_FULL_PATH),$(subst /,_,$(DTL_NAMES)),$(notdir $(DTL_NAMES)))
 BEAM_FILES += $(addsuffix .beam,$(addprefix ebin/,$(DTL_MODULES)))
 
@@ -3415,7 +3499,10 @@ define erlydtl_compile.erl
 		Module = list_to_atom("$(DTL_PREFIX)" ++ string:to_lower(Module0) ++ "$(DTL_SUFFIX)"),
 		case erlydtl:compile(F, Module, [$(DTL_OPTS)] ++ [{out_dir, "ebin/"}, return_errors]) of
 			ok -> ok;
-			{ok, _} -> ok
+			{ok, _} -> ok;
+			{error, Errors, Warnings} ->
+				io:format("Errors: ~p~nWarnings: ~p~n", [Errors, Warnings]),
+				halt(91)
 		end
 	end || F <- string:tokens("$(1)", " ")],
 	halt().
@@ -3428,7 +3515,7 @@ ebin/$(PROJECT).app:: $(DTL_FILES) | ebin/
 
 endif
 
-# Copyright (c) 2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2014, Dave Cottlehuber <dch@skunkwerks.at>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
@@ -3495,7 +3582,6 @@ ifneq ($(DEPS),)
 		$(addsuffix /ebin,$(shell cat $(ESCRIPT_RUNTIME_DEPS_FILE))))))
 endif
 
-# @todo Only generate the zip file if there were changes.
 escript:: escript-zip
 	$(gen_verbose) printf "%s\n" \
 		"#!$(ESCRIPT_SHEBANG)" \
@@ -3507,7 +3593,7 @@ escript:: escript-zip
 distclean-escript:
 	$(gen_verbose) rm -f $(ESCRIPT_FILE) $(abspath $(ESCRIPT_ZIP_FILE))
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2014, Enrique Fernandez <enrique.fernandez@erlang-solutions.com>
 # This file is contributed to erlang.mk and subject to the terms of the ISC License.
 
@@ -3578,14 +3664,18 @@ endif
 
 endif
 
-# Copyright (c) 2020, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
+
+define hex_string_escape
+$(subst $$,\$$,$(subst ",\\",$(subst \,\\\\,$1)))
+endef
 
 define hex_user_create.erl
 	{ok, _} = application:ensure_all_started(ssl),
 	{ok, _} = application:ensure_all_started(inets),
 	Config = $(hex_config.erl),
-	case hex_api_user:create(Config, <<"$(strip $1)">>, <<"$(strip $2)">>, <<"$(strip $3)">>) of
+	case hex_api_user:create(Config, <<"$(strip $1)">>, <<"$(call hex_string_escape,$2)">>, <<"$(strip $3)">>) of
 		{ok, {201, _, #{<<"email">> := Email, <<"url">> := URL, <<"username">> := Username}}} ->
 			io:format("User ~s (~s) created at ~s~n"
 				"Please check your inbox for a confirmation email.~n"
@@ -3599,17 +3689,17 @@ define hex_user_create.erl
 endef
 
 # The $(info ) call inserts a new line after the password prompt.
-hex-user-create: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-user-create: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_USERNAME),,$(eval HEX_USERNAME := $(shell read -p "Username: " username; echo $$username)))
 	$(if $(HEX_PASSWORD),,$(eval HEX_PASSWORD := $(shell stty -echo; read -p "Password: " password; stty echo; echo $$password) $(info )))
 	$(if $(HEX_EMAIL),,$(eval HEX_EMAIL := $(shell read -p "Email: " email; echo $$email)))
-	$(gen_verbose) $(call erlang,$(call hex_user_create.erl,$(HEX_USERNAME),$(HEX_PASSWORD),$(HEX_EMAIL)))
+	$(gen_verbose) $(call erlang,$(call hex_user_create.erl,$(HEX_USERNAME),$(value HEX_PASSWORD),$(HEX_EMAIL)))
 
 define hex_key_add.erl
 	{ok, _} = application:ensure_all_started(ssl),
 	{ok, _} = application:ensure_all_started(inets),
 	Config = $(hex_config.erl),
-	ConfigF = Config#{api_key => iolist_to_binary([<<"Basic ">>, base64:encode(<<"$(strip $1):$(strip $2)">>)])},
+	ConfigF = Config#{api_key => iolist_to_binary([<<"Basic ">>, base64:encode(<<"$(strip $1):$(call hex_string_escape,$2)">>)])},
 	Permissions = [
 		case string:split(P, <<":">>) of
 			[D] -> #{domain => D};
@@ -3629,16 +3719,15 @@ define hex_key_add.erl
 	end
 endef
 
-hex-key-add: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-key-add: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_USERNAME),,$(eval HEX_USERNAME := $(shell read -p "Username: " username; echo $$username)))
 	$(if $(HEX_PASSWORD),,$(eval HEX_PASSWORD := $(shell stty -echo; read -p "Password: " password; stty echo; echo $$password) $(info )))
-	$(gen_verbose) $(call erlang,$(call hex_key_add.erl,$(HEX_USERNAME),$(HEX_PASSWORD),\
+	$(gen_verbose) $(call erlang,$(call hex_key_add.erl,$(HEX_USERNAME),$(value HEX_PASSWORD),\
 		$(if $(name),$(name),$(shell hostname)-erlang-mk),\
 		$(if $(perm),$(perm),api)))
 
 HEX_TARBALL_EXTRA_METADATA ?=
 
-# @todo Check that we can += files
 HEX_TARBALL_FILES ?= \
 	$(wildcard early-plugins.mk) \
 	$(wildcard ebin/$(PROJECT).app) \
@@ -3654,11 +3743,6 @@ HEX_TARBALL_FILES ?= \
 	$(sort $(if $(LEGACY),$(filter-out src/$(PROJECT).app.src,$(call core_find,src/,*)),$(call core_find,src/,*)))
 
 HEX_TARBALL_OUTPUT_FILE ?= $(ERLANG_MK_TMP)/$(PROJECT).tar
-
-# @todo Need to check for rebar.config and/or the absence of DEPS to know
-# whether a project will work with Rebar.
-#
-# @todo contributors licenses links in HEX_TARBALL_EXTRA_METADATA
 
 # In order to build the requirements metadata we look into DEPS.
 # We do not require that the project use Hex dependencies, however
@@ -3678,7 +3762,7 @@ define hex_tarball_create.erl
 	Requirements = maps:remove(dummy, Requirements0),
 	Metadata0 = #{
 		app => <<"$(strip $(PROJECT))">>,
-		build_tools => [<<"make">>, <<"rebar3">>],
+		build_tools => [<<"make">>$(if $(or $(wildcard rebar.config),$(if $(strip $(DEPS)),,true)),$(comma) <<"rebar3">>)],
 		description => <<"$(strip $(PROJECT_DESCRIPTION))">>,
 		files => [unicode:characters_to_binary(F) || F <- Files0],
 		name => <<"$(strip $(PROJECT))">>,
@@ -3707,7 +3791,7 @@ hex_tar_verbose_0 = @echo " TAR    $(notdir $(ERLANG_MK_TMP))/$(@F)";
 hex_tar_verbose_2 = set -x;
 hex_tar_verbose = $(hex_tar_verbose_$(V))
 
-$(HEX_TARBALL_OUTPUT_FILE): $(DEPS_DIR)/hex_core/ebin/dep_built app
+$(HEX_TARBALL_OUTPUT_FILE): $(ERLANG_MK_TMP)/dep_built/hex_core app
 	$(hex_tar_verbose) $(call erlang,$(call hex_tarball_create.erl))
 
 hex-tarball-create: $(HEX_TARBALL_OUTPUT_FILE)
@@ -3758,14 +3842,14 @@ define hex_release_publish.erl
 	end
 endef
 
-hex-release-tarball: $(DEPS_DIR)/hex_core/ebin/dep_built $(HEX_TARBALL_OUTPUT_FILE)
+hex-release-tarball: $(ERLANG_MK_TMP)/dep_built/hex_core $(HEX_TARBALL_OUTPUT_FILE)
 	$(verbose) $(call erlang,$(call hex_release_publish_summary.erl))
 
-hex-release-publish: $(DEPS_DIR)/hex_core/ebin/dep_built hex-release-tarball
+hex-release-publish: $(ERLANG_MK_TMP)/dep_built/hex_core hex-release-tarball
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_release_publish.erl,$(HEX_SECRET),false))
 
-hex-release-replace: $(DEPS_DIR)/hex_core/ebin/dep_built hex-release-tarball
+hex-release-replace: $(ERLANG_MK_TMP)/dep_built/hex_core hex-release-tarball
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_release_publish.erl,$(HEX_SECRET),true))
 
@@ -3784,7 +3868,7 @@ define hex_release_delete.erl
 	end
 endef
 
-hex-release-delete: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-release-delete: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_release_delete.erl,$(HEX_SECRET)))
 
@@ -3804,7 +3888,7 @@ define hex_release_retire.erl
 	end
 endef
 
-hex-release-retire: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-release-retire: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_release_retire.erl,$(HEX_SECRET),\
 		$(if $(HEX_VERSION),$(HEX_VERSION),$(PROJECT_VERSION)),\
@@ -3826,7 +3910,7 @@ define hex_release_unretire.erl
 	end
 endef
 
-hex-release-unretire: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-release-unretire: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_release_unretire.erl,$(HEX_SECRET),\
 		$(if $(HEX_VERSION),$(HEX_VERSION),$(PROJECT_VERSION))))
@@ -3835,7 +3919,7 @@ HEX_DOCS_DOC_DIR ?= doc/
 HEX_DOCS_TARBALL_FILES ?= $(sort $(call core_find,$(HEX_DOCS_DOC_DIR),*))
 HEX_DOCS_TARBALL_OUTPUT_FILE ?= $(ERLANG_MK_TMP)/$(PROJECT)-docs.tar.gz
 
-$(HEX_DOCS_TARBALL_OUTPUT_FILE): $(DEPS_DIR)/hex_core/ebin/dep_built app docs
+$(HEX_DOCS_TARBALL_OUTPUT_FILE): $(ERLANG_MK_TMP)/dep_built/hex_core app docs
 	$(hex_tar_verbose) tar czf $(HEX_DOCS_TARBALL_OUTPUT_FILE) -C $(HEX_DOCS_DOC_DIR) \
 		$(HEX_DOCS_TARBALL_FILES:$(HEX_DOCS_DOC_DIR)%=%)
 
@@ -3859,7 +3943,7 @@ define hex_docs_publish.erl
 	end
 endef
 
-hex-docs-publish: $(DEPS_DIR)/hex_core/ebin/dep_built hex-docs-tarball-create
+hex-docs-publish: $(ERLANG_MK_TMP)/dep_built/hex_core hex-docs-tarball-create
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_docs_publish.erl,$(HEX_SECRET)))
 
@@ -3879,12 +3963,12 @@ define hex_docs_delete.erl
 	end
 endef
 
-hex-docs-delete: $(DEPS_DIR)/hex_core/ebin/dep_built
+hex-docs-delete: $(ERLANG_MK_TMP)/dep_built/hex_core
 	$(if $(HEX_SECRET),,$(eval HEX_SECRET := $(shell stty -echo; read -p "Secret: " secret; stty echo; echo $$secret) $(info )))
 	$(gen_verbose) $(call erlang,$(call hex_docs_delete.erl,$(HEX_SECRET),\
 		$(if $(HEX_VERSION),$(HEX_VERSION),$(PROJECT_VERSION))))
 
-# Copyright (c) 2015-2017, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifeq ($(filter proper,$(DEPS) $(TEST_DEPS)),proper)
@@ -3946,7 +4030,7 @@ proper: test-build cover-data-dir
 endif
 endif
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 # Verbosity.
@@ -4009,7 +4093,7 @@ endif
 endif
 endif
 
-# Copyright (c) 2013-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifeq ($(filter relx,$(BUILD_DEPS) $(DEPS) $(REL_DEPS)),relx)
@@ -4108,6 +4192,15 @@ define relx_relup.erl
 endef
 
 relx-rel: rel-deps app
+# OTP finds this application only when the directory is named
+# $(PROJECT) or $(PROJECT)-<vsn>.
+	$(verbose) dir="$(notdir $(CURDIR))"; \
+	case "$$dir" in \
+		"$(PROJECT)"|"$(PROJECT)"-*) ;; \
+		*) \
+			printf '%s\n' "Error: application $(PROJECT) was not found. The project directory is named '$$dir'; OTP requires it to be named '$(PROJECT)' or '$(PROJECT)-<vsn>' so the application can be found on the code path." >&2; \
+			exit 1 ;; \
+	esac
 	$(call erlang,$(call relx_release.erl),-pa ebin/)
 	$(verbose) $(MAKE) relx-post-rel
 	$(if $(filter-out 0,$(RELX_TAR)),$(call erlang,$(call relx_tar.erl),-pa ebin/))
@@ -4167,7 +4260,7 @@ ifdef RELOAD
 rel::
 	$(verbose) $(RELX_OUTPUT_DIR)/$(RELX_REL_NAME)/bin/$(RELX_REL_NAME)$(RELX_REL_EXT) ping
 	$(verbose) $(RELX_OUTPUT_DIR)/$(RELX_REL_NAME)/bin/$(RELX_REL_NAME)$(RELX_REL_EXT) \
-		eval "io:format(\"~p~n\", [c:lm()])."
+		eval "io:format(\"reloaded ~p~n\", [c:lm()])."
 endif
 
 help::
@@ -4178,7 +4271,7 @@ help::
 endif
 endif
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2014, M Robert Martin <rob@version2beta.com>
 # This file is contributed to erlang.mk and subject to the terms of the ISC License.
 
@@ -4206,19 +4299,34 @@ $(foreach dep,$(SHELL_DEPS),$(eval $(call dep_target,$(dep))))
 ifneq ($(SKIP_DEPS),)
 build-shell-deps:
 else
-build-shell-deps: $(ALL_SHELL_DEPS_DIRS)
+build-shell-deps: $(ALL_SHELL_DEPS_DIRS) | $(ERLANG_MK_TMP)/dep_built
 	$(verbose) set -e; for dep in $(ALL_SHELL_DEPS_DIRS) ; do \
-		if [ -z "$(strip $(FULL))" ] && [ ! -L $$dep ] && [ -f $$dep/ebin/dep_built ]; then \
+		if [ -z "$(strip $(FULL))" ] && [ ! -L $$dep ] && [ -f $(ERLANG_MK_TMP)/dep_built/`basename $$dep` ]; then \
 			:; \
 		else \
 			$(MAKE) -C $$dep IS_DEP=1; \
-			if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $$dep/ebin/dep_built; fi; \
+			if [ ! -L $$dep ] && [ -d $$dep/ebin ]; then touch $(ERLANG_MK_TMP)/dep_built/`basename $$dep`; fi; \
 		fi \
 	done
 endif
 
+ifdef RELOAD
+define shell_reload.erl
+	spawn(fun F() ->
+		case c:lm() of
+			[] -> ok;
+			Reloaded -> io:format("reloaded ~p~n", [Reloaded])
+		end,
+		receive after 5000 -> F() end
+	end).
+endef
+SHELL_RELOAD_OPTS = -eval "$(subst $(newline),,$(call escape_dquotes,$(call shell_reload.erl)))"
+else
+SHELL_RELOAD_OPTS =
+endif
+
 shell:: build-shell-deps
-	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) $(SHELL_OPTS)
+	$(gen_verbose) $(SHELL_ERL) -pa $(SHELL_PATHS) $(SHELL_RELOAD_OPTS) $(SHELL_OPTS)
 
 # Copyright 2017, Stanislaw Klekot <dozzie@jarowit.net>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
@@ -4297,7 +4405,7 @@ show-ERLC_OPTS:
 show-TEST_ERLC_OPTS:
 	@$(foreach opt,$(TEST_ERLC_OPTS) -pa ebin -I include,echo "$(opt)";)
 
-# Copyright (c) 2015-2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 ifeq ($(filter triq,$(DEPS) $(TEST_DEPS)),triq)
@@ -4348,7 +4456,7 @@ triq: test-build cover-data-dir
 endif
 endif
 
-# Copyright (c) 2022, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: xref
@@ -4567,7 +4675,7 @@ else
 	$(verbose) $(call erlang,$(call xref.erl,check,$(XREF_CHECKS)),-pa ebin/)
 endif
 
-# Copyright (c) 2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2015, Viktor Söderqvist <viktor@zuiderkwast.se>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
@@ -4708,10 +4816,15 @@ EUNIT_HRL_MODS = $(subst $(space),$(comma),$(shell \
 
 define cover_report.erl
 	$(foreach f,$(COVERDATA),cover:import("$(f)") == ok orelse halt(1),)
-	Ms = cover:imported_modules(),
+	Ms0 = cover:imported_modules(),
+	Exclude = [$(call comma_list,$(COVER_EXCLUDE_MODS))],
+	Ms = [M || M <- Ms0, not lists:member(M, Exclude)],
 	[cover:analyse_to_file(M, "$(COVER_REPORT_DIR)/" ++ atom_to_list(M)
 		++ ".COVER.html", [html])  || M <- Ms],
-	Report = [begin {ok, R} = cover:analyse(M, module), R end || M <- Ms],
+	Report = [begin
+		{result, [R], []} = cover:analyse([M], module),
+		R
+	end || M <- Ms],
 	EunitHrlMods = [$(EUNIT_HRL_MODS)],
 	Report1 = [{M, {Y, case lists:member(M, EunitHrlMods) of
 		true -> N - 1; false -> N end}} || {M, {Y, N}} <- Report],
@@ -4744,7 +4857,7 @@ cover-report:
 endif
 endif # ifneq ($(COVER_REPORT_DIR),)
 
-# Copyright (c) 2016, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 .PHONY: sfx
@@ -4791,7 +4904,7 @@ sfx:
 endif
 endif
 
-# Copyright (c) 2013-2017, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 
 # External plugins.
@@ -4808,7 +4921,7 @@ help:: help-plugins
 help-plugins::
 	$(verbose) :
 
-# Copyright (c) 2013-2015, Loïc Hoguin <essen@ninenines.eu>
+# Copyright (c) Loïc Hoguin <essen@ninenines.eu>
 # Copyright (c) 2015-2016, Jean-Sébastien Pédron <jean-sebastien@rabbitmq.com>
 # This file is part of erlang.mk and subject to the terms of the ISC License.
 

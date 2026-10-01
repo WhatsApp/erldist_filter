@@ -240,14 +240,14 @@ IS_CLANG := $(findstring clang,$(C_COMPILER_ID))
 
 ifneq ($(IS_CLANG),)
 	CFLAGS += $(CFLAGS_WARNING_CLANG)
-	CXXFLASG += $(CXXFLAGS_WARNING_CLANG)
+	CXXFLAGS += $(CXXFLAGS_WARNING_CLANG)
 else
 	$(error not using clang)
 endif
 
 ifneq ($(SANITIZE),)
 	CFLAGS += $(CFLAGS_SANITIZE)
-	CXXFLASG += $(CXXFLAGS_SANITIZE)
+	CXXFLAGS += $(CXXFLAGS_SANITIZE)
 endif
 
 # Test-only instrumentation used by erldist_filter_channel_teardown_SUITE.
@@ -257,7 +257,7 @@ endif
 
 ifneq ($(WARNINGS_AS_ERRORS),)
 	CFLAGS += -Werror
-	CXXFLASG += -Werror
+	CXXFLAGS += -Werror
 endif
 
 CFLAGS += -I"$(ERTS_INCLUDE_DIR)" -I"$(ERL_INTERFACE_INCLUDE_DIR)"

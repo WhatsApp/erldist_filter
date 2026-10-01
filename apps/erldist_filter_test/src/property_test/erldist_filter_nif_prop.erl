@@ -32,7 +32,8 @@
     prop_dist_ext_to_vterm_3/1,
     prop_dist_int_to_vdist_2/1,
     prop_dist_int_to_vterm_2/1,
-    prop_dist_int_to_vterm_3/1
+    prop_dist_int_to_vterm_3/1,
+    prop_udist_roundtrip/1
 ]).
 
 %% Macros
@@ -104,6 +105,39 @@ vterm_test_vectors_resolve_atoms([]) ->
 %%%=============================================================================
 %%% Properties
 %%%=============================================================================
+
+-spec prop_udist_roundtrip(ct_suite:ct_config()) -> proper:test().
+prop_udist_roundtrip(_Config) ->
+    ?FORALL(
+        {WithoutPayload, WithPayload},
+        {proper_vdist:vdist_any_dop_without_payload(), proper_vdist:vdist_any_dop_with_payload()},
+        begin
+            RawWithout = vterm:simplify(vdist_dop:dop_to_control_message_vterm(WithoutPayload)),
+            RawWith = vterm:simplify(vdist_dop:dop_to_control_message_vterm(WithPayload)),
+            DopWithout = udist:cast_to_dop_without_payload(RawWithout),
+            DopWith = udist:cast_to_dop_with_payload(RawWith),
+            conjunction([
+                {without_payload,
+                    ?VTERM_EQUALS(
+                        {DopWithout, RawWithout, RawWithout},
+                        {
+                            udist:cast_to_dop(RawWithout),
+                            udist:cast_to_raw_dop(DopWithout),
+                            udist:cast_to_raw_dop_without_payload(DopWithout)
+                        }
+                    )},
+                {with_payload,
+                    ?VTERM_EQUALS(
+                        {DopWith, RawWith, RawWith},
+                        {
+                            udist:cast_to_dop(RawWith),
+                            udist:cast_to_raw_dop(DopWith),
+                            udist:cast_to_raw_dop_with_payload(DopWith)
+                        }
+                    )}
+            ])
+        end
+    ).
 
 -spec prop_dist_ext_to_vdist_2(ct_suite:ct_config()) -> proper:test().
 prop_dist_ext_to_vdist_2(_Config) ->
@@ -337,6 +371,7 @@ vterm_reference_atoms_xform(VTerm, AtomMap) ->
     VTerm :: vterm:t(), Atoms :: tuple() | dynamic().
 vterm_resolve_atoms_xform(#vterm_atom_cache_ref{index = Index}, Atoms) ->
     Atom = element(Index + 1, Atoms),
+    true = is_atom(Atom),
     {cont, vterm_atom_cache_ref_resolved:new(Index, Atom), Atoms};
 vterm_resolve_atoms_xform(VT, Atoms) ->
     {cont, VT, Atoms}.

@@ -46,6 +46,8 @@ dop_sequence_id(T) when ?is_vdist_dop_t(T) ->
     Module = element(1, T),
     Module:sequence_id(T).
 
+%% Each operation constructor validates its fields. These guards specialize
+%% the argument types needed to call the corresponding constructor.
 -spec control_message_vterm_to_dop(vterm:u32(), OpCode :: pos_integer(), [vterm:t()]) -> vdist:dop_t().
 control_message_vterm_to_dop(_Arity = 3, IntegerDOP, [A, B]) ->
     case IntegerDOP of
@@ -69,7 +71,7 @@ control_message_vterm_to_dop(_Arity = 3, IntegerDOP, [A, B]) ->
             FromPid = A,
             ToPid = B,
             vdist_dop_payload_exit2:new(FromPid, ToPid);
-        ?DOP_SEND when ?is_vterm_t(A) andalso ?is_vterm_pid_t(B) ->
+        ?DOP_SEND when ?is_vterm_pid_t(B) ->
             Unused = A,
             ToPid = B,
             vdist_dop_send:new(Unused, ToPid);
@@ -84,7 +86,7 @@ control_message_vterm_to_dop(_Arity = 3, IntegerDOP, [A, B]) ->
     end;
 control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
     case IntegerDOP of
-        ?DOP_ALIAS_SEND_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_reference_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_ALIAS_SEND_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_reference_t(B) ->
             FromPid = A,
             Alias = B,
             TraceToken = C,
@@ -104,12 +106,12 @@ control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
             ToProc = B,
             Ref = C,
             vdist_dop_demonitor_p:new(FromPid, ToProc, Ref);
-        ?DOP_EXIT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_EXIT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) ->
             FromPid = A,
             ToPid = B,
             Reason = C,
             vdist_dop_exit:new(FromPid, ToPid, Reason);
-        ?DOP_EXIT2 when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_EXIT2 when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) ->
             FromPid = A,
             ToPid = B,
             Reason = C,
@@ -121,12 +123,12 @@ control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
             ToProc = B,
             Ref = C,
             vdist_dop_monitor_p:new(FromPid, ToProc, Ref);
-        ?DOP_PAYLOAD_EXIT_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_PAYLOAD_EXIT_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) ->
             FromPid = A,
             ToPid = B,
             TraceToken = C,
             vdist_dop_payload_exit_tt:new(FromPid, ToPid, TraceToken);
-        ?DOP_PAYLOAD_EXIT2_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_PAYLOAD_EXIT2_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) ->
             FromPid = A,
             ToPid = B,
             TraceToken = C,
@@ -138,17 +140,17 @@ control_message_vterm_to_dop(_Arity = 4, IntegerDOP, [A, B, C]) ->
             ToPid = B,
             Ref = C,
             vdist_dop_payload_monitor_p_exit:new(FromProc, ToPid, Ref);
-        ?DOP_REG_SEND when ?is_vterm_pid_t(A) andalso ?is_vterm_t(B) andalso ?is_vterm_atom_t(C) ->
+        ?DOP_REG_SEND when ?is_vterm_pid_t(A) andalso ?is_vterm_atom_t(C) ->
             FromPid = A,
             Unused = B,
             ToName = C,
             vdist_dop_reg_send:new(FromPid, Unused, ToName);
-        ?DOP_SEND_TT when ?is_vterm_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_SEND_TT when ?is_vterm_pid_t(B) ->
             Unused = A,
             ToPid = B,
             TraceToken = C,
             vdist_dop_send_tt:new(Unused, ToPid, TraceToken);
-        ?DOP_SEND_SENDER_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) ->
+        ?DOP_SEND_SENDER_TT when ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) ->
             FromPid = A,
             ToPid = B,
             TraceToken = C,
@@ -168,7 +170,7 @@ control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
     case IntegerDOP of
         ?DOP_ALTACT_SIG_SEND when
             ?is_vterm_fixed_integer_t(A) andalso ?is_vterm_pid_t(B) andalso
-                (?is_vterm_pid_t(C) orelse ?is_vterm_atom_t(C) orelse ?is_vterm_reference_t(C)) andalso ?is_vterm_t(D)
+                (?is_vterm_pid_t(C) orelse ?is_vterm_atom_t(C) orelse ?is_vterm_reference_t(C))
         ->
             Flags = A,
             SenderPid = B,
@@ -176,7 +178,7 @@ control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
             Token = D,
             vdist_dop_altact_sig_send:new(Flags, SenderPid, To, Token);
         ?DOP_EXIT_TT when
-            ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) andalso ?is_vterm_t(D)
+            ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B)
         ->
             FromPid = A,
             ToPid = B,
@@ -184,7 +186,7 @@ control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
             Reason = D,
             vdist_dop_exit_tt:new(FromPid, ToPid, TraceToken, Reason);
         ?DOP_EXIT2_TT when
-            ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_t(C) andalso ?is_vterm_t(D)
+            ?is_vterm_pid_t(A) andalso ?is_vterm_pid_t(B)
         ->
             FromPid = A,
             ToPid = B,
@@ -192,8 +194,7 @@ control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
             Reason = D,
             vdist_dop_exit2_tt:new(FromPid, ToPid, TraceToken, Reason);
         ?DOP_MONITOR_P_EXIT when
-            (?is_vterm_pid_t(A) orelse ?is_vterm_atom_t(A)) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_reference_t(C) andalso
-                ?is_vterm_t(D)
+            (?is_vterm_pid_t(A) orelse ?is_vterm_atom_t(A)) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_reference_t(C)
         ->
             FromProc = A,
             ToPid = B,
@@ -201,7 +202,7 @@ control_message_vterm_to_dop(_Arity = 5, IntegerDOP, [A, B, C, D]) ->
             Reason = D,
             vdist_dop_monitor_p_exit:new(FromProc, ToPid, Ref, Reason);
         ?DOP_REG_SEND_TT when
-            ?is_vterm_pid_t(A) andalso ?is_vterm_t(B) andalso ?is_vterm_atom_t(C) andalso ?is_vterm_t(D)
+            ?is_vterm_pid_t(A) andalso ?is_vterm_atom_t(C)
         ->
             FromPid = A,
             Unused = B,
@@ -222,7 +223,7 @@ control_message_vterm_to_dop(_Arity = 6, IntegerDOP, [A, B, C, D, E]) ->
     case IntegerDOP of
         ?DOP_SPAWN_REPLY_TT when
             ?is_vterm_reference_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_fixed_integer_t(C) andalso
-                (?is_vterm_atom_t(D) orelse ?is_vterm_pid_t(D)) andalso ?is_vterm_t(E)
+                (?is_vterm_atom_t(D) orelse ?is_vterm_pid_t(D))
         ->
             ReqId = A,
             To = B,
@@ -263,7 +264,7 @@ control_message_vterm_to_dop(_Arity = 7, IntegerDOP, [A, B, C, D, E, F]) ->
     case IntegerDOP of
         ?DOP_SPAWN_REQUEST_TT when
             ?is_vterm_reference_t(A) andalso ?is_vterm_pid_t(B) andalso ?is_vterm_pid_t(C) andalso ?is_vterm_tuple_t(D) andalso
-                ?is_vterm_list_t(E) andalso ?is_vterm_t(F)
+                ?is_vterm_list_t(E)
         ->
             ReqId = A,
             From = B,

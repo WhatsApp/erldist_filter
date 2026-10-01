@@ -105,6 +105,7 @@ first_frame_after_connect() ->
 -spec first_frame_after_connect(Config :: ct_suite:ct_config()) -> erldist_filter_test:testcase().
 first_frame_after_connect(Config) ->
     {p2p, P2P} = lists:keyfind(p2p, 1, Config),
+    true = is_pid(P2P),
     #{upeer := {UNode, UPid}, vpeer := {VNode, VPid}} = erldist_filter_test_p2p:peers(P2P),
     ok = load_helpers(UPid),
     ok = load_helpers(VPid),

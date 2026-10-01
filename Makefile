@@ -6,7 +6,7 @@
 
 PROJECT = erldist_filter
 PROJECT_DESCRIPTION = erldist_filter
-PROJECT_VERSION = 1.29.0
+PROJECT_VERSION = 1.29.1
 
 include erlang.mk
 
@@ -33,8 +33,8 @@ export ARCH
 endif
 
 # Configuration.
-ELP_VERSION ?= 2026-06-10
-ELP_OTP_VERSION ?= 28
+ELP_VERSION ?= 2026-08-10
+ELP_OTP_VERSION ?= 28.5
 
 ELP ?= $(CURDIR)/elp
 export ELP
@@ -54,7 +54,7 @@ ELP_ARCHIVE = elp-$(ELP_VERSION).tar.gz
 help::
 	$(verbose) printf "%s\n" "" \
 		"elp targets:" \
-		"  eqwalize     Run 'elp eqwalize-app erldist_filter' on the current project" \
+		"  eqwalize     Run 'elp eqwalize erldist_filter' on the current project" \
 		"  eqwalize-all Run 'elp eqwalize-all' on the current project"
 
 distclean:: distclean-elp
@@ -63,7 +63,7 @@ distclean:: distclean-elp
 
 $(ELP):
 	$(verbose) mkdir -p $(ELP_BUILD_DIR)
-	$(verbose) echo "Downloading eqwalizer from: "$(ELP_URL)
+	$(verbose) echo "Downloading ELP and eqwalizer from: "$(ELP_URL)
 	$(verbose) $(call core_http_get,$(ELP_BUILD_DIR)/$(ELP_ARCHIVE),$(ELP_URL))
 	$(verbose) cd $(ELP_BUILD_DIR) && \
 		tar -xzf $(ELP_ARCHIVE)
@@ -72,10 +72,10 @@ $(ELP):
 	$(verbose) rm -rf $(ELP_BUILD_DIR)
 
 eqwalize: $(ELP)
-	$(verbose) $(ELP) eqwalize $(PROJECT)
+	$(verbose) $(ELP) eqwalize $(PROJECT) --bail-on-error
 
 eqwalize-all: $(ELP)
-	$(verbose) $(ELP) eqwalize-all
+	$(verbose) $(ELP) eqwalize-all --bail-on-error
 
 distclean-elp:
 	$(gen_verbose) rm -rf $(ELP)
@@ -93,7 +93,8 @@ ERLFMT_OPTS ?=
 ERLFMT_BUILD_DIR ?= $(CURDIR)/_erlfmt_build
 ERLFMT_CODE_ARCHIVE = $(ERLFMT_VERSION).tar.gz
 
-ERLFMT_REBAR3_URL ?= https://s3.amazonaws.com/rebar3/rebar3
+ERLFMT_REBAR3_VERSION ?= 3.27.1
+ERLFMT_REBAR3_URL ?= https://github.com/erlang/rebar3/releases/download/$(ERLFMT_REBAR3_VERSION)/rebar3
 ERLFMT_REBAR3 ?= rebar3
 
 # Core targets.
@@ -102,7 +103,7 @@ help::
 	$(verbose) printf "%s\n" "" \
 		"erlfmt targets:" \
 		"  erlfmt       Run erlfmt or download the default otherwise" \
-		"  elrfmt-check Run erlfmt --check"
+		"  erlfmt-check Run erlfmt --check"
 
 distclean:: distclean-erlfmt
 

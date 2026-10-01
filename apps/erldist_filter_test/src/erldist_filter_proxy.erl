@@ -107,7 +107,14 @@ channel_recv(Pid, IoVec) ->
 %%% gen_server callbacks
 %%%=============================================================================
 
--spec init(tuple()) -> {ok, #state{}}.
+-spec init({
+    pid(),
+    erldist_filter_nif:packet_size(),
+    erldist_filter_nif:sysname(),
+    erldist_filter_nif:creation(),
+    erldist_filter_nif:connection_id(),
+    erldist_filter_nif:distribution_flags()
+}) -> {ok, #state{}}.
 init({ParentPid, PacketSize, Sysname, Creation, ConnectionId, DistributionFlags}) ->
     ParentMon = erlang:monitor(process, ParentPid),
     Channel = erldist_filter_nif:channel_open(PacketSize, Sysname, Creation, ConnectionId, DistributionFlags),

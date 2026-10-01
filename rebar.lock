@@ -1,13 +1,9 @@
-{"1.2.0",
 [{<<"eqwalizer_support">>,
-  {git_subdir,"https://github.com/WhatsApp/eqwalizer.git",
-              {ref,"4986d98000d933b1dfb2af5dbe8215d22f4625fe"},
-              "eqwalizer_support"},
+  {git_subdir,"https://github.com/WhatsApp/erlang-language-platform.git",
+              {ref,"81ddb608598ff652a44a362f7a65cf2516bf6d1e"},
+              "eqwalizer/eqwalizer_support"},
   0},
- {<<"proper">>,{pkg,<<"proper">>,<<"1.5.0">>},0}]}.
-[
-{pkg_hash,[
- {<<"proper">>, <<"4A87CE8B219858E64C9AA015F4F7ED739D0AC3CA6BFD77FA62794617EE784225">>}]},
-{pkg_hash_ext,[
- {<<"proper">>, <<"FBF7CF0625E5441A314514F7D8E1EAFF52090FCD94FF34B5171FF293D3F9969A">>}]}
-].
+ {<<"proper">>,
+  {git,"https://github.com/proper-testing/proper.git",
+       {ref,"21de022438cb57a04cbcf0f3e5b40bb846598daa"}},
+  0}].

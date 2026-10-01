@@ -238,10 +238,14 @@
 %%%=============================================================================
 
 -spec cast_to_dop(raw_dop_t()) -> dop_t().
-cast_to_dop(T = {?DOP_ALIAS_SEND, _, _}) ->
-    setelement(1, T, udist_dop_alias_send);
-cast_to_dop(T = {?DOP_ALIAS_SEND_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_alias_send_tt);
+cast_to_dop({?DOP_ALIAS_SEND, FromPid, Alias}) when
+    is_pid(FromPid) andalso is_reference(Alias)
+->
+    #udist_dop_alias_send{from_pid = FromPid, alias = Alias};
+cast_to_dop({?DOP_ALIAS_SEND_TT, FromPid, Alias, Token}) when
+    is_pid(FromPid) andalso is_reference(Alias)
+->
+    #udist_dop_alias_send_tt{from_pid = FromPid, alias = Alias, token = Token};
 cast_to_dop({?DOP_ALTACT_SIG_SEND, A, B, C}) when
     is_integer(A) andalso is_pid(B) andalso (is_pid(C) orelse is_atom(C) orelse is_reference(C))
 ->
@@ -250,96 +254,193 @@ cast_to_dop({?DOP_ALTACT_SIG_SEND, A, B, C, D}) when
     is_integer(A) andalso is_pid(B) andalso (is_pid(C) orelse is_atom(C) orelse is_reference(C))
 ->
     #udist_dop_altact_sig_send{flags = A, sender_pid = B, to = C, token = {some, D}};
-cast_to_dop(T = {?DOP_DEMONITOR_P, _, _, _}) ->
-    setelement(1, T, udist_dop_demonitor_p);
-cast_to_dop(T = {?DOP_EXIT, _, _, _}) ->
-    setelement(1, T, udist_dop_exit);
-cast_to_dop(T = {?DOP_EXIT2, _, _, _}) ->
-    setelement(1, T, udist_dop_exit2);
-cast_to_dop(T = {?DOP_EXIT2_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_exit2_tt);
-cast_to_dop(T = {?DOP_EXIT_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_exit_tt);
-cast_to_dop(T = {?DOP_GROUP_LEADER, _, _}) ->
-    setelement(1, T, udist_dop_group_leader);
-cast_to_dop(T = {?DOP_LINK, _, _}) ->
-    setelement(1, T, udist_dop_link);
-cast_to_dop(T = {?DOP_MONITOR_P, _, _, _}) ->
-    setelement(1, T, udist_dop_monitor_p);
-cast_to_dop(T = {?DOP_MONITOR_P_EXIT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_monitor_p_exit);
-cast_to_dop(T = {?DOP_PAYLOAD_EXIT, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit);
-cast_to_dop(T = {?DOP_PAYLOAD_EXIT2, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit2);
-cast_to_dop(T = {?DOP_PAYLOAD_EXIT2_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit2_tt);
-cast_to_dop(T = {?DOP_PAYLOAD_EXIT_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit_tt);
-cast_to_dop(T = {?DOP_PAYLOAD_MONITOR_P_EXIT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_monitor_p_exit);
-cast_to_dop(T = {?DOP_REG_SEND, _, _, _}) ->
-    setelement(1, T, udist_dop_reg_send);
-cast_to_dop(T = {?DOP_REG_SEND_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_reg_send_tt);
-cast_to_dop(T = {?DOP_SEND, _, _}) ->
-    setelement(1, T, udist_dop_send);
-cast_to_dop(T = {?DOP_SEND_SENDER, _, _}) ->
-    setelement(1, T, udist_dop_send_sender);
-cast_to_dop(T = {?DOP_SEND_SENDER_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_send_sender_tt);
-cast_to_dop(T = {?DOP_SEND_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_send_tt);
-cast_to_dop(T = {?DOP_SPAWN_REPLY, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_reply);
-cast_to_dop(T = {?DOP_SPAWN_REPLY_TT, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_reply_tt);
-cast_to_dop(T = {?DOP_SPAWN_REQUEST, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_request);
-cast_to_dop(T = {?DOP_SPAWN_REQUEST_TT, _, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_request_tt);
-cast_to_dop(T = {?DOP_UNLINK, _, _}) ->
-    setelement(1, T, udist_dop_unlink);
-cast_to_dop(T = {?DOP_UNLINK_ID, _, _, _}) ->
-    setelement(1, T, udist_dop_unlink_id);
-cast_to_dop(T = {?DOP_UNLINK_ID_ACK, _, _, _}) ->
-    setelement(1, T, udist_dop_unlink_id_ack).
+cast_to_dop({?DOP_DEMONITOR_P, FromPid, ToProc, Ref}) when
+    is_pid(FromPid) andalso (is_atom(ToProc) orelse is_pid(ToProc)) andalso is_reference(Ref)
+->
+    #udist_dop_demonitor_p{from_pid = FromPid, to_proc = ToProc, ref = Ref};
+cast_to_dop({?DOP_EXIT, FromPid, ToPid, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit{from_pid = FromPid, to_pid = ToPid, reason = Reason};
+cast_to_dop({?DOP_EXIT2, FromPid, ToPid, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit2{from_pid = FromPid, to_pid = ToPid, reason = Reason};
+cast_to_dop({?DOP_EXIT2_TT, FromPid, ToPid, TraceToken, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit2_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken, reason = Reason};
+cast_to_dop({?DOP_EXIT_TT, FromPid, ToPid, TraceToken, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken, reason = Reason};
+cast_to_dop({?DOP_GROUP_LEADER, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_group_leader{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_LINK, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_link{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_MONITOR_P, FromPid, ToProc, Ref}) when
+    is_pid(FromPid) andalso (is_atom(ToProc) orelse is_pid(ToProc)) andalso is_reference(Ref)
+->
+    #udist_dop_monitor_p{from_pid = FromPid, to_proc = ToProc, ref = Ref};
+cast_to_dop({?DOP_MONITOR_P_EXIT, FromProc, ToPid, Ref, Reason}) when
+    (is_atom(FromProc) orelse is_pid(FromProc)) andalso is_pid(ToPid) andalso is_reference(Ref)
+->
+    #udist_dop_monitor_p_exit{from_proc = FromProc, to_pid = ToPid, ref = Ref, reason = Reason};
+cast_to_dop({?DOP_PAYLOAD_EXIT, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_PAYLOAD_EXIT2, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit2{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_PAYLOAD_EXIT2_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit2_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop({?DOP_PAYLOAD_EXIT_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop({?DOP_PAYLOAD_MONITOR_P_EXIT, FromProc, ToPid, Ref}) when
+    (is_atom(FromProc) orelse is_pid(FromProc)) andalso is_pid(ToPid) andalso is_reference(Ref)
+->
+    #udist_dop_payload_monitor_p_exit{from_proc = FromProc, to_pid = ToPid, ref = Ref};
+cast_to_dop({?DOP_REG_SEND, FromPid, Unused, ToName}) when
+    is_pid(FromPid) andalso is_atom(ToName)
+->
+    #udist_dop_reg_send{from_pid = FromPid, unused = Unused, to_name = ToName};
+cast_to_dop({?DOP_REG_SEND_TT, FromPid, Unused, ToName, TraceToken}) when
+    is_pid(FromPid) andalso is_atom(ToName)
+->
+    #udist_dop_reg_send_tt{from_pid = FromPid, unused = Unused, to_name = ToName, trace_token = TraceToken};
+cast_to_dop({?DOP_SEND, Unused, ToPid}) when
+    is_pid(ToPid)
+->
+    #udist_dop_send{unused = Unused, to_pid = ToPid};
+cast_to_dop({?DOP_SEND_SENDER, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_send_sender{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_SEND_SENDER_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_send_sender_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop({?DOP_SEND_TT, Unused, ToPid, TraceToken}) when
+    is_pid(ToPid)
+->
+    #udist_dop_send_tt{unused = Unused, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop({?DOP_SPAWN_REPLY, ReqId, To, Flags, Result}) when
+    is_reference(ReqId) andalso is_pid(To) andalso is_integer(Flags) andalso (is_atom(Result) orelse is_pid(Result))
+->
+    #udist_dop_spawn_reply{req_id = ReqId, to = To, flags = Flags, result = Result};
+cast_to_dop({?DOP_SPAWN_REPLY_TT, ReqId, To, Flags, Result, Token}) when
+    is_reference(ReqId) andalso is_pid(To) andalso is_integer(Flags) andalso (is_atom(Result) orelse is_pid(Result))
+->
+    #udist_dop_spawn_reply_tt{req_id = ReqId, to = To, flags = Flags, result = Result, token = Token};
+cast_to_dop({?DOP_SPAWN_REQUEST, ReqId, From, GroupLeader, {Module, Function, Arity}, OptList}) when
+    is_reference(ReqId) andalso is_pid(From) andalso is_pid(GroupLeader) andalso is_atom(Module) andalso
+        is_atom(Function) andalso is_integer(Arity) andalso is_list(OptList)
+->
+    #udist_dop_spawn_request{
+        req_id = ReqId, from = From, group_leader = GroupLeader, mfa = {Module, Function, Arity}, opt_list = OptList
+    };
+cast_to_dop({?DOP_SPAWN_REQUEST_TT, ReqId, From, GroupLeader, {Module, Function, Arity}, OptList, Token}) when
+    is_reference(ReqId) andalso is_pid(From) andalso is_pid(GroupLeader) andalso is_atom(Module) andalso
+        is_atom(Function) andalso is_integer(Arity) andalso is_list(OptList)
+->
+    #udist_dop_spawn_request_tt{
+        req_id = ReqId,
+        from = From,
+        group_leader = GroupLeader,
+        mfa = {Module, Function, Arity},
+        opt_list = OptList,
+        token = Token
+    };
+cast_to_dop({?DOP_UNLINK, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_UNLINK_ID, Id, FromPid, ToPid}) when
+    is_integer(Id) andalso is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink_id{id = Id, from_pid = FromPid, to_pid = ToPid};
+cast_to_dop({?DOP_UNLINK_ID_ACK, Id, FromPid, ToPid}) when
+    is_integer(Id) andalso is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink_id_ack{id = Id, from_pid = FromPid, to_pid = ToPid}.
 
 -spec cast_to_dop_without_payload(raw_dop_without_payload_t()) -> dop_without_payload_t().
-cast_to_dop_without_payload(T = {?DOP_DEMONITOR_P, _, _, _}) ->
-    setelement(1, T, udist_dop_demonitor_p);
-cast_to_dop_without_payload(T = {?DOP_EXIT, _, _, _}) ->
-    setelement(1, T, udist_dop_exit);
-cast_to_dop_without_payload(T = {?DOP_EXIT2, _, _, _}) ->
-    setelement(1, T, udist_dop_exit2);
-cast_to_dop_without_payload(T = {?DOP_EXIT2_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_exit2_tt);
-cast_to_dop_without_payload(T = {?DOP_EXIT_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_exit_tt);
-cast_to_dop_without_payload(T = {?DOP_GROUP_LEADER, _, _}) ->
-    setelement(1, T, udist_dop_group_leader);
-cast_to_dop_without_payload(T = {?DOP_LINK, _, _}) ->
-    setelement(1, T, udist_dop_link);
-cast_to_dop_without_payload(T = {?DOP_MONITOR_P, _, _, _}) ->
-    setelement(1, T, udist_dop_monitor_p);
-cast_to_dop_without_payload(T = {?DOP_MONITOR_P_EXIT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_monitor_p_exit);
-cast_to_dop_without_payload(T = {?DOP_SPAWN_REPLY, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_reply);
-cast_to_dop_without_payload(T = {?DOP_SPAWN_REPLY_TT, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_reply_tt);
-cast_to_dop_without_payload(T = {?DOP_UNLINK, _, _}) ->
-    setelement(1, T, udist_dop_unlink);
-cast_to_dop_without_payload(T = {?DOP_UNLINK_ID, _, _, _}) ->
-    setelement(1, T, udist_dop_unlink_id);
-cast_to_dop_without_payload(T = {?DOP_UNLINK_ID_ACK, _, _, _}) ->
-    setelement(1, T, udist_dop_unlink_id_ack).
+cast_to_dop_without_payload({?DOP_DEMONITOR_P, FromPid, ToProc, Ref}) when
+    is_pid(FromPid) andalso (is_atom(ToProc) orelse is_pid(ToProc)) andalso is_reference(Ref)
+->
+    #udist_dop_demonitor_p{from_pid = FromPid, to_proc = ToProc, ref = Ref};
+cast_to_dop_without_payload({?DOP_EXIT, FromPid, ToPid, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit{from_pid = FromPid, to_pid = ToPid, reason = Reason};
+cast_to_dop_without_payload({?DOP_EXIT2, FromPid, ToPid, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit2{from_pid = FromPid, to_pid = ToPid, reason = Reason};
+cast_to_dop_without_payload({?DOP_EXIT2_TT, FromPid, ToPid, TraceToken, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit2_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken, reason = Reason};
+cast_to_dop_without_payload({?DOP_EXIT_TT, FromPid, ToPid, TraceToken, Reason}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_exit_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken, reason = Reason};
+cast_to_dop_without_payload({?DOP_GROUP_LEADER, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_group_leader{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_without_payload({?DOP_LINK, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_link{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_without_payload({?DOP_MONITOR_P, FromPid, ToProc, Ref}) when
+    is_pid(FromPid) andalso (is_atom(ToProc) orelse is_pid(ToProc)) andalso is_reference(Ref)
+->
+    #udist_dop_monitor_p{from_pid = FromPid, to_proc = ToProc, ref = Ref};
+cast_to_dop_without_payload({?DOP_MONITOR_P_EXIT, FromProc, ToPid, Ref, Reason}) when
+    (is_atom(FromProc) orelse is_pid(FromProc)) andalso is_pid(ToPid) andalso is_reference(Ref)
+->
+    #udist_dop_monitor_p_exit{from_proc = FromProc, to_pid = ToPid, ref = Ref, reason = Reason};
+cast_to_dop_without_payload({?DOP_SPAWN_REPLY, ReqId, To, Flags, Result}) when
+    is_reference(ReqId) andalso is_pid(To) andalso is_integer(Flags) andalso (is_atom(Result) orelse is_pid(Result))
+->
+    #udist_dop_spawn_reply{req_id = ReqId, to = To, flags = Flags, result = Result};
+cast_to_dop_without_payload({?DOP_SPAWN_REPLY_TT, ReqId, To, Flags, Result, Token}) when
+    is_reference(ReqId) andalso is_pid(To) andalso is_integer(Flags) andalso (is_atom(Result) orelse is_pid(Result))
+->
+    #udist_dop_spawn_reply_tt{req_id = ReqId, to = To, flags = Flags, result = Result, token = Token};
+cast_to_dop_without_payload({?DOP_UNLINK, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_without_payload({?DOP_UNLINK_ID, Id, FromPid, ToPid}) when
+    is_integer(Id) andalso is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink_id{id = Id, from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_without_payload({?DOP_UNLINK_ID_ACK, Id, FromPid, ToPid}) when
+    is_integer(Id) andalso is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_unlink_id_ack{id = Id, from_pid = FromPid, to_pid = ToPid}.
 
 -spec cast_to_dop_with_payload(raw_dop_with_payload_t()) -> dop_with_payload_t().
-cast_to_dop_with_payload(T = {?DOP_ALIAS_SEND, _, _}) ->
-    setelement(1, T, udist_dop_alias_send);
-cast_to_dop_with_payload(T = {?DOP_ALIAS_SEND_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_alias_send_tt);
+cast_to_dop_with_payload({?DOP_ALIAS_SEND, FromPid, Alias}) when
+    is_pid(FromPid) andalso is_reference(Alias)
+->
+    #udist_dop_alias_send{from_pid = FromPid, alias = Alias};
+cast_to_dop_with_payload({?DOP_ALIAS_SEND_TT, FromPid, Alias, Token}) when
+    is_pid(FromPid) andalso is_reference(Alias)
+->
+    #udist_dop_alias_send_tt{from_pid = FromPid, alias = Alias, token = Token};
 cast_to_dop_with_payload({?DOP_ALTACT_SIG_SEND, A, B, C}) when
     is_integer(A) andalso is_pid(B) andalso (is_pid(C) orelse is_atom(C) orelse is_reference(C))
 ->
@@ -348,32 +449,71 @@ cast_to_dop_with_payload({?DOP_ALTACT_SIG_SEND, A, B, C, D}) when
     is_integer(A) andalso is_pid(B) andalso (is_pid(C) orelse is_atom(C) orelse is_reference(C))
 ->
     #udist_dop_altact_sig_send{flags = A, sender_pid = B, to = C, token = {some, D}};
-cast_to_dop_with_payload(T = {?DOP_PAYLOAD_EXIT, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit);
-cast_to_dop_with_payload(T = {?DOP_PAYLOAD_EXIT2, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit2);
-cast_to_dop_with_payload(T = {?DOP_PAYLOAD_EXIT2_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit2_tt);
-cast_to_dop_with_payload(T = {?DOP_PAYLOAD_EXIT_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_exit_tt);
-cast_to_dop_with_payload(T = {?DOP_PAYLOAD_MONITOR_P_EXIT, _, _, _}) ->
-    setelement(1, T, udist_dop_payload_monitor_p_exit);
-cast_to_dop_with_payload(T = {?DOP_REG_SEND, _, _, _}) ->
-    setelement(1, T, udist_dop_reg_send);
-cast_to_dop_with_payload(T = {?DOP_REG_SEND_TT, _, _, _, _}) ->
-    setelement(1, T, udist_dop_reg_send_tt);
-cast_to_dop_with_payload(T = {?DOP_SEND, _, _}) ->
-    setelement(1, T, udist_dop_send);
-cast_to_dop_with_payload(T = {?DOP_SEND_SENDER, _, _}) ->
-    setelement(1, T, udist_dop_send_sender);
-cast_to_dop_with_payload(T = {?DOP_SEND_SENDER_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_send_sender_tt);
-cast_to_dop_with_payload(T = {?DOP_SEND_TT, _, _, _}) ->
-    setelement(1, T, udist_dop_send_tt);
-cast_to_dop_with_payload(T = {?DOP_SPAWN_REQUEST, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_request);
-cast_to_dop_with_payload(T = {?DOP_SPAWN_REQUEST_TT, _, _, _, _, _, _}) ->
-    setelement(1, T, udist_dop_spawn_request_tt).
+cast_to_dop_with_payload({?DOP_PAYLOAD_EXIT, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_with_payload({?DOP_PAYLOAD_EXIT2, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit2{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_with_payload({?DOP_PAYLOAD_EXIT2_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit2_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop_with_payload({?DOP_PAYLOAD_EXIT_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_payload_exit_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop_with_payload({?DOP_PAYLOAD_MONITOR_P_EXIT, FromProc, ToPid, Ref}) when
+    (is_atom(FromProc) orelse is_pid(FromProc)) andalso is_pid(ToPid) andalso is_reference(Ref)
+->
+    #udist_dop_payload_monitor_p_exit{from_proc = FromProc, to_pid = ToPid, ref = Ref};
+cast_to_dop_with_payload({?DOP_REG_SEND, FromPid, Unused, ToName}) when
+    is_pid(FromPid) andalso is_atom(ToName)
+->
+    #udist_dop_reg_send{from_pid = FromPid, unused = Unused, to_name = ToName};
+cast_to_dop_with_payload({?DOP_REG_SEND_TT, FromPid, Unused, ToName, TraceToken}) when
+    is_pid(FromPid) andalso is_atom(ToName)
+->
+    #udist_dop_reg_send_tt{from_pid = FromPid, unused = Unused, to_name = ToName, trace_token = TraceToken};
+cast_to_dop_with_payload({?DOP_SEND, Unused, ToPid}) when
+    is_pid(ToPid)
+->
+    #udist_dop_send{unused = Unused, to_pid = ToPid};
+cast_to_dop_with_payload({?DOP_SEND_SENDER, FromPid, ToPid}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_send_sender{from_pid = FromPid, to_pid = ToPid};
+cast_to_dop_with_payload({?DOP_SEND_SENDER_TT, FromPid, ToPid, TraceToken}) when
+    is_pid(FromPid) andalso is_pid(ToPid)
+->
+    #udist_dop_send_sender_tt{from_pid = FromPid, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop_with_payload({?DOP_SEND_TT, Unused, ToPid, TraceToken}) when
+    is_pid(ToPid)
+->
+    #udist_dop_send_tt{unused = Unused, to_pid = ToPid, trace_token = TraceToken};
+cast_to_dop_with_payload({?DOP_SPAWN_REQUEST, ReqId, From, GroupLeader, {Module, Function, Arity}, OptList}) when
+    is_reference(ReqId) andalso is_pid(From) andalso is_pid(GroupLeader) andalso is_atom(Module) andalso
+        is_atom(Function) andalso is_integer(Arity) andalso is_list(OptList)
+->
+    #udist_dop_spawn_request{
+        req_id = ReqId, from = From, group_leader = GroupLeader, mfa = {Module, Function, Arity}, opt_list = OptList
+    };
+cast_to_dop_with_payload(
+    {?DOP_SPAWN_REQUEST_TT, ReqId, From, GroupLeader, {Module, Function, Arity}, OptList, Token}
+) when
+    is_reference(ReqId) andalso is_pid(From) andalso is_pid(GroupLeader) andalso is_atom(Module) andalso
+        is_atom(Function) andalso is_integer(Arity) andalso is_list(OptList)
+->
+    #udist_dop_spawn_request_tt{
+        req_id = ReqId,
+        from = From,
+        group_leader = GroupLeader,
+        mfa = {Module, Function, Arity},
+        opt_list = OptList,
+        token = Token
+    }.
 
 -spec cast_to_raw_dop(dop_t()) -> raw_dop_t().
 cast_to_raw_dop(T = #udist_dop_alias_send{}) ->

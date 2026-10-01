@@ -61,7 +61,9 @@
     prop_dist_int_to_vterm_2/0,
     prop_dist_int_to_vterm_2/1,
     prop_dist_int_to_vterm_3/0,
-    prop_dist_int_to_vterm_3/1
+    prop_dist_int_to_vterm_3/1,
+    prop_udist_roundtrip/0,
+    prop_udist_roundtrip/1
 ]).
 
 %%%=============================================================================
@@ -88,7 +90,8 @@ groups() ->
             prop_dist_ext_to_vterm_3,
             prop_dist_int_to_vdist_2,
             prop_dist_int_to_vterm_2,
-            prop_dist_int_to_vterm_3
+            prop_dist_int_to_vterm_3,
+            prop_udist_roundtrip
         ]}
     ].
 
@@ -265,6 +268,19 @@ dist_int_to_vterm_3(Config, [{Atoms, VTermInput, VTermOutput} | TestVectors]) ->
     dist_int_to_vterm_3(Config, TestVectors);
 dist_int_to_vterm_3(_Config, []) ->
     ok.
+
+prop_udist_roundtrip() ->
+    [
+        {doc, "Distribution operations round-trip between wire tuples and records, with and without payloads."},
+        {timetrap, {seconds, 600}}
+    ].
+
+prop_udist_roundtrip(Config) ->
+    erldist_filter_proper:quickcheck(erldist_filter_nif_prop:prop_udist_roundtrip(Config), [
+        verbose,
+        {max_shrinks, 100},
+        {numtests, 1000}
+    ]).
 
 prop_dist_ext_to_vdist_2() ->
     [
