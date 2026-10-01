@@ -144,12 +144,15 @@ gen_hs_data(Driver, Socket) ->
                      S,
                      [{active, false}, {packet, 4}, Nodelay])
            end,
+       %% Unlike inet_tcp_dist, keep the socket passive after nodeup: the
+       %% receiver takes it over in f_handshake_complete. Data delivered here
+       %% as {Port, {data, _}} would reach the receiver as a bad message and
+       %% close the new connection.
        f_setopts_post_nodeup =
            fun (S) ->
                    inet:setopts(
                      S,
-                     [{active, true}, {packet,4},
-                      {deliver, port}, binary, Nodelay])
+                     [{active, false}, {packet, 4}, Nodelay])
            end,
        f_getll    = fun inet:getll/1,
        mf_tick    = fun (S) -> ?MODULE:tick(Driver, S) end,
